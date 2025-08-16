@@ -130,9 +130,14 @@ class YamlManager {
         config.providers = [];
       }
 
+      // 获取gpt-load实例的token
+      const gptloadService = require('./gptload');
+      const multiInstanceStatus = gptloadService.getMultiInstanceStatus();
+      const gptloadToken = await this.getGptloadToken(multiInstanceStatus);
+
       // 为每个模型添加或更新 provider
       for (const model of models) {
-        this.addOrUpdateModelProvider(config, model);
+        this.addOrUpdateModelProvider(config, model, gptloadToken);
       }
 
       // 保存配置
@@ -147,11 +152,89 @@ class YamlManager {
   }
 
   /**
+   * 获取gpt-load实例的token
+   */
+  async getGptloadToken(multiInstanceStatus) {
+    try {
+      // 优先使用本地实例的token
+      const localInstance = Object.values(multiInstanceStatus.instances).find(
+        instance => instance.name && instance.name.includes('本地')
+      );
+      
+      if (localInstance) {
+        const multiGptloadManager = require('./multi-gptload');
+        const instance = multiGptloadManager.getInstance('local');
+        if (instance && instance.token) {
+          console.log('✅ 使用本地gpt-load实例的token');
+          return instance.token;
+        }
+      }
+      
+      // 如果本地实例没有token，使用第一个有token的健康实例
+      for (const [instanceId, status] of Object.entries(multiInstanceStatus.instances)) {
+        if (status.healthy) {
+          const multiGptloadManager = require('./multi-gptload');
+          const instance = multiGptloadManager.getInstance(instanceId);
+          if (instance && instance.token) {
+            console.log(`✅ 使用实例 ${instance.name} 的token`);
+            return instance.token;
+          }
+        }
+      }
+      
+      console.warn('⚠️ 未找到可用的gpt-load token，将使用默认API密钥');
+      return 'sk-uni-load-auto-generated';
+    } catch (error) {
+      console.error('获取gpt-load token失败:', error.message);
+      return 'sk-uni-load-auto-generated';
+    }
+  }
+
+  /**
+   * 标准化模型名称，处理重定向
+   */
+  normalizeModelName(originalModel) {
+    let normalizedModel = originalModel;
+    
+    // 处理带组织名的模型：deepseek-ai/deepseek-v3 -> deepseek-v3
+    if (normalizedModel.includes('/')) {
+      const parts = normalizedModel.split('/');
+      normalizedModel = parts[parts.length - 1]; // 取最后一部分
+    }
+    
+    // 移除日期后缀，常见格式：
+    // - model-20241201 -> model
+    // - model-2024-12-01 -> model
+    // - model-preview-05-20 -> model-preview
+    // - model-001 -> model  
+    // - model-latest -> model
+    // - model-2024 -> model
+    normalizedModel = normalizedModel
+      .replace(/-\d{8}$/, '')                    // 移除 -20241201 格式
+      .replace(/-\d{4}-\d{2}-\d{2}$/, '')        // 移除 -2024-12-01 格式
+      .replace(/-\d{2}-\d{2}$/, '')              // 移除 -05-20 格式（月-日）
+      .replace(/-\d{3}$/, '')                    // 移除 -001 格式
+      .replace(/-latest$/, '')                   // 移除 -latest 后缀
+      .replace(/-\d{4}$/, '');                   // 移除 -2024 格式
+    
+    // 统一转换为小写
+    normalizedModel = normalizedModel.toLowerCase();
+    
+    if (originalModel !== normalizedModel) {
+      console.log(`🔄 模型名称重定向: ${originalModel} -> ${normalizedModel}`);
+    }
+    
+    return normalizedModel;
+  }
+
+  /**
    * 添加或更新模型 provider
    */
-  addOrUpdateModelProvider(config, modelName) {
-    const normalizedModelName = modelName.toLowerCase().replace(/[^a-z0-9-]/g, '-');
-    const providerName = `gptload-${normalizedModelName}`;
+  addOrUpdateModelProvider(config, originalModelName, gptloadToken = 'sk-uni-load-auto-generated') {
+    // 标准化模型名称用于重定向
+    const normalizedModelName = this.normalizeModelName(originalModelName);
+    const modelNameForUrl = normalizedModelName.toLowerCase().replace(/[^a-z0-9-]/g, '-');
+    const providerName = `gptload-${modelNameForUrl}`;
     
     // 查找是否已存在该 provider
     const existingProviderIndex = config.providers.findIndex(
@@ -161,15 +244,22 @@ class YamlManager {
     // 构建 provider 配置
     const providerConfig = {
       provider: providerName,
-      base_url: `${this.gptloadUrl}/proxy/${normalizedModelName}/v1/chat/completions`,
-      api: 'sk-uni-load-auto-generated',
-      model: [modelName],
-      tools: true,
-      preferences: {
-        AUTO_RETRY: true,
-        SCHEDULING_ALGORITHM: 'round_robin'
-      }
+      base_url: `${this.gptloadUrl}/proxy/${modelNameForUrl}/v1/chat/completions`,
+      api: gptloadToken, // 使用gpt-load的访问token
+      tools: true
     };
+
+    // 构建模型映射：原始名称 -> 标准化名称
+    if (originalModelName !== normalizedModelName) {
+      // 如果有重定向，使用键值对格式
+      providerConfig.model = {
+        [originalModelName]: normalizedModelName
+      };
+      console.log(`📝 添加模型重命名: ${originalModelName} -> ${normalizedModelName}`);
+    } else {
+      // 如果没有重定向，使用数组格式
+      providerConfig.model = [normalizedModelName];
+    }
 
     if (existingProviderIndex >= 0) {
       // 更新现有 provider

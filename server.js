@@ -112,7 +112,7 @@ app.post('/api/preview-site-name', (req, res) => {
 // API 路由
 app.post('/api/process-ai-site', async (req, res) => {
   try {
-    const { baseUrl, apiKeys, channelTypes } = req.body;
+    const { baseUrl, apiKeys, channelTypes, validationEndpoint } = req.body;
     
     if (!baseUrl || !apiKeys || !Array.isArray(apiKeys) || apiKeys.length === 0) {
       return res.status(400).json({ 
@@ -158,13 +158,24 @@ app.post('/api/process-ai-site', async (req, res) => {
     
     // 步骤1：获取AI站点支持的模型
     console.log('获取模型列表...');
-    const models = await modelsService.getModels(baseUrl, apiKeys[0]);
+    const allModels = await modelsService.getModels(baseUrl, apiKeys[0]);
     
-    if (!models || models.length === 0) {
+    if (!allModels || allModels.length === 0) {
       return res.status(400).json({ error: '无法获取模型列表或模型列表为空' });
     }
     
-    console.log(`发现 ${models.length} 个模型`);
+    // 应用白名单过滤
+    const models = modelsService.filterModels(allModels);
+    
+    if (models.length === 0) {
+      console.log(`发现 ${allModels.length} 个模型，但白名单过滤后为空`);
+      return res.status(400).json({ 
+        error: '白名单过滤后没有可用模型', 
+        details: `原始模型数量: ${allModels.length}，过滤后: 0` 
+      });
+    }
+    
+    console.log(`发现 ${allModels.length} 个模型，白名单过滤后剩余 ${models.length} 个模型`);
 
     // 步骤2：为每种格式创建站点分组（第一层）
     console.log('创建站点分组...');
@@ -173,7 +184,7 @@ app.post('/api/process-ai-site', async (req, res) => {
     
     for (const channelType of selectedChannelTypes) {
       try {
-        const siteGroup = await gptloadService.createSiteGroup(siteName, baseUrl, apiKeys, channelType);
+        const siteGroup = await gptloadService.createSiteGroup(siteName, baseUrl, apiKeys, channelType, validationEndpoint, models);
         if (siteGroup && siteGroup.name) {
           siteGroups.push(siteGroup);
           groupsCreated++;
