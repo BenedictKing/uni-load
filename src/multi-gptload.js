@@ -549,7 +549,7 @@ class MultiGptloadManager {
         validation_endpoint: "/v1/messages"
       },
       gemini: {
-        test_model: "gemini-2.0-flash-lite",
+        test_model: "gemini-2.5-flash",
         validation_endpoint: "/v1beta/models"
       }
     };

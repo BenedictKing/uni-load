@@ -218,7 +218,7 @@ class ModelsService {
       // OpenAI
       'gpt-',
       // Google
-      'gemini-',
+      'gemini-2.5-', // 仅支持 2.5 及以上版本
       'gemma-',
       // Anthropic
       'claude-',
