@@ -213,8 +213,18 @@ class ModelsService {
    * 过滤和清理模型名称
    */
   filterModels(models) {
+    // 白名单前缀（不区分大小写）
+    const allowedPrefixes = [
+      'gemini-2.5-',
+      'gpt-5',
+      'deepseek-',
+      'deepseek-ai/',
+      'kimi-k2',
+      'doubao-',
+      'qwen-'
+    ];
+
     const filtered = models.filter(model => {
-      // 过滤掉一些明显不是聊天模型的
       const name = model.toLowerCase();
       
       // 跳过嵌入模型
@@ -243,13 +253,28 @@ class ModelsService {
         return false;
       }
       
+      // 白名单检查（不区分大小写）
+      const isAllowed = allowedPrefixes.some(prefix => {
+        // 处理特殊情况：kimi-k2 不区分大小写
+        if (prefix === 'kimi-k2') {
+          return name.includes('kimi') && name.includes('k2');
+        }
+        // 将前缀也转为小写进行比较
+        return name.startsWith(prefix.toLowerCase());
+      });
+      
+      if (!isAllowed) {
+        console.log(`🚫 过滤掉模型（不在白名单）: ${model}`);
+        return false;
+      }
+      
       return true;
     });
 
     // 去重并排序
     const uniqueModels = [...new Set(filtered)];
     
-    console.log(`📋 模型过滤结果: ${models.length} -> ${uniqueModels.length} (过滤掉 ${models.length - uniqueModels.length} 个非聊天模型)`);
+    console.log(`📋 模型白名单过滤结果: ${models.length} -> ${uniqueModels.length} (过滤掉 ${models.length - uniqueModels.length} 个模型)`);
     
     return uniqueModels.sort();
   }
