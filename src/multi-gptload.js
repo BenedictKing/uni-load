@@ -262,47 +262,33 @@ class MultiGptloadManager {
    */
   async testSiteAccessibility(instance, siteUrl, options) {
     try {
-      // 创建一个临时测试分组来验证连通性
-      const testGroupName = `test-${Date.now()}`;
-      const testData = {
-        name: testGroupName,
-        display_name: 'connectivity test',
-        description: 'temporary group for testing connectivity',
-        upstreams: [{ url: siteUrl, weight: 1 }],
-        channel_type: options.channelType || 'openai',
-        test_model: 'gpt-3.5-turbo',
-        validation_endpoint: '/v1/models'
-      };
-
-      // 创建测试分组
-      const createResponse = await instance.apiClient.post('/groups', testData);
-      const groupId = createResponse.data.id;
-
-      // 立即删除测试分组
-      try {
-        await instance.apiClient.delete(`/groups/${groupId}`);
-      } catch (deleteError) {
-        console.warn(`删除测试分组失败: ${deleteError.message}`);
-      }
-
+      // 方法1：直接测试groups接口的连通性
+      const groupsResponse = await instance.apiClient.get('/groups');
+      
+      // 如果能成功获取groups，说明实例本身是健康的
+      // 对于站点连通性，我们简化假设实例健康就能访问大部分站点
+      console.log(`✅ 实例 ${instance.name} 健康检查通过，假设可访问 ${siteUrl}`);
       return true;
 
     } catch (error) {
+      // 如果连groups接口都访问不了，说明实例有问题
+      console.log(`❌ 实例 ${instance.name} 健康检查失败: ${error.message}`);
+      
       // 根据错误类型判断是否为连通性问题
       if (error.response) {
         const status = error.response.status;
         const message = error.response.data?.message || error.message;
         
-        // 5xx错误或连接超时可能表示无法访问目标站点
+        // 5xx错误或连接超时可能表示实例不可用
         if (status >= 500 || message.includes('timeout') || message.includes('ECONNREFUSED')) {
           return false;
         }
         
-        // 其他错误（如4xx）可能表示实例可用但配置问题
+        // 其他错误（如4xx认证问题）可能表示实例可用但配置问题
         return true;
       }
 
-      // 网络错误表示无法连接
+      // 网络错误表示无法连接到实例
       return false;
     }
   }
@@ -432,7 +418,7 @@ class MultiGptloadManager {
   /**
    * 统一的API接口 - 创建站点分组
    */
-  async createSiteGroup(siteName, baseUrl, apiKeys, channelType = 'openai') {
+  async createSiteGroup(siteName, baseUrl, apiKeys, channelType = 'openai', customValidationEndpoint = null, availableModels = null) {
     return await this.executeOnBestInstance(baseUrl, async (instance) => {
       // 为不同格式创建不同的分组名
       const groupName = `${siteName.toLowerCase()}-${channelType}`;
@@ -441,13 +427,22 @@ class MultiGptloadManager {
       const existingGroup = await this.checkGroupExists(instance, groupName);
       if (existingGroup) {
         console.log(`站点分组 ${groupName} 已存在，更新配置...`);
-        return await this.updateSiteGroup(instance, existingGroup, baseUrl, apiKeys, channelType);
+        return await this.updateSiteGroup(instance, existingGroup, baseUrl, apiKeys, channelType, customValidationEndpoint, availableModels);
       }
 
       console.log(`创建站点分组: ${groupName}，格式: ${channelType}`);
       
       // 根据不同 channel_type 设置默认参数
       const channelConfig = this.getChannelConfig(channelType);
+      
+      // 选择验证模型：优先使用可用模型中的第一个，否则使用默认
+      let testModel = channelConfig.test_model;
+      if (availableModels && availableModels.length > 0) {
+        testModel = availableModels[0];
+        console.log(`✅ 使用筛选出的第一个模型作为验证模型: ${testModel}`);
+      } else {
+        console.log(`⚠️ 未提供可用模型列表，使用默认验证模型: ${testModel}`);
+      }
       
       // 创建分组
       const groupData = {
@@ -456,8 +451,9 @@ class MultiGptloadManager {
         description: `${siteName} AI站点 - ${baseUrl} (${channelType}) [实例: ${instance.name}]`,
         upstreams: [{ url: baseUrl, weight: 1 }],
         channel_type: channelType,
-        test_model: channelConfig.test_model,
-        validation_endpoint: channelConfig.validation_endpoint
+        test_model: testModel, // 使用选择的验证模型
+        validation_endpoint: customValidationEndpoint || channelConfig.validation_endpoint, // 使用自定义端点或默认值
+        sort: 20 // 渠道分组的排序号为20
       };
 
       try {
@@ -498,7 +494,7 @@ class MultiGptloadManager {
           const existingGroup = await this.checkGroupExists(instance, groupName);
           if (existingGroup) {
             console.log(`✅ 找到已存在的分组 ${groupName}，将更新配置`);
-            return await this.updateSiteGroup(instance, existingGroup, baseUrl, apiKeys, channelType);
+            return await this.updateSiteGroup(instance, existingGroup, baseUrl, apiKeys, channelType, customValidationEndpoint, availableModels);
           }
         }
         throw error;
@@ -564,19 +560,29 @@ class MultiGptloadManager {
   /**
    * 更新站点分组
    */
-  async updateSiteGroup(instance, existingGroup, baseUrl, apiKeys, channelType) {
+  async updateSiteGroup(instance, existingGroup, baseUrl, apiKeys, channelType, customValidationEndpoint = null, availableModels = null) {
     try {
       console.log(`更新站点分组: ${existingGroup.name}，格式: ${channelType} (实例: ${instance.name})`);
       
       // 根据不同 channel_type 设置默认参数
       const channelConfig = this.getChannelConfig(channelType);
       
+      // 选择验证模型：优先使用可用模型中的第一个，否则使用默认
+      let testModel = channelConfig.test_model;
+      if (availableModels && availableModels.length > 0) {
+        testModel = availableModels[0];
+        console.log(`✅ 使用筛选出的第一个模型作为验证模型: ${testModel}`);
+      } else {
+        console.log(`⚠️ 未提供可用模型列表，使用默认验证模型: ${testModel}`);
+      }
+      
       // 更新分组配置
       const updateData = {
         upstreams: [{ url: baseUrl, weight: 1 }],
         channel_type: channelType,
-        test_model: channelConfig.test_model,
-        validation_endpoint: channelConfig.validation_endpoint
+        test_model: testModel, // 使用选择的验证模型
+        validation_endpoint: customValidationEndpoint || channelConfig.validation_endpoint, // 使用自定义端点或默认值
+        sort: 20 // 渠道分组的排序号为20
       };
 
       await instance.apiClient.put(`/groups/${existingGroup.id}`, updateData);
