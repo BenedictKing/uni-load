@@ -12,6 +12,47 @@ uni-load 是一个自动化配置工具，帮助用户快速将第三方AI站点
 4. 📝 **更新配置文件** - 自动修改 uni-api 的 `api.yaml` 配置
 5. 🎯 **统一入口访问** - 用户通过 uni-api 统一入口访问所有AI模型
 
+## 🌐 gptload 多实例支持
+
+支持连接多个 gptload 实例，自动为不同站点选择最佳实例：
+
+### 必需配置
+
+> **重要**：启动服务前必须配置 gptload 实例，否则服务无法启动！
+
+1. **复制配置文件**
+   ```bash
+   cp gptload-instances.json.example gptload-instances.json
+   ```
+
+2. **编辑配置文件**
+   ```json
+   [
+     {
+       "id": "local",
+       "name": "本地 gptload",
+       "url": "http://localhost:3001",
+       "priority": 1,
+       "description": "本地服务，优先使用"
+     },
+     {
+       "id": "us-proxy",
+       "name": "美国代理 gptload",
+       "url": "https://us.gptload.example.com",
+       "token": "your-token-here",
+       "priority": 2,
+       "description": "用于访问被墙的站点"
+     }
+   ]
+   ```
+
+### 智能路由
+
+- **优先级排序**: 数字越小优先级越高
+- **健康检查**: 自动检测实例状态
+- **连通性测试**: 测试实例是否能访问目标站点
+- **故障转移**: 自动切换到可用实例
+
 ## 🏗️ 架构设计
 
 ```
@@ -58,7 +99,16 @@ cd uni-load
 bun install
 ```
 
-3. **配置环境变量**
+3. **配置 gptload 实例**（必需步骤）
+```bash
+# 复制配置模板
+cp gptload-instances.json.example gptload-instances.json
+
+# 编辑配置文件，至少配置本地实例
+# 示例：修改 url、token 等参数
+```
+
+4. **配置环境变量**
 ```bash
 # 推荐：直接创建本地配置文件
 cp .env.example .env.local
@@ -67,14 +117,14 @@ cp .env.example .env.local
 # .env.local 优先级更高且不会被提交到版本控制
 ```
 
-4. **启动服务**
+5. **启动服务**
 ```bash
 bun start
 # 或开发模式（自动重载）
 bun dev
 ```
 
-5. **访问页面**
+6. **访问页面**
 ```
 http://localhost:3002
 ```

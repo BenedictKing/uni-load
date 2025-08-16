@@ -9,6 +9,9 @@ require('dotenv').config({ path: '.env' });
 const gptloadService = require('./src/gptload');
 const modelsService = require('./src/models');
 const yamlManager = require('./src/yaml-manager');
+const modelSyncService = require('./src/model-sync');
+const channelHealthMonitor = require('./src/channel-health');
+const channelCleanupService = require('./src/channel-cleanup');
 
 const app = express();
 const PORT = process.env.PORT || 3002;
@@ -109,11 +112,34 @@ app.post('/api/preview-site-name', (req, res) => {
 // API 路由
 app.post('/api/process-ai-site', async (req, res) => {
   try {
-    const { baseUrl, apiKeys } = req.body;
+    const { baseUrl, apiKeys, channelTypes } = req.body;
     
     if (!baseUrl || !apiKeys || !Array.isArray(apiKeys) || apiKeys.length === 0) {
       return res.status(400).json({ 
         error: '参数不完整：需要 baseUrl 和 apiKeys 数组' 
+      });
+    }
+
+    // 验证和处理 channelTypes
+    const validChannelTypes = ['openai', 'anthropic', 'gemini'];
+    let selectedChannelTypes = channelTypes;
+    
+    // 如果没有提供 channelTypes，默认使用 openai（向后兼容）
+    if (!selectedChannelTypes || !Array.isArray(selectedChannelTypes)) {
+      selectedChannelTypes = ['openai'];
+    }
+    
+    // 验证所有选择的类型都是有效的
+    const invalidTypes = selectedChannelTypes.filter(type => !validChannelTypes.includes(type));
+    if (invalidTypes.length > 0) {
+      return res.status(400).json({ 
+        error: `无效的 channelTypes：${invalidTypes.join(', ')}，支持的类型：${validChannelTypes.join(', ')}` 
+      });
+    }
+    
+    if (selectedChannelTypes.length === 0) {
+      return res.status(400).json({ 
+        error: '请至少选择一种API格式类型' 
       });
     }
 
@@ -127,7 +153,7 @@ app.post('/api/process-ai-site', async (req, res) => {
       });
     }
 
-    console.log(`开始处理AI站点：${siteName} (${baseUrl})`);
+    console.log(`开始处理AI站点：${siteName} (${baseUrl})，格式：${selectedChannelTypes.join(', ')}`);
     console.log(`自动生成的站点名称：${siteName}`);
     
     // 步骤1：获取AI站点支持的模型
@@ -140,13 +166,30 @@ app.post('/api/process-ai-site', async (req, res) => {
     
     console.log(`发现 ${models.length} 个模型`);
 
-    // 步骤2：创建站点分组（第一层）
+    // 步骤2：为每种格式创建站点分组（第一层）
     console.log('创建站点分组...');
-    const siteGroup = await gptloadService.createSiteGroup(siteName, baseUrl, apiKeys);
+    const siteGroups = [];
+    let groupsCreated = 0;
     
-    // 步骤3：创建或更新模型分组（第二层），将站点分组添加为上游
+    for (const channelType of selectedChannelTypes) {
+      try {
+        const siteGroup = await gptloadService.createSiteGroup(siteName, baseUrl, apiKeys, channelType);
+        siteGroups.push(siteGroup);
+        groupsCreated++;
+        console.log(`✅ ${channelType} 格式站点分组创建成功`);
+      } catch (error) {
+        console.error(`❌ ${channelType} 格式站点分组创建失败:`, error.message);
+        // 继续处理其他格式，不中断整个流程
+      }
+    }
+    
+    if (siteGroups.length === 0) {
+      return res.status(500).json({ error: '所有格式的站点分组都创建失败' });
+    }
+    
+    // 步骤3：创建或更新模型分组（第二层），将所有站点分组添加为上游
     console.log('创建/更新模型分组...');
-    const modelGroups = await gptloadService.createOrUpdateModelGroups(models, siteGroup);
+    const modelGroups = await gptloadService.createOrUpdateModelGroups(models, siteGroups);
     
     // 步骤4：更新 uni-api 配置，指向模型分组
     console.log('更新 uni-api 配置...');
@@ -158,9 +201,11 @@ app.post('/api/process-ai-site', async (req, res) => {
       data: {
         siteName,
         baseUrl,
+        channelTypes: selectedChannelTypes,
+        groupsCreated,
         modelsCount: models.length,
         models: models,
-        siteGroup: siteGroup,
+        siteGroups: siteGroups,
         modelGroups: modelGroups.length
       }
     });
@@ -184,11 +229,223 @@ app.get('/api/status', async (req, res) => {
   try {
     const gptloadStatus = await gptloadService.getStatus();
     const uniApiStatus = await yamlManager.getStatus();
+    const modelSyncStatus = modelSyncService.getStatus();
+    const channelHealthStatus = channelHealthMonitor.getStatus();
+    const channelCleanupStatus = channelCleanupService.getStatus();
     
     res.json({
       gptload: gptloadStatus,
-      uniApi: uniApiStatus
+      uniApi: uniApiStatus,
+      modelSync: modelSyncStatus,
+      channelHealth: channelHealthStatus,
+      channelCleanup: channelCleanupStatus
     });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 手动触发模型同步
+app.post('/api/sync-models', async (req, res) => {
+  try {
+    // 异步执行，立即返回
+    modelSyncService.syncAllModels().catch(error => {
+      console.error('手动模型同步失败:', error);
+    });
+    
+    res.json({ 
+      success: true, 
+      message: '模型同步已开始，请查看控制台日志了解进度' 
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 控制模型同步服务
+app.post('/api/sync-models/control', (req, res) => {
+  try {
+    const { action } = req.body;
+    
+    switch (action) {
+      case 'start':
+        modelSyncService.start();
+        res.json({ success: true, message: '模型同步服务已启动' });
+        break;
+      case 'stop':
+        modelSyncService.stop();
+        res.json({ success: true, message: '模型同步服务已停止' });
+        break;
+      default:
+        res.status(400).json({ error: '无效的操作，支持: start, stop' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 手动触发渠道健康检查
+app.post('/api/check-channels', async (req, res) => {
+  try {
+    // 异步执行，立即返回
+    channelHealthMonitor.checkChannelHealth().catch(error => {
+      console.error('手动渠道健康检查失败:', error);
+    });
+    
+    res.json({ 
+      success: true, 
+      message: '渠道健康检查已开始，请查看控制台日志了解进度' 
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 控制渠道健康监控服务
+app.post('/api/check-channels/control', (req, res) => {
+  try {
+    const { action } = req.body;
+    
+    switch (action) {
+      case 'start':
+        channelHealthMonitor.start();
+        res.json({ success: true, message: '渠道健康监控已启动' });
+        break;
+      case 'stop':
+        channelHealthMonitor.stop();
+        res.json({ success: true, message: '渠道健康监控已停止' });
+        break;
+      default:
+        res.status(400).json({ error: '无效的操作，支持: start, stop' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 获取失败的渠道列表
+app.get('/api/failed-channels', (req, res) => {
+  try {
+    const failedChannels = channelHealthMonitor.getFailedChannels();
+    res.json({ failedChannels });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 重置渠道失败计数
+app.post('/api/reset-channel-failures', (req, res) => {
+  try {
+    const { channelName } = req.body;
+    channelHealthMonitor.resetChannelFailures(channelName);
+    
+    res.json({ 
+      success: true, 
+      message: channelName ? 
+        `已重置渠道 ${channelName} 的失败计数` : 
+        '已重置所有渠道的失败计数'
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 获取多实例状态
+app.get('/api/multi-instances', (req, res) => {
+  try {
+    const status = gptloadService.getMultiInstanceStatus();
+    res.json(status);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 重新分配站点到指定实例
+app.post('/api/reassign-site', async (req, res) => {
+  try {
+    const { siteUrl, instanceId } = req.body;
+    
+    if (!siteUrl) {
+      return res.status(400).json({ error: '需要提供 siteUrl' });
+    }
+    
+    await gptloadService.reassignSite(siteUrl, instanceId);
+    
+    res.json({ 
+      success: true, 
+      message: instanceId ? 
+        `已将站点 ${siteUrl} 分配到实例 ${instanceId}` :
+        `已清除站点 ${siteUrl} 的分配，将重新自动分配`
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 预览渠道清理（试运行）
+app.post('/api/cleanup-channels/preview', async (req, res) => {
+  try {
+    const options = req.body || {};
+    
+    const results = await channelCleanupService.previewCleanup(options);
+    
+    res.json({
+      success: true,
+      message: '预览完成',
+      results
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 执行渠道清理
+app.post('/api/cleanup-channels', async (req, res) => {
+  try {
+    const options = req.body || {};
+    
+    // 异步执行，立即返回
+    channelCleanupService.cleanupDisconnectedChannels(options).then(results => {
+      console.log('✅ 渠道清理完成:', results);
+    }).catch(error => {
+      console.error('❌ 渠道清理失败:', error);
+    });
+    
+    res.json({
+      success: true,
+      message: '渠道清理已开始，请查看控制台日志了解进度'
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 手动清理指定渠道
+app.post('/api/cleanup-channels/manual', async (req, res) => {
+  try {
+    const { channelNames, dryRun = false } = req.body;
+    
+    if (!channelNames || !Array.isArray(channelNames) || channelNames.length === 0) {
+      return res.status(400).json({ error: '需要提供渠道名称数组' });
+    }
+    
+    const results = await channelCleanupService.manualCleanupChannels(channelNames, dryRun);
+    
+    res.json({
+      success: true,
+      message: `${dryRun ? '预览' : '清理'}完成`,
+      results
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 获取清理历史
+app.get('/api/cleanup-history', (req, res) => {
+  try {
+    const history = channelCleanupService.getCleanupHistory();
+    res.json({ history });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -199,4 +456,20 @@ app.listen(PORT, () => {
   console.log(`📍 访问地址: http://localhost:${PORT}`);
   console.log(`🔗 gptload: ${process.env.GPTLOAD_URL || 'http://localhost:3001'}`);
   console.log(`🔗 uni-api: ${process.env.UNI_API_PATH || '../uni-api'}`);
+  
+  // 启动模型同步服务
+  if (process.env.ENABLE_MODEL_SYNC !== 'false') {
+    console.log(`🔄 启动模型同步服务...`);
+    modelSyncService.start();
+  } else {
+    console.log(`⚠️ 模型同步服务已禁用 (ENABLE_MODEL_SYNC=false)`);
+  }
+  
+  // 启动渠道健康监控
+  if (process.env.ENABLE_CHANNEL_HEALTH !== 'false') {
+    console.log(`🩺 启动渠道健康监控...`);
+    channelHealthMonitor.start();
+  } else {
+    console.log(`⚠️ 渠道健康监控已禁用 (ENABLE_CHANNEL_HEALTH=false)`);
+  }
 });

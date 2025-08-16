@@ -11,3 +11,4 @@ dist/
 # Bun 相关
 *.lock
 .aider*
+*.json

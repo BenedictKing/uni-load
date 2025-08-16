@@ -64,7 +64,7 @@
             font-size: 1.1em;
         }
         
-        .form-group input, .form-group textarea {
+        .form-group input, .form-group textarea, .form-group select {
             width: 100%;
             padding: 15px;
             border: 2px solid #e1e5e9;
@@ -74,7 +74,7 @@
             background: #f8f9fa;
         }
         
-        .form-group input:focus, .form-group textarea:focus {
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
             outline: none;
             border-color: #4CAF50;
             background: white;
@@ -217,6 +217,131 @@
             font-size: 0.9em;
             margin-top: 5px;
         }
+        
+        .checkbox-group {
+            margin-top: 10px;
+        }
+        
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            cursor: pointer;
+            font-weight: normal;
+            font-size: 16px;
+        }
+        
+        .checkbox-item input[type="checkbox"] {
+            margin-right: 12px;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        
+        .checkbox-item:hover {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+        
+        .sync-panel {
+            margin-top: 40px;
+            padding: 25px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            border: 2px solid #e1e5e9;
+        }
+        
+        .sync-panel h3 {
+            margin-bottom: 20px;
+            color: #495057;
+            font-weight: 600;
+        }
+        
+        .sync-status {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .sync-controls {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        
+        .btn-sync, .btn-control, .btn-refresh, .btn-warning {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-sync {
+            background: #17a2b8;
+            color: white;
+        }
+        
+        .btn-sync:hover {
+            background: #138496;
+            transform: translateY(-1px);
+        }
+        
+        .btn-control {
+            background: #ffc107;
+            color: #212529;
+        }
+        
+        .btn-control:hover {
+            background: #e0a800;
+            transform: translateY(-1px);
+        }
+        
+        .btn-refresh {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-refresh:hover {
+            background: #545b62;
+            transform: translateY(-1px);
+        }
+        
+        .btn-warning {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-warning:hover {
+            background: #c82333;
+            transform: translateY(-1px);
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-running {
+            background: #28a745;
+        }
+        
+        .status-stopped {
+            background: #dc3545;
+        }
+        
+        .status-idle {
+            background: #ffc107;
+        }
     </style>
 </head>
 <body>
@@ -254,6 +379,35 @@
                 </div>
                 
                 <div class="form-group">
+                    <label>API 格式类型 * (可多选)</label>
+                    <div class="checkbox-group">
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="channelType_openai" name="channelTypes" value="openai" checked>
+                            <span class="checkmark"></span>
+                            OpenAI 兼容格式
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="channelType_anthropic" name="channelTypes" value="anthropic">
+                            <span class="checkmark"></span>
+                            Anthropic Claude 格式
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="channelType_gemini" name="channelTypes" value="gemini">
+                            <span class="checkmark"></span>
+                            Google Gemini 格式
+                        </label>
+                    </div>
+                    <div class="help-text">选择该AI站点支持的API格式，一个站点可能同时支持多种格式</div>
+                    <div class="example">
+                        <strong>格式说明：</strong><br>
+                        • <strong>OpenAI 兼容</strong>：OpenAI、Azure OpenAI、DeepSeek、Qwen、通义千问等<br>
+                        • <strong>Anthropic Claude</strong>：Claude 官方 API<br>
+                        • <strong>Google Gemini</strong>：Gemini 原生 API<br>
+                        • <strong>代理站点</strong>：可能同时支持多种格式，请根据实际情况选择
+                    </div>
+                </div>
+                
+                <div class="form-group">
                     <label>API 密钥 *</label>
                     <div class="api-keys-container">
                         <div id="apiKeysContainer">
@@ -278,6 +432,33 @@
             </div>
             
             <div class="result" id="result"></div>
+            
+            <!-- 模型同步控制面板 -->
+            <div class="sync-panel">
+                <h3>🔄 模型同步服务</h3>
+                <div class="sync-status" id="syncStatus">
+                    <p>正在获取状态...</p>
+                </div>
+                <div class="sync-controls">
+                    <button type="button" class="btn-sync" onclick="triggerManualSync()">手动同步</button>
+                    <button type="button" class="btn-control" id="syncControlBtn" onclick="toggleSyncService()">控制服务</button>
+                    <button type="button" class="btn-refresh" onclick="refreshSyncStatus()">刷新状态</button>
+                </div>
+            </div>
+            
+            <!-- 渠道健康监控面板 -->
+            <div class="sync-panel">
+                <h3>🩺 渠道健康监控</h3>
+                <div class="sync-status" id="channelHealthStatus">
+                    <p>正在获取状态...</p>
+                </div>
+                <div class="sync-controls">
+                    <button type="button" class="btn-sync" onclick="triggerChannelCheck()">健康检查</button>
+                    <button type="button" class="btn-control" id="healthControlBtn" onclick="toggleHealthMonitor()">控制服务</button>
+                    <button type="button" class="btn-warning" onclick="showFailedChannels()">查看失败渠道</button>
+                    <button type="button" class="btn-refresh" onclick="refreshChannelHealthStatus()">刷新状态</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -356,6 +537,15 @@
             // 收集表单数据
             const baseUrl = document.getElementById('baseUrl').value.trim();
             
+            // 收集选中的 channelTypes
+            const channelTypeCheckboxes = document.querySelectorAll('input[name="channelTypes"]:checked');
+            const channelTypes = Array.from(channelTypeCheckboxes).map(cb => cb.value);
+            
+            if (channelTypes.length === 0) {
+                alert('请至少选择一种API格式类型');
+                return;
+            }
+            
             // 通过API获取站点名称
             let siteName;
             try {
@@ -404,7 +594,8 @@
                     body: JSON.stringify({
                         siteName,
                         baseUrl,
-                        apiKeys
+                        apiKeys,
+                        channelTypes
                     })
                 });
                 
@@ -415,8 +606,9 @@
                     result.innerHTML = `
                         <h3>✅ 配置成功！</h3>
                         <p><strong>站点名称:</strong> ${data.data.siteName}</p>
+                        <p><strong>API格式:</strong> ${data.data.channelTypes.join(', ')}</p>
+                        <p><strong>创建分组:</strong> ${data.data.groupsCreated} 个</p>
                         <p><strong>发现模型:</strong> ${data.data.modelsCount} 个</p>
-                        <p><strong>创建分组:</strong> ${data.data.modelGroups} 个模型分组</p>
                         <p><strong>模型列表:</strong></p>
                         <ul style="margin-left: 20px; margin-top: 10px;">
                             ${data.data.models.map(model => `<li>${model}</li>`).join('')}
@@ -454,7 +646,306 @@
                 .catch(error => {
                     console.error('❌ uni-load 服务连接失败:', error);
                 });
+                
+            // 初始化同步状态
+            refreshSyncStatus();
+            
+            // 初始化渠道健康状态
+            refreshChannelHealthStatus();
         });
+        
+        // 刷新同步状态
+        async function refreshSyncStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                updateSyncStatusDisplay(data.modelSync);
+            } catch (error) {
+                document.getElementById('syncStatus').innerHTML = 
+                    '<p style="color: #dc3545;">❌ 无法获取同步状态</p>';
+            }
+        }
+        
+        // 更新同步状态显示
+        function updateSyncStatusDisplay(syncStatus) {
+            const statusDiv = document.getElementById('syncStatus');
+            const controlBtn = document.getElementById('syncControlBtn');
+            
+            if (!syncStatus) {
+                statusDiv.innerHTML = '<p style="color: #dc3545;">❌ 同步服务不可用</p>';
+                return;
+            }
+            
+            let statusIndicator = '';
+            let statusText = '';
+            
+            if (syncStatus.isRunning) {
+                statusIndicator = '<span class="status-indicator status-running"></span>';
+                statusText = '正在同步中...';
+            } else if (syncStatus.hasInterval) {
+                statusIndicator = '<span class="status-indicator status-idle"></span>';
+                statusText = `服务运行中，每 ${syncStatus.intervalMinutes} 分钟检查一次`;
+                if (syncStatus.nextSync) {
+                    statusText += `<br><small>下次同步: ${new Date(syncStatus.nextSync).toLocaleString()}</small>`;
+                }
+            } else {
+                statusIndicator = '<span class="status-indicator status-stopped"></span>';
+                statusText = '服务已停止';
+            }
+            
+            statusDiv.innerHTML = `
+                <p>${statusIndicator}${statusText}</p>
+                <p><small>同步间隔: ${syncStatus.intervalMinutes} 分钟</small></p>
+            `;
+            
+            // 更新控制按钮
+            controlBtn.textContent = syncStatus.hasInterval ? '停止服务' : '启动服务';
+            controlBtn.style.background = syncStatus.hasInterval ? '#dc3545' : '#28a745';
+        }
+        
+        // 手动触发同步
+        async function triggerManualSync() {
+            const btn = event.target;
+            const originalText = btn.textContent;
+            
+            try {
+                btn.disabled = true;
+                btn.textContent = '同步中...';
+                
+                const response = await fetch('/api/sync-models', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('✅ ' + data.message);
+                    setTimeout(refreshSyncStatus, 2000); // 2秒后刷新状态
+                } else {
+                    throw new Error(data.error || '同步失败');
+                }
+                
+            } catch (error) {
+                alert('❌ 手动同步失败: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        }
+        
+        // 切换同步服务状态
+        async function toggleSyncService() {
+            const btn = document.getElementById('syncControlBtn');
+            const isRunning = btn.textContent === '停止服务';
+            const action = isRunning ? 'stop' : 'start';
+            
+            try {
+                btn.disabled = true;
+                
+                const response = await fetch('/api/sync-models/control', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ action })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('✅ ' + data.message);
+                    refreshSyncStatus();
+                } else {
+                    throw new Error(data.error || '操作失败');
+                }
+                
+            } catch (error) {
+                alert('❌ 操作失败: ' + error.message);
+            } finally {
+                btn.disabled = false;
+            }
+        }
+        
+        // === 渠道健康监控功能 ===
+        
+        // 刷新渠道健康状态
+        async function refreshChannelHealthStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                updateChannelHealthDisplay(data.channelHealth);
+            } catch (error) {
+                document.getElementById('channelHealthStatus').innerHTML = 
+                    '<p style="color: #dc3545;">❌ 无法获取健康监控状态</p>';
+            }
+        }
+        
+        // 更新渠道健康状态显示
+        function updateChannelHealthDisplay(healthStatus) {
+            const statusDiv = document.getElementById('channelHealthStatus');
+            const controlBtn = document.getElementById('healthControlBtn');
+            
+            if (!healthStatus) {
+                statusDiv.innerHTML = '<p style="color: #dc3545;">❌ 健康监控服务不可用</p>';
+                return;
+            }
+            
+            let statusIndicator = '';
+            let statusText = '';
+            
+            if (healthStatus.isRunning) {
+                statusIndicator = '<span class="status-indicator status-running"></span>';
+                statusText = '正在检查渠道健康...';
+            } else if (healthStatus.hasInterval) {
+                statusIndicator = '<span class="status-indicator status-idle"></span>';
+                statusText = `监控运行中，每 ${healthStatus.intervalMinutes} 分钟检查一次`;
+                if (healthStatus.nextCheck) {
+                    statusText += `<br><small>下次检查: ${new Date(healthStatus.nextCheck).toLocaleString()}</small>`;
+                }
+            } else {
+                statusIndicator = '<span class="status-indicator status-stopped"></span>';
+                statusText = '监控已停止';
+            }
+            
+            let failureInfo = '';
+            if (healthStatus.failureCount > 0) {
+                failureInfo = `<br><span style="color: #dc3545;"><small>⚠️ ${healthStatus.failureCount} 个渠道存在失败记录</small></span>`;
+            }
+            
+            statusDiv.innerHTML = `
+                <p>${statusIndicator}${statusText}${failureInfo}</p>
+                <p><small>失败阈值: ${healthStatus.failureThreshold} 次，检查间隔: ${healthStatus.intervalMinutes} 分钟</small></p>
+            `;
+            
+            // 更新控制按钮
+            controlBtn.textContent = healthStatus.hasInterval ? '停止监控' : '启动监控';
+            controlBtn.style.background = healthStatus.hasInterval ? '#dc3545' : '#28a745';
+        }
+        
+        // 手动触发渠道健康检查
+        async function triggerChannelCheck() {
+            const btn = event.target;
+            const originalText = btn.textContent;
+            
+            try {
+                btn.disabled = true;
+                btn.textContent = '检查中...';
+                
+                const response = await fetch('/api/check-channels', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('✅ ' + data.message);
+                    setTimeout(refreshChannelHealthStatus, 2000);
+                } else {
+                    throw new Error(data.error || '检查失败');
+                }
+                
+            } catch (error) {
+                alert('❌ 手动健康检查失败: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        }
+        
+        // 切换渠道健康监控服务状态
+        async function toggleHealthMonitor() {
+            const btn = document.getElementById('healthControlBtn');
+            const isRunning = btn.textContent === '停止监控';
+            const action = isRunning ? 'stop' : 'start';
+            
+            try {
+                btn.disabled = true;
+                
+                const response = await fetch('/api/check-channels/control', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ action })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('✅ ' + data.message);
+                    refreshChannelHealthStatus();
+                } else {
+                    throw new Error(data.error || '操作失败');
+                }
+                
+            } catch (error) {
+                alert('❌ 操作失败: ' + error.message);
+            } finally {
+                btn.disabled = false;
+            }
+        }
+        
+        // 显示失败的渠道
+        async function showFailedChannels() {
+            try {
+                const response = await fetch('/api/failed-channels');
+                const data = await response.json();
+                
+                if (data.failedChannels.length === 0) {
+                    alert('✅ 当前没有失败的渠道');
+                    return;
+                }
+                
+                let message = '🚨 失败的渠道列表:\n\n';
+                data.failedChannels.forEach(channel => {
+                    message += `• ${channel.name}: ${channel.failures}/${channel.threshold} 次失败`;
+                    if (channel.willBeRemoved) {
+                        message += ' (将被移除)';
+                    }
+                    message += '\n';
+                });
+                
+                message += '\n是否要重置所有失败计数?';
+                
+                if (confirm(message)) {
+                    await resetAllChannelFailures();
+                }
+                
+            } catch (error) {
+                alert('❌ 获取失败渠道列表失败: ' + error.message);
+            }
+        }
+        
+        // 重置所有渠道失败计数
+        async function resetAllChannelFailures() {
+            try {
+                const response = await fetch('/api/reset-channel-failures', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({})
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('✅ ' + data.message);
+                    refreshChannelHealthStatus();
+                } else {
+                    throw new Error(data.error || '重置失败');
+                }
+                
+            } catch (error) {
+                alert('❌ 重置失败: ' + error.message);
+            }
+        }
     </script>
 </body>
 </html>
