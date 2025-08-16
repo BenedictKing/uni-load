@@ -52,7 +52,12 @@ function generateSiteNameFromUrl(baseUrl) {
         // 常见的通用前缀
         const commonPrefixes = ['api', 'www', 'app', 'admin', 'service'];
         
-        if (commonPrefixes.includes(firstPart) && secondPart) {
+        // 检查 firstPart 是否为通用前缀或以通用前缀开头
+        const isCommonPrefix = commonPrefixes.some(prefix => 
+          firstPart === prefix || firstPart.startsWith(prefix + '-')
+        );
+
+        if (isCommonPrefix && secondPart) {
           siteName = secondPart;
         } else if (firstPart && firstPart.length > 2) {
           // 如果第一个部分不是通用前缀且长度合理，使用它
