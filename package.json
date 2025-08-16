@@ -1,0 +1,27 @@
+{
+  "name": "uni-load",
+  "version": "1.0.0",
+  "description": "中间桥梁项目，连接 uni-api 和 gptload，实现第三方AI站点的自动配置",
+  "main": "server.js",
+  "scripts": {
+    "start": "bun run server.js",
+    "dev": "bun --watch server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "axios": "^1.6.0",
+    "yaml": "^2.3.4",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {},
+  "packageManager": "bun@1.0.0",
+  "keywords": [
+    "ai",
+    "api",
+    "bridge",
+    "automation"
+  ],
+  "author": "",
+  "license": "MIT"
+}

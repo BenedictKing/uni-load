@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>uni-load - AI站点配置器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .form-container {
+            padding: 40px;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+            font-size: 1.1em;
+        }
+        
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+        }
+        
+        .form-group input:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #4CAF50;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+        }
+        
+        .form-group textarea {
+            height: 120px;
+            resize: vertical;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .api-keys-container {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            border: 2px dashed #dee2e6;
+        }
+        
+        .api-key-input {
+            display: flex;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        
+        .api-key-input input {
+            flex: 1;
+            margin-right: 10px;
+            margin-bottom: 0;
+        }
+        
+        .btn-remove {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-remove:hover {
+            background: #c82333;
+            transform: translateY(-1px);
+        }
+        
+        .btn-add {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-add:hover {
+            background: #218838;
+            transform: translateY(-1px);
+        }
+        
+        .btn-submit {
+            width: 100%;
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            border: none;
+            padding: 18px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+        
+        .btn-submit:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(76, 175, 80, 0.3);
+        }
+        
+        .btn-submit:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+        }
+        
+        .result.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        .result.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            display: none;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4CAF50;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .help-text {
+            font-size: 0.9em;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+        
+        .example {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 uni-load</h1>
+            <p>AI站点自动配置工具 - 连接 uni-api 与 gptload</p>
+        </div>
+        
+        <div class="form-container">
+            <form id="aiSiteForm">
+                <div class="form-group">
+                    <label for="siteName">站点名称 *</label>
+                    <input type="text" id="siteName" name="siteName" required 
+                           placeholder="例如: deepseek, openai, anthropic">
+                    <div class="help-text">将用作 gptload 分组名称，建议使用英文小写</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="baseUrl">API 基础地址 *</label>
+                    <input type="url" id="baseUrl" name="baseUrl" required 
+                           placeholder="https://api.example.com/v1">
+                    <div class="help-text">AI站点的API基础地址，通常以 /v1 结尾</div>
+                    <div class="example">示例: https://api.deepseek.com/v1</div>
+                </div>
+                
+                <div class="form-group">
+                    <label>API 密钥 *</label>
+                    <div class="api-keys-container">
+                        <div id="apiKeysContainer">
+                            <div class="api-key-input">
+                                <input type="password" placeholder="sk-..." required>
+                                <button type="button" class="btn-remove" onclick="removeApiKey(this)">删除</button>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-add" onclick="addApiKey()">+ 添加更多密钥</button>
+                        <div class="help-text">支持多个API密钥，将用于负载均衡</div>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn-submit" id="submitBtn">
+                    🔧 开始配置
+                </button>
+            </form>
+            
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>正在配置中，请稍候...</p>
+            </div>
+            
+            <div class="result" id="result"></div>
+        </div>
+    </div>
+
+    <script>
+        function addApiKey() {
+            const container = document.getElementById('apiKeysContainer');
+            const div = document.createElement('div');
+            div.className = 'api-key-input';
+            div.innerHTML = `
+                <input type="password" placeholder="sk-..." required>
+                <button type="button" class="btn-remove" onclick="removeApiKey(this)">删除</button>
+            `;
+            container.appendChild(div);
+        }
+        
+        function removeApiKey(button) {
+            const container = document.getElementById('apiKeysContainer');
+            if (container.children.length > 1) {
+                button.parentElement.remove();
+            } else {
+                alert('至少需要保留一个API密钥');
+            }
+        }
+        
+        document.getElementById('aiSiteForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+            
+            // 收集表单数据
+            const siteName = document.getElementById('siteName').value.trim();
+            const baseUrl = document.getElementById('baseUrl').value.trim();
+            const apiKeyInputs = document.querySelectorAll('#apiKeysContainer input');
+            const apiKeys = Array.from(apiKeyInputs)
+                .map(input => input.value.trim())
+                .filter(key => key.length > 0);
+            
+            if (apiKeys.length === 0) {
+                alert('请至少输入一个API密钥');
+                return;
+            }
+            
+            // 显示加载状态
+            submitBtn.disabled = true;
+            loading.style.display = 'block';
+            result.style.display = 'none';
+            
+            try {
+                const response = await fetch('/api/process-ai-site', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        siteName,
+                        baseUrl,
+                        apiKeys
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    result.className = 'result success';
+                    result.innerHTML = `
+                        <h3>✅ 配置成功！</h3>
+                        <p><strong>站点名称:</strong> ${data.data.siteName}</p>
+                        <p><strong>发现模型:</strong> ${data.data.modelsCount} 个</p>
+                        <p><strong>创建分组:</strong> ${data.data.modelGroups} 个模型分组</p>
+                        <p><strong>模型列表:</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            ${data.data.models.map(model => `<li>${model}</li>`).join('')}
+                        </ul>
+                        <p style="margin-top: 15px; color: #28a745;">
+                            <strong>✨ 现在可以通过 uni-api 访问这些模型了！</strong>
+                        </p>
+                    `;
+                } else {
+                    throw new Error(data.error || '配置失败');
+                }
+                
+            } catch (error) {
+                result.className = 'result error';
+                result.innerHTML = `
+                    <h3>❌ 配置失败</h3>
+                    <p><strong>错误信息:</strong> ${error.message}</p>
+                    <p>请检查输入的信息是否正确，或查看控制台获取更多详情。</p>
+                `;
+            } finally {
+                submitBtn.disabled = false;
+                loading.style.display = 'none';
+                result.style.display = 'block';
+            }
+        });
+        
+        // 页面加载时添加一些示例提示
+        document.addEventListener('DOMContentLoaded', function() {
+            // 检查服务状态
+            fetch('/api/health')
+                .then(response => response.json())
+                .then(data => {
+                    console.log('✅ uni-load 服务运行正常');
+                })
+                .catch(error => {
+                    console.error('❌ uni-load 服务连接失败:', error);
+                });
+        });
+    </script>
+</body>
+</html>
