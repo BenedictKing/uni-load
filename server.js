@@ -208,7 +208,7 @@ app.post('/api/process-ai-site', async (req, res) => {
     
     // 步骤4：更新 uni-api 配置，指向模型分组
     console.log('更新 uni-api 配置...');
-    await yamlManager.updateUniApiConfig(models, modelGroups);
+    await yamlManager.updateUniApiConfig(modelGroups);
     
     res.json({
       success: true,

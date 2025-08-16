@@ -226,9 +226,8 @@ class ModelSyncService {
 
     // 更新uni-api配置
     if (changes.added.length > 0 || changes.removed.length > 0) {
-      const allModels = await this.getAllConfiguredModels();
       const allModelGroups = await this.getAllModelGroups();
-      await yamlManager.updateUniApiConfig(allModels, allModelGroups);
+      await yamlManager.updateUniApiConfig(allModelGroups);
       console.log(`🔧 已更新 uni-api 配置`);
     }
   }

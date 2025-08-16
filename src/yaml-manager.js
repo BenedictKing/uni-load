@@ -111,7 +111,7 @@ class YamlManager {
   /**
    * 更新 uni-api 配置
    */
-  async updateUniApiConfig(models, modelGroups) {
+  async updateUniApiConfig(modelGroups) {
     try {
       console.log('更新 uni-api 配置文件...');
       
@@ -136,14 +136,18 @@ class YamlManager {
       const gptloadToken = await this.getGptloadToken(multiInstanceStatus);
 
       // 为每个模型添加或更新 provider
-      for (const model of models) {
-        this.addOrUpdateModelProvider(config, model, gptloadToken);
+      for (const modelGroup of modelGroups) {
+        if (modelGroup && modelGroup.name && modelGroup.test_model) {
+          this.addOrUpdateModelProvider(config, modelGroup.test_model, modelGroup.name, gptloadToken);
+        } else {
+          console.warn('⚠️ 跳过一个无效的模型分组数据:', modelGroup);
+        }
       }
 
       // 保存配置
       await this.saveConfig(config);
       
-      console.log(`✅ 成功添加 ${models.length} 个模型到 uni-api 配置`);
+      console.log(`✅ 成功将 ${modelGroups.length} 个模型分组更新到 uni-api 配置`);
       
     } catch (error) {
       console.error('更新 uni-api 配置失败:', error.message);
@@ -230,10 +234,12 @@ class YamlManager {
   /**
    * 添加或更新模型 provider
    */
-  addOrUpdateModelProvider(config, originalModelName, gptloadToken = 'sk-uni-load-auto-generated') {
+  addOrUpdateModelProvider(config, originalModelName, groupName, gptloadToken = 'sk-uni-load-auto-generated') {
     // 标准化模型名称用于重定向
     const normalizedModelName = this.normalizeModelName(originalModelName);
-    const modelNameForUrl = normalizedModelName.toLowerCase().replace(/[^a-z0-9-]/g, '-');
+    
+    // 使用 gptload 服务生成的、确切的分组名
+    const modelNameForUrl = groupName;
     const providerName = `gptload-${modelNameForUrl}`;
     
     // 查找是否已存在该 provider
