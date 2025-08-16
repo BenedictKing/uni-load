@@ -229,18 +229,28 @@
         <div class="form-container">
             <form id="aiSiteForm">
                 <div class="form-group">
-                    <label for="siteName">站点名称 *</label>
-                    <input type="text" id="siteName" name="siteName" required 
-                           placeholder="例如: deepseek, openai, anthropic">
-                    <div class="help-text">将用作 gptload 分组名称，建议使用英文小写</div>
+                    <label for="baseUrl">API 基础地址 *</label>
+                    <input type="url" id="baseUrl" name="baseUrl" required 
+                           placeholder="https://api.example.com/v1"
+                           oninput="debouncedUpdateSiteName()">
+                    <div class="help-text">AI站点的API基础地址，通常以 /v1 结尾</div>
+                    <div class="example">
+                        <strong>示例：</strong><br>
+                        • https://api.deepseek.com/v1 → <strong>deepseek</strong><br>
+                        • https://api.openai.com/v1 → <strong>openai</strong><br>
+                        • https://api.anthropic.com/v1 → <strong>anthropic</strong><br>
+                        • https://api.groq.com/openai/v1 → <strong>groq</strong>
+                    </div>
                 </div>
                 
                 <div class="form-group">
-                    <label for="baseUrl">API 基础地址 *</label>
-                    <input type="url" id="baseUrl" name="baseUrl" required 
-                           placeholder="https://api.example.com/v1">
-                    <div class="help-text">AI站点的API基础地址，通常以 /v1 结尾</div>
-                    <div class="example">示例: https://api.deepseek.com/v1</div>
+                    <label>自动生成的站点名称</label>
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; border: 2px solid #e1e5e9;">
+                        <div id="generatedSiteName" style="font-family: 'Courier New', monospace; font-weight: bold; color: #28a745;">
+                            请先输入 API 基础地址
+                        </div>
+                        <div class="help-text">根据域名自动生成，将用作 gptload 分组名称</div>
+                    </div>
                 </div>
                 
                 <div class="form-group">
@@ -272,6 +282,50 @@
     </div>
 
     <script>
+        // 自动生成站点名称 - 通过后端API
+        async function updateSiteName() {
+            const baseUrlInput = document.getElementById('baseUrl');
+            const siteNameDiv = document.getElementById('generatedSiteName');
+            const baseUrl = baseUrlInput.value.trim();
+            
+            if (!baseUrl) {
+                siteNameDiv.textContent = '请先输入 API 基础地址';
+                siteNameDiv.style.color = '#6c757d';
+                return;
+            }
+            
+            try {
+                // 调用后端API获取站点名称
+                const response = await fetch('/api/preview-site-name', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ baseUrl })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    siteNameDiv.textContent = data.siteName;
+                    siteNameDiv.style.color = '#28a745';
+                } else {
+                    siteNameDiv.textContent = data.error || '无法生成站点名称';
+                    siteNameDiv.style.color = '#dc3545';
+                }
+            } catch (error) {
+                siteNameDiv.textContent = '网络错误，无法生成站点名称';
+                siteNameDiv.style.color = '#dc3545';
+            }
+        }
+        
+        // 防抖函数，避免频繁调用API
+        let debounceTimer;
+        function debouncedUpdateSiteName() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(updateSiteName, 500); // 500ms 延迟
+        }
+        
         function addApiKey() {
             const container = document.getElementById('apiKeysContainer');
             const div = document.createElement('div');
@@ -300,8 +354,32 @@
             const result = document.getElementById('result');
             
             // 收集表单数据
-            const siteName = document.getElementById('siteName').value.trim();
             const baseUrl = document.getElementById('baseUrl').value.trim();
+            
+            // 通过API获取站点名称
+            let siteName;
+            try {
+                const response = await fetch('/api/preview-site-name', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ baseUrl })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    siteName = data.siteName;
+                } else {
+                    alert('无法生成站点名称: ' + (data.error || '未知错误'));
+                    return;
+                }
+            } catch (error) {
+                alert('获取站点名称失败: ' + error.message);
+                return;
+            }
+            
             const apiKeyInputs = document.querySelectorAll('#apiKeysContainer input');
             const apiKeys = Array.from(apiKeyInputs)
                 .map(input => input.value.trim())
