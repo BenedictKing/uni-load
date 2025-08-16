@@ -20,6 +20,13 @@ class MultiGptloadManager {
     }
 
     console.log(`🌐 初始化了 ${this.instances.size} 个 gptload 实例`);
+    
+    // 立即进行一次健康检查
+    setTimeout(() => {
+      this.checkAllInstancesHealth().catch(error => {
+        console.error('初始健康检查失败:', error);
+      });
+    }, 1000); // 延迟1秒执行，让服务器完全启动
   }
 
   /**
@@ -137,15 +144,28 @@ class MultiGptloadManager {
       const response = await instance.apiClient.get('/groups');
       const responseTime = Date.now() - startTime;
 
+      // 处理不同的响应格式
+      let groupsCount = 0;
+      if (Array.isArray(response.data)) {
+        groupsCount = response.data.length;
+      } else if (response.data && Array.isArray(response.data.data)) {
+        groupsCount = response.data.data.length;
+      } else if (response.data && typeof response.data.code === 'number' && Array.isArray(response.data.data)) {
+        // gptload 特定格式: { code: 0, message: "Success", data: [...] }
+        groupsCount = response.data.data.length;
+      } else if (response.data && Array.isArray(response.data.groups)) {
+        groupsCount = response.data.groups.length;
+      }
+
       this.healthStatus.set(instanceId, {
         healthy: true,
         lastCheck: new Date().toISOString(),
         responseTime,
-        groupsCount: response.data?.length || 0,
+        groupsCount,
         error: null
       });
 
-      console.log(`✅ ${instance.name}: 健康 (${responseTime}ms, ${response.data?.length || 0} 个分组)`);
+      console.log(`✅ ${instance.name}: 健康 (${responseTime}ms, ${groupsCount} 个分组)`);
       
     } catch (error) {
       this.healthStatus.set(instanceId, {
@@ -196,13 +216,27 @@ class MultiGptloadManager {
    */
   async findBestInstanceForSite(siteUrl, options) {
     // 获取健康的实例，按优先级排序
-    const healthyInstances = Array.from(this.instances.values())
+    let healthyInstances = Array.from(this.instances.values())
       .filter(instance => this.healthStatus.get(instance.id)?.healthy)
       .sort((a, b) => a.priority - b.priority);
 
     if (healthyInstances.length === 0) {
-      console.log('❌ 没有健康的 gptload 实例可用');
-      return null;
+      console.log('⚠️ 没有健康的 gptload 实例，执行健康检查...');
+      
+      // 主动进行健康检查
+      await this.checkAllInstancesHealth();
+      
+      // 重新获取健康的实例
+      healthyInstances = Array.from(this.instances.values())
+        .filter(instance => this.healthStatus.get(instance.id)?.healthy)
+        .sort((a, b) => a.priority - b.priority);
+      
+      if (healthyInstances.length === 0) {
+        console.log('❌ 健康检查后仍没有健康的 gptload 实例可用');
+        return null;
+      }
+      
+      console.log(`✅ 健康检查后发现 ${healthyInstances.length} 个健康实例`);
     }
 
     // 测试每个实例是否能访问该站点
@@ -426,25 +460,49 @@ class MultiGptloadManager {
         validation_endpoint: channelConfig.validation_endpoint
       };
 
-      const response = await instance.apiClient.post('/groups', groupData);
-      const group = response.data;
-      
-      // 添加 API 密钥
-      if (apiKeys && apiKeys.length > 0) {
-        await this.addApiKeysToGroup(instance, group.id, apiKeys);
-      }
-      
-      console.log(`✅ 站点分组 ${groupName} 创建成功 (实例: ${instance.name})`);
-      
-      // 在返回的分组信息中添加实例信息
-      return {
-        ...group,
-        _instance: {
-          id: instance.id,
-          name: instance.name,
-          url: instance.url
+      try {
+        const response = await instance.apiClient.post('/groups', groupData);
+        
+        // 处理不同的响应格式
+        let group;
+        if (response.data && typeof response.data.code === 'number' && response.data.data) {
+          // gptload 特定格式: { code: 0, message: "Success", data: {...} }
+          group = response.data.data;
+        } else if (response.data) {
+          // 直接返回数据
+          group = response.data;
+        } else {
+          throw new Error('响应格式不正确');
         }
-      };
+        
+        // 添加 API 密钥
+        if (apiKeys && apiKeys.length > 0) {
+          await this.addApiKeysToGroup(instance, group.id, apiKeys);
+        }
+        
+        console.log(`✅ 站点分组 ${groupName} 创建成功 (实例: ${instance.name})`);
+        
+        // 在返回的分组信息中添加实例信息
+        return {
+          ...group,
+          _instance: {
+            id: instance.id,
+            name: instance.name,
+            url: instance.url
+          }
+        };
+      } catch (error) {
+        // 如果是409错误（分组已存在），重新检查并返回现有分组
+        if (error.response && error.response.status === 409) {
+          console.log(`⚠️ 分组 ${groupName} 已存在（409错误），重新获取分组信息...`);
+          const existingGroup = await this.checkGroupExists(instance, groupName);
+          if (existingGroup) {
+            console.log(`✅ 找到已存在的分组 ${groupName}，将更新配置`);
+            return await this.updateSiteGroup(instance, existingGroup, baseUrl, apiKeys, channelType);
+          }
+        }
+        throw error;
+      }
     }, { channelType });
   }
 
@@ -454,7 +512,26 @@ class MultiGptloadManager {
   async checkGroupExists(instance, groupName) {
     try {
       const response = await instance.apiClient.get('/groups');
-      const groups = response.data;
+      let groups = [];
+      
+      // 处理不同的响应格式
+      if (Array.isArray(response.data)) {
+        // 直接是数组格式
+        groups = response.data;
+      } else if (response.data && typeof response.data.code === 'number' && Array.isArray(response.data.data)) {
+        // gptload 特定格式: { code: 0, message: "Success", data: [...] }
+        groups = response.data.data;
+      } else if (response.data && Array.isArray(response.data.data)) {
+        // 包装在 data 字段中
+        groups = response.data.data;
+      } else if (response.data && Array.isArray(response.data.groups)) {
+        // 包装在 groups 字段中
+        groups = response.data.groups;
+      } else {
+        console.warn(`实例 ${instance.name} 返回未知的分组数据格式:`, response.data);
+        return null;
+      }
+      
       return groups.find(group => group.name === groupName);
     } catch (error) {
       console.error('检查分组失败:', error.message);
@@ -488,17 +565,43 @@ class MultiGptloadManager {
    * 更新站点分组
    */
   async updateSiteGroup(instance, existingGroup, baseUrl, apiKeys, channelType) {
-    // 实现更新逻辑，类似原来的updateSiteGroup方法
-    // 这里简化实现
-    console.log(`✅ 站点分组 ${existingGroup.name} 更新成功 (实例: ${instance.name})`);
-    return {
-      ...existingGroup,
-      _instance: {
-        id: instance.id,
-        name: instance.name,
-        url: instance.url
+    try {
+      console.log(`更新站点分组: ${existingGroup.name}，格式: ${channelType} (实例: ${instance.name})`);
+      
+      // 根据不同 channel_type 设置默认参数
+      const channelConfig = this.getChannelConfig(channelType);
+      
+      // 更新分组配置
+      const updateData = {
+        upstreams: [{ url: baseUrl, weight: 1 }],
+        channel_type: channelType,
+        test_model: channelConfig.test_model,
+        validation_endpoint: channelConfig.validation_endpoint
+      };
+
+      await instance.apiClient.put(`/groups/${existingGroup.id}`, updateData);
+      
+      // 添加新的 API 密钥（如果有）
+      if (apiKeys && apiKeys.length > 0) {
+        await this.addApiKeysToGroup(instance, existingGroup.id, apiKeys);
       }
-    };
+      
+      console.log(`✅ 站点分组 ${existingGroup.name} 更新成功 (实例: ${instance.name})`);
+      
+      return {
+        ...existingGroup,
+        ...updateData,
+        _instance: {
+          id: instance.id,
+          name: instance.name,
+          url: instance.url
+        }
+      };
+      
+    } catch (error) {
+      console.error(`更新站点分组失败: ${error.message}`);
+      throw new Error(`更新站点分组失败: ${error.message}`);
+    }
   }
 
   /**
@@ -534,7 +637,27 @@ class MultiGptloadManager {
       
       try {
         const response = await instance.apiClient.get('/groups');
-        const groups = response.data.map(group => ({
+        let groups = [];
+        
+        // 处理不同的响应格式
+        if (Array.isArray(response.data)) {
+          // 直接是数组格式
+          groups = response.data;
+        } else if (response.data && typeof response.data.code === 'number' && Array.isArray(response.data.data)) {
+          // gptload 特定格式: { code: 0, message: "Success", data: [...] }
+          groups = response.data.data;
+        } else if (response.data && Array.isArray(response.data.data)) {
+          // 包装在 data 字段中
+          groups = response.data.data;
+        } else if (response.data && Array.isArray(response.data.groups)) {
+          // 包装在 groups 字段中
+          groups = response.data.groups;
+        } else {
+          console.warn(`实例 ${instance.name} 返回未知的分组数据格式:`, response.data);
+          continue;
+        }
+        
+        const processedGroups = groups.map(group => ({
           ...group,
           _instance: {
             id: instance.id,
@@ -543,7 +666,9 @@ class MultiGptloadManager {
           }
         }));
         
-        allGroups.push(...groups);
+        allGroups.push(...processedGroups);
+        console.log(`✅ 从实例 ${instance.name} 获取 ${groups.length} 个分组`);
+        
       } catch (error) {
         console.error(`获取实例 ${instance.name} 的分组失败:`, error.message);
       }

@@ -87,58 +87,6 @@
             font-family: 'Courier New', monospace;
         }
         
-        .api-keys-container {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 20px;
-            border: 2px dashed #dee2e6;
-        }
-        
-        .api-key-input {
-            display: flex;
-            margin-bottom: 10px;
-            align-items: center;
-        }
-        
-        .api-key-input input {
-            flex: 1;
-            margin-right: 10px;
-            margin-bottom: 0;
-        }
-        
-        .btn-remove {
-            background: #dc3545;
-            color: white;
-            border: none;
-            padding: 15px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.3s ease;
-        }
-        
-        .btn-remove:hover {
-            background: #c82333;
-            transform: translateY(-1px);
-        }
-        
-        .btn-add {
-            background: #28a745;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            margin-top: 10px;
-            transition: all 0.3s ease;
-        }
-        
-        .btn-add:hover {
-            background: #218838;
-            transform: translateY(-1px);
-        }
-        
         .btn-submit {
             width: 100%;
             background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
@@ -220,15 +168,18 @@
         
         .checkbox-group {
             margin-top: 10px;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
         }
         
         .checkbox-item {
             display: flex;
             align-items: center;
-            margin-bottom: 12px;
             cursor: pointer;
             font-weight: normal;
             font-size: 16px;
+            white-space: nowrap;
         }
         
         .checkbox-item input[type="checkbox"] {
@@ -356,16 +307,9 @@
                 <div class="form-group">
                     <label for="baseUrl">API 基础地址 *</label>
                     <input type="url" id="baseUrl" name="baseUrl" required 
-                           placeholder="https://api.example.com/v1"
+                           placeholder="https://api.example.com"
                            oninput="debouncedUpdateSiteName()">
-                    <div class="help-text">AI站点的API基础地址，通常以 /v1 结尾</div>
-                    <div class="example">
-                        <strong>示例：</strong><br>
-                        • https://api.deepseek.com/v1 → <strong>deepseek</strong><br>
-                        • https://api.openai.com/v1 → <strong>openai</strong><br>
-                        • https://api.anthropic.com/v1 → <strong>anthropic</strong><br>
-                        • https://api.groq.com/openai/v1 → <strong>groq</strong>
-                    </div>
+                    <div class="help-text">AI站点的API地址</div>
                 </div>
                 
                 <div class="form-group">
@@ -374,7 +318,7 @@
                         <div id="generatedSiteName" style="font-family: 'Courier New', monospace; font-weight: bold; color: #28a745;">
                             请先输入 API 基础地址
                         </div>
-                        <div class="help-text">根据域名自动生成，将用作 gptload 分组名称</div>
+                        <div class="help-text">根据域名自动生成</div>
                     </div>
                 </div>
                 
@@ -397,28 +341,14 @@
                             Google Gemini 格式
                         </label>
                     </div>
-                    <div class="help-text">选择该AI站点支持的API格式，一个站点可能同时支持多种格式</div>
-                    <div class="example">
-                        <strong>格式说明：</strong><br>
-                        • <strong>OpenAI 兼容</strong>：OpenAI、Azure OpenAI、DeepSeek、Qwen、通义千问等<br>
-                        • <strong>Anthropic Claude</strong>：Claude 官方 API<br>
-                        • <strong>Google Gemini</strong>：Gemini 原生 API<br>
-                        • <strong>代理站点</strong>：可能同时支持多种格式，请根据实际情况选择
-                    </div>
+                    <div class="help-text">选择该AI站点支持的API格式</div>
                 </div>
                 
                 <div class="form-group">
-                    <label>API 密钥 *</label>
-                    <div class="api-keys-container">
-                        <div id="apiKeysContainer">
-                            <div class="api-key-input">
-                                <input type="password" placeholder="sk-..." required>
-                                <button type="button" class="btn-remove" onclick="removeApiKey(this)">删除</button>
-                            </div>
-                        </div>
-                        <button type="button" class="btn-add" onclick="addApiKey()">+ 添加更多密钥</button>
-                        <div class="help-text">支持多个API密钥，将用于负载均衡</div>
-                    </div>
+                    <label for="apiKeys">API 密钥 *</label>
+                    <textarea id="apiKeys" name="apiKeys" required 
+                              placeholder="sk-xxx...&#10;sk-yyy..., sk-zzz...&#10;sk-aaa... sk-bbb...; sk-ccc...&#10;&#10;支持分隔符：换行、空格、逗号、分号"
+                              rows="6"></textarea>
                 </div>
                 
                 <button type="submit" class="btn-submit" id="submitBtn">
@@ -508,23 +438,27 @@
         }
         
         function addApiKey() {
-            const container = document.getElementById('apiKeysContainer');
-            const div = document.createElement('div');
-            div.className = 'api-key-input';
-            div.innerHTML = `
-                <input type="password" placeholder="sk-..." required>
-                <button type="button" class="btn-remove" onclick="removeApiKey(this)">删除</button>
-            `;
-            container.appendChild(div);
+            // 这个函数不再需要，但保留以防止错误
         }
         
         function removeApiKey(button) {
-            const container = document.getElementById('apiKeysContainer');
-            if (container.children.length > 1) {
-                button.parentElement.remove();
-            } else {
-                alert('至少需要保留一个API密钥');
+            // 这个函数不再需要，但保留以防止错误
+        }
+        
+        // 解析多行API密钥文本
+        function parseApiKeys(text) {
+            if (!text || !text.trim()) {
+                return [];
             }
+            
+            // 使用多种分隔符：换行、空格、逗号、分号
+            const keys = text
+                .split(/[\n\r\s,;]+/) // 按换行、空格、逗号、分号分割
+                .map(key => key.trim()) // 去除首尾空格
+                .filter(key => key.length > 0) // 过滤空字符串
+                .filter((key, index, arr) => arr.indexOf(key) === index); // 去重
+            
+            return keys;
         }
         
         document.getElementById('aiSiteForm').addEventListener('submit', async function(e) {
@@ -570,10 +504,9 @@
                 return;
             }
             
-            const apiKeyInputs = document.querySelectorAll('#apiKeysContainer input');
-            const apiKeys = Array.from(apiKeyInputs)
-                .map(input => input.value.trim())
-                .filter(key => key.length > 0);
+            // 解析多行API密钥文本
+            const apiKeysText = document.getElementById('apiKeys').value;
+            const apiKeys = parseApiKeys(apiKeysText);
             
             if (apiKeys.length === 0) {
                 alert('请至少输入一个API密钥');

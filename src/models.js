@@ -75,32 +75,42 @@ class ModelsService {
    */
   parseModelsResponse(data) {
     try {
+      let models = [];
+      
       // 标准OpenAI格式: { object: "list", data: [...] }
       if (data && data.object === 'list' && Array.isArray(data.data)) {
-        return data.data
+        models = data.data
           .map(model => model.id || model.name)
           .filter(id => id && typeof id === 'string');
       }
-      
+      // 带有额外字段的OpenAI兼容格式: { data: [...], success: true }
+      else if (data && Array.isArray(data.data)) {
+        models = data.data
+          .map(model => model.id || model.name)
+          .filter(id => id && typeof id === 'string');
+      }
       // 直接是模型数组
-      if (Array.isArray(data)) {
-        return data
+      else if (Array.isArray(data)) {
+        models = data
           .map(model => {
             if (typeof model === 'string') return model;
             return model.id || model.name || model.model;
           })
           .filter(id => id && typeof id === 'string');
       }
-      
       // 其他可能的格式
-      if (data && data.models && Array.isArray(data.models)) {
-        return data.models
+      else if (data && data.models && Array.isArray(data.models)) {
+        models = data.models
           .map(model => model.id || model.name || model)
           .filter(id => id && typeof id === 'string');
       }
+      else {
+        console.warn('未识别的模型响应格式:', data);
+        return [];
+      }
       
-      console.warn('未识别的模型响应格式:', data);
-      return [];
+      // 过滤和清理模型
+      return this.filterModels(models);
       
     } catch (error) {
       console.error('解析模型数据失败:', error.message);
@@ -212,21 +222,36 @@ class ModelsService {
         return false;
       }
       
-      // 跳过图像模型（除非是多模态）
-      if (name.includes('dall-e') || name.includes('midjourney')) {
+      // 跳过图像生成模型
+      if (name.includes('dall-e') || 
+          name.includes('midjourney') || 
+          name.includes('imagen') ||
+          name.includes('image-generation') ||
+          name.includes('generate')) {
         return false;
       }
       
       // 跳过音频模型
-      if (name.includes('whisper') || name.includes('tts')) {
+      if (name.includes('whisper') || 
+          name.includes('tts') ||
+          name.includes('audio')) {
+        return false;
+      }
+      
+      // 跳过文本嵌入模型
+      if (name.includes('text-embedding')) {
         return false;
       }
       
       return true;
     });
 
-    // 去重
-    return [...new Set(filtered)];
+    // 去重并排序
+    const uniqueModels = [...new Set(filtered)];
+    
+    console.log(`📋 模型过滤结果: ${models.length} -> ${uniqueModels.length} (过滤掉 ${models.length - uniqueModels.length} 个非聊天模型)`);
+    
+    return uniqueModels.sort();
   }
 }
 

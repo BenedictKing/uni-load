@@ -174,9 +174,13 @@ app.post('/api/process-ai-site', async (req, res) => {
     for (const channelType of selectedChannelTypes) {
       try {
         const siteGroup = await gptloadService.createSiteGroup(siteName, baseUrl, apiKeys, channelType);
-        siteGroups.push(siteGroup);
-        groupsCreated++;
-        console.log(`✅ ${channelType} 格式站点分组创建成功`);
+        if (siteGroup && siteGroup.name) {
+          siteGroups.push(siteGroup);
+          groupsCreated++;
+          console.log(`✅ ${channelType} 格式站点分组创建成功`);
+        } else {
+          console.error(`❌ ${channelType} 格式站点分组创建返回无效数据:`, siteGroup);
+        }
       } catch (error) {
         console.error(`❌ ${channelType} 格式站点分组创建失败:`, error.message);
         // 继续处理其他格式，不中断整个流程
@@ -355,6 +359,25 @@ app.get('/api/multi-instances', (req, res) => {
   try {
     const status = gptloadService.getMultiInstanceStatus();
     res.json(status);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 手动触发多实例健康检查
+app.post('/api/check-instances', async (req, res) => {
+  try {
+    // 异步执行，立即返回
+    gptloadService.checkAllInstancesHealth().then(results => {
+      console.log('✅ 多实例健康检查完成');
+    }).catch(error => {
+      console.error('❌ 多实例健康检查失败:', error);
+    });
+    
+    res.json({ 
+      success: true, 
+      message: '多实例健康检查已开始，请查看控制台日志了解进度' 
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

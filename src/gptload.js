@@ -194,12 +194,25 @@ class GptloadService {
     try {
       // 为所有站点分组创建上游配置
       const upstreams = siteGroups.map(siteGroup => {
+        if (!siteGroup || !siteGroup.name) {
+          console.error('站点分组数据不完整:', siteGroup);
+          return null; // 返回 null 而不是抛出错误，稍后过滤
+        }
+        
         const instanceUrl = siteGroup._instance?.url || process.env.GPTLOAD_URL || 'http://localhost:3001';
+        const upstreamUrl = `${instanceUrl}/proxy/${siteGroup.name}`;
+        
+        console.log(`📋 添加上游: ${upstreamUrl} (来源: ${siteGroup.name})`);
+        
         return {
-          url: `${instanceUrl}/proxy/${siteGroup.name}`,
+          url: upstreamUrl,
           weight: 1
         };
-      });
+      }).filter(upstream => upstream !== null); // 过滤掉无效的上游
+
+      if (upstreams.length === 0) {
+        throw new Error('没有有效的站点分组可用于创建模型分组');
+      }
 
       // 创建模型分组，上游指向所有站点分组
       const groupData = {
@@ -213,7 +226,18 @@ class GptloadService {
       };
 
       const response = await targetInstance.apiClient.post('/groups', groupData);
-      const group = response.data;
+      
+      // 处理不同的响应格式
+      let group;
+      if (response.data && typeof response.data.code === 'number' && response.data.data) {
+        // gptload 特定格式: { code: 0, message: "Success", data: {...} }
+        group = response.data.data;
+      } else if (response.data) {
+        // 直接返回数据
+        group = response.data;
+      } else {
+        throw new Error('响应格式不正确');
+      }
       
       console.log(`✅ 模型分组 ${groupName} 创建成功，包含 ${upstreams.length} 个上游 (实例: ${targetInstance.name})`);
       
@@ -256,6 +280,11 @@ class GptloadService {
       let addedCount = 0;
       
       for (const siteGroup of siteGroups) {
+        if (!siteGroup || !siteGroup.name) {
+          console.error('跳过无效的站点分组:', siteGroup);
+          continue; // 跳过无效的站点分组
+        }
+        
         const instanceUrl = siteGroup._instance?.url || process.env.GPTLOAD_URL || 'http://localhost:3001';
         const newUpstreamUrl = `${instanceUrl}/proxy/${siteGroup.name}`;
         
@@ -326,6 +355,13 @@ class GptloadService {
       instances: this.manager.getAllInstancesStatus(),
       siteAssignments: this.manager.getSiteAssignments()
     };
+  }
+
+  /**
+   * 手动检查所有实例健康状态
+   */
+  async checkAllInstancesHealth() {
+    return await this.manager.checkAllInstancesHealth();
   }
 }
 
