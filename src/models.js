@@ -215,13 +215,30 @@ class ModelsService {
   filterModels(models) {
     // 白名单前缀（不区分大小写）
     const allowedPrefixes = [
-      'gemini-2.5-',
-      'gpt-5',
+      // OpenAI
+      'gpt-',
+      // Google
+      'gemini-',
+      'gemma-',
+      // Anthropic
+      'claude-',
+      // DeepSeek
       'deepseek-',
       'deepseek-ai/',
-      'kimi-k2',
-      'doubao-',
-      'qwen-'
+      // Qwen (Alibaba)
+      'qwen-',
+      // Llama (Meta)
+      'llama-',
+      // Mistral
+      'mixtral-',
+      'mistral-',
+      // 01.ai
+      'yi-',
+      // Moonshot
+      'moonshot-',
+      'kimi-k2', // 保留特殊处理
+      // Doubao (ByteDance)
+      'doubao-'
     ];
 
     const filtered = models.filter(model => {
