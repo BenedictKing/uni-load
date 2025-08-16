@@ -52,8 +52,8 @@ class GptloadService {
   /**
    * 创建站点分组（第一层）
    */
-  async createSiteGroup(siteName, baseUrl, apiKeys, channelType = 'openai') {
-    return await this.manager.createSiteGroup(siteName, baseUrl, apiKeys, channelType);
+  async createSiteGroup(siteName, baseUrl, apiKeys, channelType = 'openai', customValidationEndpoint = null, availableModels = null) {
+    return await this.manager.createSiteGroup(siteName, baseUrl, apiKeys, channelType, customValidationEndpoint, availableModels);
   }
 
   /**
@@ -66,7 +66,7 @@ class GptloadService {
   /**
    * 更新站点分组
    */
-  async updateSiteGroup(existingGroup, baseUrl, apiKeys, channelType = 'openai') {
+  async updateSiteGroup(existingGroup, baseUrl, apiKeys, channelType = 'openai', customValidationEndpoint = null, availableModels = null) {
     // 使用分组所在的实例进行更新
     const instanceId = existingGroup._instance?.id;
     
@@ -90,7 +90,8 @@ class GptloadService {
         upstreams: [{ url: baseUrl, weight: 1 }],
         channel_type: channelType,
         test_model: channelConfig.test_model,
-        validation_endpoint: channelConfig.validation_endpoint
+        validation_endpoint: channelConfig.validation_endpoint,
+        sort: 20 // 渠道分组的排序号为20
       };
 
       await instance.apiClient.put(`/groups/${existingGroup.id}`, updateData);
@@ -148,6 +149,8 @@ class GptloadService {
         const modelGroup = await this.createOrUpdateModelGroup(model, siteGroups);
         if (modelGroup) {
           modelGroups.push(modelGroup);
+        } else {
+          console.log(`⚠️ 模型 ${model} 被跳过（分组名无法生成或其他问题）`);
         }
       } catch (error) {
         console.error(`处理模型 ${model} 失败:`, error.message);
@@ -159,10 +162,138 @@ class GptloadService {
   }
 
   /**
+   * 处理模型名称中的URL不安全字符（仅处理斜杠）
+   */
+  sanitizeModelNameForUrl(modelName) {
+    // 只处理斜杠，替换为连字符，保持其他原样
+    const sanitized = modelName.replace(/\//g, '-');
+    
+    if (modelName !== sanitized) {
+      console.log(`🔧 处理URL不安全字符: ${modelName} -> ${sanitized}`);
+    }
+    
+    return sanitized;
+  }
+
+  /**
+   * 生成安全的分组名称（符合gpt-load规范）
+   */
+  generateSafeGroupName(modelName) {
+    // 处理URL不安全字符
+    const urlSafe = this.sanitizeModelNameForUrl(modelName);
+    
+    // 转为小写，只保留字母、数字、中划线、下划线
+    let groupName = urlSafe.toLowerCase().replace(/[^a-z0-9-_]/g, '-');
+    
+    // 移除开头和结尾的连字符/下划线
+    groupName = groupName.replace(/^[-_]+|[-_]+$/g, '');
+    
+    // 合并多个连续的连字符/下划线
+    groupName = groupName.replace(/[-_]+/g, '-');
+    
+    // gpt-load要求：长度3-30位
+    if (groupName.length < 3) {
+      // 如果太短，添加前缀
+      groupName = 'mdl-' + groupName;
+    }
+    
+    if (groupName.length > 30) {
+      // 如果太长，智能截断保留重要部分
+      const truncated = this.intelligentTruncate(groupName, 30);
+      
+      // 如果截断后仍然太长，说明这个模型名无法处理
+      if (truncated.length > 30) {
+        console.log(`❌ 模型名称过长无法处理，跳过: ${modelName}`);
+        return null; // 返回null表示跳过这个模型
+      }
+      
+      groupName = truncated;
+      console.log(`📏 分组名过长，智能截断为: ${groupName}`);
+    }
+    
+    // 确保符合规范
+    if (!groupName || groupName.length < 3 || groupName.length > 30) {
+      console.log(`❌ 分组名不符合规范，跳过模型: ${modelName}`);
+      return null; // 返回null表示跳过这个模型
+    }
+    
+    return groupName;
+  }
+
+  /**
+   * 智能截断分组名，保留重要部分
+   */
+  intelligentTruncate(name, maxLength) {
+    if (name.length <= maxLength) return name;
+    
+    let truncated = name;
+    
+    // 第一步：删除所有连字符，直接连接
+    truncated = truncated.replace(/-/g, '');
+    
+    if (truncated.length <= maxLength) return truncated;
+    
+    // 第二步：常见词语缩写
+    const abbreviations = {
+      'deepseek': 'ds',
+      'gemini': 'gm',
+      'anthropic': 'ant',
+      'claude': 'cl',
+      'openai': 'oai',
+      'chatgpt': 'cgpt',
+      'gpt': 'g',
+      'flash': 'f',
+      'lite': 'l',
+      'preview': 'p',
+      'turbo': 't',
+      'instruct': 'i',
+      'vision': 'v',
+      'pro': 'p',
+      'mini': 'm',
+      'large': 'lg',
+      'medium': 'md',
+      'small': 'sm'
+    };
+    
+    for (const [full, abbr] of Object.entries(abbreviations)) {
+      const regex = new RegExp(full, 'g');
+      truncated = truncated.replace(regex, abbr);
+      if (truncated.length <= maxLength) return truncated;
+    }
+    
+    // 第三步：移除常见的版本号和日期模式
+    truncated = truncated
+      .replace(/p\d{4}$/, '')                    // preview0617 -> p0617 -> 空
+      .replace(/\d{4}\d{2}\d{2}$/, '')          // 20241201
+      .replace(/\d{8}$/, '')                     // 20241201
+      .replace(/\d{3}$/, '')                     // 001
+      .replace(/latest$/, '')                    // latest
+      .replace(/v?\d+(\.\d+)*$/, '');           // v3, 2.5
+    
+    if (truncated.length <= maxLength) return truncated;
+    
+    // 第四步：如果还是太长，从末尾截断
+    if (truncated.length > maxLength) {
+      truncated = truncated.substring(0, maxLength);
+    }
+    
+    return truncated;
+  }
+
+  /**
    * 创建或更新单个模型分组
    */
-  async createOrUpdateModelGroup(modelName, siteGroups) {
-    const groupName = modelName.toLowerCase().replace(/[^a-z0-9-]/g, '-');
+  async createOrUpdateModelGroup(originalModelName, siteGroups) {
+    // 生成安全的分组名称
+    const groupName = this.generateSafeGroupName(originalModelName);
+    
+    // 如果分组名无法生成（太长），跳过这个模型
+    if (!groupName) {
+      console.log(`⏭️ 跳过模型: ${originalModelName}`);
+      return null;
+    }
+    
+    console.log(`处理模型: ${originalModelName} -> 分组名: ${groupName}`);
     
     // 检查模型分组是否已存在（在所有实例中查找）
     const existingGroup = await this.checkGroupExists(groupName);
@@ -172,7 +303,7 @@ class GptloadService {
       return await this.addSiteGroupsToModelGroup(existingGroup, siteGroups);
     }
 
-    console.log(`创建模型分组: ${groupName}`);
+    console.log(`创建模型分组: ${groupName} (原始模型: ${originalModelName})`);
     
     // 选择一个健康的实例来创建模型分组（优先使用本地实例）
     const localInstance = this.manager.getInstance('local');
@@ -217,12 +348,13 @@ class GptloadService {
       // 创建模型分组，上游指向所有站点分组
       const groupData = {
         name: groupName,
-        display_name: `${modelName} 模型`,
-        description: `${modelName} 模型聚合分组 (支持多种格式，跨实例)`,
+        display_name: `${originalModelName} 模型`,
+        description: `${originalModelName} 模型聚合分组 (支持多种格式，跨实例)`,
         upstreams: upstreams,
         channel_type: "openai", // 模型分组统一使用openai格式对外
-        test_model: modelName,
-        validation_endpoint: "/chat/completions"
+        test_model: originalModelName, // 保持原始模型名称
+        validation_endpoint: "/v1/chat/completions", // 默认使用v1路径
+        sort: 10 // 模型分组的排序号为10
       };
 
       const response = await targetInstance.apiClient.post('/groups', groupData);
@@ -239,6 +371,18 @@ class GptloadService {
         throw new Error('响应格式不正确');
       }
       
+      // 为模型分组添加gpt-load的访问token作为API密钥
+      if (targetInstance.token) {
+        try {
+          await this.manager.addApiKeysToGroup(targetInstance, group.id, [targetInstance.token]);
+          console.log(`✅ 已为模型分组 ${groupName} 添加gpt-load访问token`);
+        } catch (error) {
+          console.warn(`⚠️ 为模型分组添加gpt-load token失败: ${error.message}，但分组已创建成功`);
+        }
+      } else {
+        console.warn(`⚠️ 实例 ${targetInstance.name} 没有配置token，模型分组 ${groupName} 将无API密钥`);
+      }
+      
       console.log(`✅ 模型分组 ${groupName} 创建成功，包含 ${upstreams.length} 个上游 (实例: ${targetInstance.name})`);
       
       return {
@@ -252,6 +396,19 @@ class GptloadService {
       
     } catch (error) {
       console.error(`创建模型分组 ${groupName} 失败: ${error.message}`);
+      
+      // 如果是400错误，尝试获取更详细的错误信息
+      if (error.response && error.response.status === 400) {
+        console.error('400错误详情:', {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          data: error.response.data,
+          groupName: groupName,
+          originalModelName: originalModelName,
+          groupData: JSON.stringify(groupData, null, 2)
+        });
+      }
+      
       throw new Error(`创建模型分组失败: ${error.message}`);
     }
   }
