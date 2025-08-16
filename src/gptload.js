@@ -281,6 +281,24 @@ class GptloadService {
   }
 
   /**
+   * 根据模型名称获取渠道类型
+   */
+  getChannelTypeForModel(modelName) {
+    const lowerCaseModel = modelName.toLowerCase();
+
+    if (lowerCaseModel.startsWith('claude-')) {
+      return 'anthropic';
+    }
+
+    if (lowerCaseModel.startsWith('gemini-')) {
+      return 'gemini';
+    }
+
+    // 默认为 openai
+    return 'openai';
+  }
+
+  /**
    * 创建或更新单个模型分组
    */
   async createOrUpdateModelGroup(originalModelName, siteGroups) {
@@ -345,15 +363,20 @@ class GptloadService {
         throw new Error('没有有效的站点分组可用于创建模型分组');
       }
 
+      // 根据模型名称确定渠道类型并获取相应配置
+      const channelType = this.getChannelTypeForModel(originalModelName);
+      const channelConfig = this.getChannelConfig(channelType);
+      console.log(`ℹ️ 模型 ${originalModelName} 将使用 ${channelType.toUpperCase()} 格式`);
+
       // 创建模型分组，上游指向所有站点分组
       const groupData = {
         name: groupName,
-        display_name: `${originalModelName} 模型`,
-        description: `${originalModelName} 模型聚合分组 (支持多种格式，跨实例)`,
+        display_name: `${originalModelName} 模型 (${channelType.toUpperCase()})`,
+        description: `${originalModelName} 模型聚合分组 (格式: ${channelType}, 跨实例)`,
         upstreams: upstreams,
-        channel_type: "openai", // 模型分组统一使用openai格式对外
+        channel_type: channelType, // 动态设置 channel_type
         test_model: originalModelName, // 保持原始模型名称
-        validation_endpoint: "/v1/chat/completions", // 默认使用v1路径
+        validation_endpoint: channelConfig.validation_endpoint, // 使用对应格式的验证端点
         sort: 10 // 模型分组的排序号为10
       };
 
