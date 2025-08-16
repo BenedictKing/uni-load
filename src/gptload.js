@@ -178,9 +178,12 @@ class GptloadService {
   /**
    * 生成安全的分组名称（符合gpt-load规范）
    */
-  generateSafeGroupName(modelName) {
+  generateSafeGroupName(modelName, channelType) {
+    // 将模型名称和渠道类型结合，确保唯一性
+    const combinedName = `${modelName}-${channelType}`;
+    
     // 处理URL不安全字符
-    const urlSafe = this.sanitizeModelNameForUrl(modelName);
+    const urlSafe = this.sanitizeModelNameForUrl(combinedName);
     
     // 转为小写，只保留字母、数字、中划线、下划线
     let groupName = urlSafe.toLowerCase().replace(/[^a-z0-9-_]/g, '-');
@@ -213,7 +216,7 @@ class GptloadService {
     
     // 确保符合规范
     if (!groupName || groupName.length < 3 || groupName.length > 30) {
-      console.log(`❌ 分组名不符合规范，跳过模型: ${modelName}`);
+      console.log(`❌ 分组名不符合规范，跳过模型: ${modelName} (格式: ${channelType})`);
       return null; // 返回null表示跳过这个模型
     }
     
@@ -302,8 +305,11 @@ class GptloadService {
    * 创建或更新单个模型分组
    */
   async createOrUpdateModelGroup(originalModelName, siteGroups) {
-    // 生成安全的分组名称
-    const groupName = this.generateSafeGroupName(originalModelName);
+    // 1. 根据模型名称确定渠道类型
+    const channelType = this.getChannelTypeForModel(originalModelName);
+    
+    // 2. 使用模型名和渠道类型生成安全的分组名称
+    const groupName = this.generateSafeGroupName(originalModelName, channelType);
     
     // 如果分组名无法生成（太长），跳过这个模型
     if (!groupName) {
@@ -311,7 +317,7 @@ class GptloadService {
       return null;
     }
     
-    console.log(`处理模型: ${originalModelName} -> 分组名: ${groupName}`);
+    console.log(`处理模型: ${originalModelName} (格式: ${channelType}) -> 分组名: ${groupName}`);
     
     // 检查模型分组是否已存在（在所有实例中查找）
     const existingGroup = await this.checkGroupExists(groupName);
@@ -363,8 +369,7 @@ class GptloadService {
         throw new Error('没有有效的站点分组可用于创建模型分组');
       }
 
-      // 根据模型名称确定渠道类型并获取相应配置
-      const channelType = this.getChannelTypeForModel(originalModelName);
+      // 根据模型名称确定渠道类型并获取相应配置 (channelType 已在前面获取)
       const channelConfig = this.getChannelConfig(channelType);
       console.log(`ℹ️ 模型 ${originalModelName} 将使用 ${channelType.toUpperCase()} 格式`);
 
