@@ -198,9 +198,15 @@ class GptloadService {
   async createOrUpdateModelGroups(models, siteGroups) {
     const modelGroups = [];
     
+    // 优化：在循环开始前，一次性获取所有实例的现有分组信息
+    console.log('🔄 获取所有实例的现有分组信息...');
+    const allExistingGroups = await this.getAllGroups();
+    console.log(`✅ 已获取 ${allExistingGroups.length} 个分组，开始处理模型...`);
+    
     for (const model of models) {
       try {
-        const modelGroup = await this.createOrUpdateModelGroup(model, siteGroups);
+        // 将预加载的分组列表传递下去
+        const modelGroup = await this.createOrUpdateModelGroup(model, siteGroups, allExistingGroups);
         if (modelGroup) {
           modelGroups.push(modelGroup);
         } else {
@@ -358,7 +364,7 @@ class GptloadService {
   /**
    * 创建或更新单个模型分组
    */
-  async createOrUpdateModelGroup(originalModelName, siteGroups) {
+  async createOrUpdateModelGroup(originalModelName, siteGroups, allExistingGroups) { // 新增 allExistingGroups 参数
     // 1. 根据模型名称确定渠道类型，并考虑可用站点格式
     const preferredChannelType = this.getChannelTypeForModel(originalModelName);
     const isPreferredTypeAvailable = siteGroups.some(sg => sg.channel_type === preferredChannelType);
@@ -388,8 +394,8 @@ class GptloadService {
     
     console.log(`处理模型: ${originalModelName} (格式: ${channelType}) -> 分组名: ${groupName}`);
     
-    // 检查模型分组是否已存在（在所有实例中查找）
-    const existingGroup = await this.checkGroupExists(groupName);
+    // 优化：检查模型分组是否已存在（从预加载的列表中查找）
+    const existingGroup = allExistingGroups.find(group => group.name === groupName);
     
     if (existingGroup) {
       console.log(`模型分组 ${groupName} 已存在，添加站点分组为上游...`);
@@ -482,7 +488,7 @@ class GptloadService {
       
       console.log(`✅ 模型分组 ${groupName} 创建成功，包含 ${upstreams.length} 个上游 (实例: ${targetInstance.name})`);
       
-      return {
+      const newGroup = { // 将返回对象赋值给一个新变量
         ...group,
         _instance: {
           id: targetInstance.id,
@@ -490,6 +496,11 @@ class GptloadService {
           url: targetInstance.url
         }
       };
+
+      // 将新创建的分组添加到缓存列表中，以便后续检查
+      allExistingGroups.push(newGroup);
+
+      return newGroup; // 返回新创建的分组
       
     } catch (error) {
       console.error(`创建模型分组 ${groupName} 失败: ${error.message}`);
