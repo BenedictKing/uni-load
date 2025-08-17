@@ -351,6 +351,18 @@
                               rows="6"></textarea>
                 </div>
                 
+                <div class="form-group">
+                    <label for="validationEndpoint">验证端点 (可选)</label>
+                    <input type="text" id="validationEndpoint" name="validationEndpoint" 
+                           placeholder="/v1/chat/completions">
+                    <div class="help-text">用于健康检查的API端点，留空使用默认值</div>
+                    <div class="example">
+                        • <strong>OpenAI格式</strong>：/v1/chat/completions、/v3/chat/completions<br>
+                        • <strong>Claude格式</strong>：/v1/messages<br>
+                        • <strong>Gemini格式</strong>：/v1beta/models
+                    </div>
+                </div>
+                
                 <button type="submit" class="btn-submit" id="submitBtn">
                     🔧 开始配置
                 </button>
@@ -508,6 +520,9 @@
             const apiKeysText = document.getElementById('apiKeys').value;
             const apiKeys = parseApiKeys(apiKeysText);
             
+            // 获取自定义验证端点
+            const validationEndpoint = document.getElementById('validationEndpoint').value.trim();
+            
             if (apiKeys.length === 0) {
                 alert('请至少输入一个API密钥');
                 return;
@@ -528,7 +543,8 @@
                         siteName,
                         baseUrl,
                         apiKeys,
-                        channelTypes
+                        channelTypes,
+                        validationEndpoint: validationEndpoint || undefined // 只在有值时发送
                     })
                 });
                 
