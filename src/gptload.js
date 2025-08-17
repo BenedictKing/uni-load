@@ -621,6 +621,38 @@ class GptloadService {
   }
 
   /**
+   * 获取分组的API密钥
+   */
+  async getGroupApiKeys(groupId, instanceId) {
+    const instance = this.manager.getInstance(instanceId);
+    if (!instance) {
+      throw new Error(`实例 ${instanceId} 不存在`);
+    }
+
+    try {
+      // 使用 gptload 的 GET /keys 接口获取密钥
+      const params = {
+        group_id: groupId,
+        page: 1,
+        page_size: 1000, // 获取足够多的密钥
+        status: 'active' // 只获取有效的密钥
+      };
+
+      const response = await instance.apiClient.get('/keys', { params });
+
+      if (response.data && response.data.data && response.data.data.items) {
+        // 提取密钥值
+        return response.data.data.items.map(item => item.key_value);
+      }
+
+      return [];
+    } catch (error) {
+      console.error(`获取分组 ${groupId} 的密钥失败:`, error.message);
+      return [];
+    }
+  }
+
+  /**
    * 重新分配站点到指定实例
    */
   async reassignSite(siteUrl, instanceId = null) {

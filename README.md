@@ -233,7 +233,7 @@ UNI_API_YAML_PATH=../uni-api/api.yaml
 └── API密钥: sk-xxx, sk-yyy
 
 模型分组 (deepseek-chat)
-├── 上游: http://localhost:3001/proxy/deepseek
+├── 上游: http://localhost:3001/proxy/deepseek-chat
 └── 支持多站点负载均衡
 ```
 

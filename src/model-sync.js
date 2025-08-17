@@ -145,8 +145,8 @@ class ModelSyncService {
    * 同步单个站点的模型
    */
   async syncSiteModels(siteGroup) {
-    // 解析站点信息
-    const siteInfo = this.parseSiteGroupInfo(siteGroup);
+    // 解析站点信息（现在是异步的）
+    const siteInfo = await this.parseSiteGroupInfo(siteGroup);
     
     // 获取当前模型列表
     const currentModels = await modelsService.getModels(
@@ -172,7 +172,7 @@ class ModelSyncService {
   /**
    * 解析站点分组信息
    */
-  parseSiteGroupInfo(siteGroup) {
+  async parseSiteGroupInfo(siteGroup) {
     // 从分组名解析站点名和格式
     // 例如：deepseek-openai -> siteName: deepseek, channelType: openai
     const parts = siteGroup.name.split('-');
@@ -182,8 +182,19 @@ class ModelSyncService {
     // 获取baseUrl
     const baseUrl = siteGroup.upstreams[0]?.url;
 
-    // 获取API密钥（从分组的keys中获取第一个）
-    const apiKey = siteGroup.api_keys?.[0]?.key_value || 'dummy-key';
+    // 使用新的密钥获取接口获取API密钥
+    let apiKey = 'dummy-key'; // 默认值
+    try {
+      const apiKeys = await gptloadService.getGroupApiKeys(siteGroup.id, siteGroup._instance.id);
+      if (apiKeys && apiKeys.length > 0) {
+        apiKey = apiKeys[0]; // 使用第一个有效密钥
+        console.log(`✅ 成功获取分组 ${siteGroup.name} 的API密钥`);
+      } else {
+        console.warn(`⚠️ 分组 ${siteGroup.name} 没有有效的API密钥，使用默认值`);
+      }
+    } catch (error) {
+      console.error(`❌ 获取分组 ${siteGroup.name} 的API密钥失败: ${error.message}`);
+    }
 
     return {
       siteName,

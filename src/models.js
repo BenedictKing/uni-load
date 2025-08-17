@@ -225,7 +225,10 @@ class ModelsService {
       "gemini-2.5-", // 仅支持 2.5 及以上版本
       "gemma-",
       // Anthropic
-      "claude-",
+      "claude-opus",
+      "claude-sonnet",
+      "claude-3",
+      "claude-4",
       // DeepSeek
       "deepseek-",
       // Qwen (Alibaba)
@@ -256,6 +259,8 @@ class ModelsService {
       "o4",
       // vercel v0
       "v0-",
+      // MiniMax
+      "minimax-",
     ];
 
     const filtered = models.filter((model) => {
@@ -299,8 +304,8 @@ class ModelsService {
 
       // 如果完整名称不匹配，并且包含斜杠，则尝试匹配斜杠后的部分
       // 例如：检查 "Qwen/Qwen3..." 中的 "Qwen3..." 是否以 "qwen-" 开头
-      if (!isAllowed && name.includes('/')) {
-        const parts = name.split('/');
+      if (!isAllowed && name.includes("/")) {
+        const parts = name.split("/");
         const modelPart = parts[parts.length - 1];
         isAllowed = allowedPrefixes.some((prefix) => {
           return modelPart.startsWith(prefix.toLowerCase());
