@@ -242,7 +242,8 @@ class ModelsService {
       // Zhipu AI (智谱)
       'glm-',
       // xAI
-      'grok-',
+      'grok-3',
+      'grok-4',
       // Flux
       'flux-',
       // Misc / Provider Specific
