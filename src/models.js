@@ -292,10 +292,20 @@ class ModelsService {
       }
 
       // 白名单检查（不区分大小写）
-      const isAllowed = allowedPrefixes.some((prefix) => {
-        // 将前缀也转为小写进行比较
+      let isAllowed = allowedPrefixes.some((prefix) => {
+        // 首先尝试匹配完整名称（例如 "deepseek-ai/..."）
         return name.startsWith(prefix.toLowerCase());
       });
+
+      // 如果完整名称不匹配，并且包含斜杠，则尝试匹配斜杠后的部分
+      // 例如：检查 "Qwen/Qwen3..." 中的 "Qwen3..." 是否以 "qwen-" 开头
+      if (!isAllowed && name.includes('/')) {
+        const parts = name.split('/');
+        const modelPart = parts[parts.length - 1];
+        isAllowed = allowedPrefixes.some((prefix) => {
+          return modelPart.startsWith(prefix.toLowerCase());
+        });
+      }
 
       if (!isAllowed) {
         console.log(`🚫 过滤掉模型（不在白名单）: ${model}`);
