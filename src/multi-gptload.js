@@ -561,7 +561,7 @@ class MultiGptloadManager {
       },
       gemini: {
         test_model: "gemini-2.5-flash",
-        validation_endpoint: "/v1beta/models"
+        validation_endpoint: "/v1beta/openai/chat/completions"
       }
     };
     

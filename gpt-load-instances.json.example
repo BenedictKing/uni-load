@@ -1,0 +1,17 @@
+[
+  {
+    "id": "local",
+    "name": "本地 gpt-load",
+    "url": "http://localhost:3001",
+    "priority": 1,
+    "description": "本地服务，优先使用"
+  },
+  {
+    "id": "us-proxy",
+    "name": "美国代理 gpt-load",
+    "url": "https://us.gpt-load.example.com",
+    "token": "your-token-here",
+    "priority": 2,
+    "description": "用于本地不易访问的站点"
+  }
+]

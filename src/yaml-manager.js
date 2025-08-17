@@ -254,7 +254,7 @@ class YamlManager {
           apiPath = '/v1/messages';
           break;
         case 'gemini':
-          apiPath = '/v1beta/models';
+          apiPath = '/v1beta/openai/chat/completions';
           break;
         default: // openai 及其他
           apiPath = '/v1/chat/completions';
