@@ -418,7 +418,7 @@ class MultiGptloadManager {
   /**
    * 统一的API接口 - 创建站点分组
    */
-  async createSiteGroup(siteName, baseUrl, apiKeys, channelType = 'openai', customValidationEndpoint = null, availableModels = null) {
+  async createSiteGroup(siteName, baseUrl, apiKeys, channelType = 'openai', customValidationEndpoints = {}, availableModels = null) {
     return await this.executeOnBestInstance(baseUrl, async (instance) => {
       // 为不同格式创建不同的分组名
       const groupName = `${siteName.toLowerCase()}-${channelType}`;
@@ -427,7 +427,7 @@ class MultiGptloadManager {
       const existingGroup = await this.checkGroupExists(instance, groupName);
       if (existingGroup) {
         console.log(`站点分组 ${groupName} 已存在，更新配置...`);
-        return await this.updateSiteGroup(instance, existingGroup, baseUrl, apiKeys, channelType, customValidationEndpoint, availableModels);
+        return await this.updateSiteGroup(instance, existingGroup, baseUrl, apiKeys, channelType, customValidationEndpoints, availableModels);
       }
 
       console.log(`创建站点分组: ${groupName}，格式: ${channelType}`);
@@ -444,6 +444,9 @@ class MultiGptloadManager {
         console.log(`⚠️ 未提供可用模型列表，使用默认验证模型: ${testModel}`);
       }
       
+      // 确定要使用的验证端点
+      const validationEndpoint = customValidationEndpoints[channelType] || channelConfig.validation_endpoint;
+      
       // 创建分组
       const groupData = {
         name: groupName,
@@ -452,7 +455,7 @@ class MultiGptloadManager {
         upstreams: [{ url: baseUrl, weight: 1 }],
         channel_type: channelType,
         test_model: testModel, // 使用选择的验证模型
-        validation_endpoint: customValidationEndpoint || channelConfig.validation_endpoint, // 使用自定义端点或默认值
+        validation_endpoint: validationEndpoint, // 使用自定义端点或默认值
         sort: 20 // 渠道分组的排序号为20
       };
 
@@ -494,7 +497,7 @@ class MultiGptloadManager {
           const existingGroup = await this.checkGroupExists(instance, groupName);
           if (existingGroup) {
             console.log(`✅ 找到已存在的分组 ${groupName}，将更新配置`);
-            return await this.updateSiteGroup(instance, existingGroup, baseUrl, apiKeys, channelType, customValidationEndpoint, availableModels);
+            return await this.updateSiteGroup(instance, existingGroup, baseUrl, apiKeys, channelType, customValidationEndpoints, availableModels);
           }
         }
         throw error;
@@ -560,7 +563,7 @@ class MultiGptloadManager {
   /**
    * 更新站点分组
    */
-  async updateSiteGroup(instance, existingGroup, baseUrl, apiKeys, channelType, customValidationEndpoint = null, availableModels = null) {
+  async updateSiteGroup(instance, existingGroup, baseUrl, apiKeys, channelType, customValidationEndpoints = {}, availableModels = null) {
     try {
       console.log(`更新站点分组: ${existingGroup.name}，格式: ${channelType} (实例: ${instance.name})`);
       
@@ -576,12 +579,15 @@ class MultiGptloadManager {
         console.log(`⚠️ 未提供可用模型列表，使用默认验证模型: ${testModel}`);
       }
       
+      // 确定要使用的验证端点
+      const validationEndpoint = customValidationEndpoints[channelType] || channelConfig.validation_endpoint;
+      
       // 更新分组配置
       const updateData = {
         upstreams: [{ url: baseUrl, weight: 1 }],
         channel_type: channelType,
         test_model: testModel, // 使用选择的验证模型
-        validation_endpoint: customValidationEndpoint || channelConfig.validation_endpoint, // 使用自定义端点或默认值
+        validation_endpoint: validationEndpoint, // 使用自定义端点或默认值
         sort: 20 // 渠道分组的排序号为20
       };
 

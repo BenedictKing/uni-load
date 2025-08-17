@@ -351,15 +351,22 @@
                               rows="6"></textarea>
                 </div>
                 
-                <div class="form-group">
-                    <label for="validationEndpoint">验证端点 (可选)</label>
-                    <input type="text" id="validationEndpoint" name="validationEndpoint" 
-                           placeholder="/v1/chat/completions">
-                    <div class="help-text">用于健康检查的API端点，留空使用默认值</div>
-                    <div class="example">
-                        • <strong>OpenAI格式</strong>：/v1/chat/completions、/v3/chat/completions<br>
-                        • <strong>Claude格式</strong>：/v1/messages<br>
-                        • <strong>Gemini格式</strong>：/v1beta/models
+                <!-- 新的动态验证端点输入区域 -->
+                <div id="validationEndpointsContainer">
+                    <div id="validationEndpoint_openai_group" class="form-group" style="display: none;">
+                        <label for="validationEndpoint_openai">验证端点 (OpenAI 格式)</label>
+                        <input type="text" id="validationEndpoint_openai" name="validationEndpoint_openai" placeholder="留空则使用默认值 /v1/chat/completions">
+                        <div class="help-text">用于 OpenAI 格式的健康检查端点。</div>
+                    </div>
+                    <div id="validationEndpoint_anthropic_group" class="form-group" style="display: none;">
+                        <label for="validationEndpoint_anthropic">验证端点 (Claude 格式)</label>
+                        <input type="text" id="validationEndpoint_anthropic" name="validationEndpoint_anthropic" placeholder="留空则使用默认值 /v1/messages">
+                        <div class="help-text">用于 Anthropic Claude 格式的健康检查端点。</div>
+                    </div>
+                    <div id="validationEndpoint_gemini_group" class="form-group" style="display: none;">
+                        <label for="validationEndpoint_gemini">验证端点 (Gemini 格式)</label>
+                        <input type="text" id="validationEndpoint_gemini" name="validationEndpoint_gemini" placeholder="留空则使用默认值 /v1beta/models">
+                        <div class="help-text">用于 Google Gemini 格式的健康检查端点。</div>
                     </div>
                 </div>
                 
@@ -457,50 +464,19 @@
 
         // 动态更新验证端点的帮助信息
         function updateValidationEndpointHelp() {
-            const validationInput = document.getElementById('validationEndpoint');
-            const exampleDiv = validationInput.nextElementSibling.nextElementSibling; // 获取 example div
-
-            const helpInfo = {
-                openai: {
-                    placeholder: '/v1/chat/completions',
-                    example: '• <strong>OpenAI格式</strong>：/v1/chat/completions、/v3/chat/completions'
-                },
-                anthropic: {
-                    placeholder: '/v1/messages',
-                    example: '• <strong>Claude格式</strong>：/v1/messages'
-                },
-                gemini: {
-                    placeholder: '/v1beta/models',
-                    example: '• <strong>Gemini格式</strong>：/v1beta/models'
-                }
-            };
-
             const checkedTypes = Array.from(document.querySelectorAll('input[name="channelTypes"]:checked')).map(cb => cb.value);
+            const allTypes = ['openai', 'anthropic', 'gemini'];
 
-            let newPlaceholder = '留空使用默认值';
-            let newExampleHTML = '';
-
-            if (checkedTypes.length === 1 && helpInfo[checkedTypes[0]]) {
-                newPlaceholder = helpInfo[checkedTypes[0]].placeholder;
-            } else {
-                newPlaceholder = '留空使用默认值'; // 多个或零个选中时使用通用提示
-            }
-
-            if (checkedTypes.length === 0) {
-                // 如果一个都没选，显示所有
-                Object.values(helpInfo).forEach(info => {
-                    newExampleHTML += info.example + '<br>';
-                });
-            } else {
-                checkedTypes.forEach(type => {
-                    if (helpInfo[type]) {
-                        newExampleHTML += helpInfo[type].example + '<br>';
+            allTypes.forEach(type => {
+                const groupDiv = document.getElementById(`validationEndpoint_${type}_group`);
+                if (groupDiv) {
+                    if (checkedTypes.includes(type)) {
+                        groupDiv.style.display = 'block';
+                    } else {
+                        groupDiv.style.display = 'none';
                     }
-                });
-            }
-
-            validationInput.placeholder = newPlaceholder;
-            exampleDiv.innerHTML = newExampleHTML.slice(0, -4); // 移除最后的 <br>
+                }
+            });
         }
         
         function addApiKey() {
@@ -574,8 +550,14 @@
             const apiKeysText = document.getElementById('apiKeys').value;
             const apiKeys = parseApiKeys(apiKeysText);
             
-            // 获取自定义验证端点
-            const validationEndpoint = document.getElementById('validationEndpoint').value.trim();
+            // 收集自定义验证端点
+            const customValidationEndpoints = {};
+            channelTypes.forEach(type => {
+                const input = document.getElementById(`validationEndpoint_${type}`);
+                if (input && input.value.trim()) {
+                    customValidationEndpoints[type] = input.value.trim();
+                }
+            });
             
             if (apiKeys.length === 0) {
                 alert('请至少输入一个API密钥');
@@ -598,7 +580,7 @@
                         baseUrl,
                         apiKeys,
                         channelTypes,
-                        validationEndpoint: validationEndpoint || undefined // 只在有值时发送
+                        customValidationEndpoints // 使用新的对象
                     })
                 });
                 

@@ -116,7 +116,7 @@ app.post('/api/preview-site-name', (req, res) => {
 // API 路由
 app.post('/api/process-ai-site', async (req, res) => {
   try {
-    const { baseUrl, apiKeys, channelTypes, validationEndpoint } = req.body;
+    const { baseUrl, apiKeys, channelTypes, customValidationEndpoints } = req.body;
     
     if (!baseUrl || !apiKeys || !Array.isArray(apiKeys) || apiKeys.length === 0) {
       return res.status(400).json({ 
@@ -188,7 +188,7 @@ app.post('/api/process-ai-site', async (req, res) => {
     
     for (const channelType of selectedChannelTypes) {
       try {
-        const siteGroup = await gptloadService.createSiteGroup(siteName, baseUrl, apiKeys, channelType, validationEndpoint, models);
+        const siteGroup = await gptloadService.createSiteGroup(siteName, baseUrl, apiKeys, channelType, customValidationEndpoints, models);
         if (siteGroup && siteGroup.name) {
           siteGroups.push(siteGroup);
           groupsCreated++;

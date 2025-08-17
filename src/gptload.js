@@ -52,8 +52,8 @@ class GptloadService {
   /**
    * 创建站点分组（第一层）
    */
-  async createSiteGroup(siteName, baseUrl, apiKeys, channelType = 'openai', customValidationEndpoint = null, availableModels = null) {
-    return await this.manager.createSiteGroup(siteName, baseUrl, apiKeys, channelType, customValidationEndpoint, availableModels);
+  async createSiteGroup(siteName, baseUrl, apiKeys, channelType = 'openai', customValidationEndpoints = {}, availableModels = null) {
+    return await this.manager.createSiteGroup(siteName, baseUrl, apiKeys, channelType, customValidationEndpoints, availableModels);
   }
 
   /**
@@ -66,7 +66,7 @@ class GptloadService {
   /**
    * 更新站点分组
    */
-  async updateSiteGroup(existingGroup, baseUrl, apiKeys, channelType = 'openai', customValidationEndpoint = null, availableModels = null) {
+  async updateSiteGroup(existingGroup, baseUrl, apiKeys, channelType = 'openai', customValidationEndpoints = {}, availableModels = null) {
     // 使用分组所在的实例进行更新
     const instanceId = existingGroup._instance?.id;
     
