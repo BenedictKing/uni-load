@@ -326,17 +326,17 @@
                     <label>API 格式类型 * (可多选)</label>
                     <div class="checkbox-group">
                         <label class="checkbox-item">
-                            <input type="checkbox" id="channelType_openai" name="channelTypes" value="openai" checked>
+                            <input type="checkbox" id="channelType_openai" name="channelTypes" value="openai" checked onchange="updateValidationEndpointHelp()">
                             <span class="checkmark"></span>
                             OpenAI 兼容格式
                         </label>
                         <label class="checkbox-item">
-                            <input type="checkbox" id="channelType_anthropic" name="channelTypes" value="anthropic">
+                            <input type="checkbox" id="channelType_anthropic" name="channelTypes" value="anthropic" onchange="updateValidationEndpointHelp()">
                             <span class="checkmark"></span>
                             Anthropic Claude 格式
                         </label>
                         <label class="checkbox-item">
-                            <input type="checkbox" id="channelType_gemini" name="channelTypes" value="gemini">
+                            <input type="checkbox" id="channelType_gemini" name="channelTypes" value="gemini" onchange="updateValidationEndpointHelp()">
                             <span class="checkmark"></span>
                             Google Gemini 格式
                         </label>
@@ -448,6 +448,59 @@
         function debouncedUpdateSiteName() {
             clearTimeout(debounceTimer);
             debounceTimer = setTimeout(updateSiteName, 500); // 500ms 延迟
+        }
+        
+        function debouncedUpdateSiteName() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(updateSiteName, 500); // 500ms 延迟
+        }
+
+        // 动态更新验证端点的帮助信息
+        function updateValidationEndpointHelp() {
+            const validationInput = document.getElementById('validationEndpoint');
+            const exampleDiv = validationInput.nextElementSibling.nextElementSibling; // 获取 example div
+
+            const helpInfo = {
+                openai: {
+                    placeholder: '/v1/chat/completions',
+                    example: '• <strong>OpenAI格式</strong>：/v1/chat/completions、/v3/chat/completions'
+                },
+                anthropic: {
+                    placeholder: '/v1/messages',
+                    example: '• <strong>Claude格式</strong>：/v1/messages'
+                },
+                gemini: {
+                    placeholder: '/v1beta/models',
+                    example: '• <strong>Gemini格式</strong>：/v1beta/models'
+                }
+            };
+
+            const checkedTypes = Array.from(document.querySelectorAll('input[name="channelTypes"]:checked')).map(cb => cb.value);
+
+            let newPlaceholder = '留空使用默认值';
+            let newExampleHTML = '';
+
+            if (checkedTypes.length === 1 && helpInfo[checkedTypes[0]]) {
+                newPlaceholder = helpInfo[checkedTypes[0]].placeholder;
+            } else {
+                newPlaceholder = '留空使用默认值'; // 多个或零个选中时使用通用提示
+            }
+
+            if (checkedTypes.length === 0) {
+                // 如果一个都没选，显示所有
+                Object.values(helpInfo).forEach(info => {
+                    newExampleHTML += info.example + '<br>';
+                });
+            } else {
+                checkedTypes.forEach(type => {
+                    if (helpInfo[type]) {
+                        newExampleHTML += helpInfo[type].example + '<br>';
+                    }
+                });
+            }
+
+            validationInput.placeholder = newPlaceholder;
+            exampleDiv.innerHTML = newExampleHTML.slice(0, -4); // 移除最后的 <br>
         }
         
         function addApiKey() {
@@ -602,6 +655,9 @@
             
             // 初始化渠道健康状态
             refreshChannelHealthStatus();
+
+            // 初始化验证端点帮助信息
+            updateValidationEndpointHelp();
         });
         
         // 刷新同步状态
