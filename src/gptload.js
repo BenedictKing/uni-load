@@ -139,6 +139,22 @@ class GptloadService {
   }
 
   /**
+   * 根据ID删除分组
+   */
+  async deleteGroupById(groupId, instanceId) {
+    if (!instanceId) {
+      throw new Error('删除分组需要提供 instanceId');
+    }
+    
+    const instance = this.manager.getInstance(instanceId);
+    if (!instance) {
+      throw new Error(`实例 ${instanceId} 不存在`);
+    }
+    
+    return await this.manager.deleteGroup(instance, groupId);
+  }
+
+  /**
    * 创建或更新模型分组（第二层）
    */
   async createOrUpdateModelGroups(models, siteGroups) {

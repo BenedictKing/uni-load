@@ -632,6 +632,25 @@ class MultiGptloadManager {
   }
 
   /**
+   * 从指定实例删除分组
+   */
+  async deleteGroup(instance, groupId) {
+    try {
+      await instance.apiClient.delete(`/groups/${groupId}`);
+      console.log(`✅ 成功从实例 ${instance.name} 删除分组 ${groupId}`);
+      return true;
+    } catch (error) {
+      console.error(`❌ 从实例 ${instance.name} 删除分组 ${groupId} 失败: ${error.message}`);
+      // 即使是404（已不存在）也视为成功
+      if (error.response && error.response.status === 404) {
+        console.log(`ℹ️ 分组 ${groupId} 在实例 ${instance.name} 中已不存在`);
+        return true;
+      }
+      return false;
+    }
+  }
+
+  /**
    * 获取所有分组（从所有实例）
    */
   async getAllGroups() {

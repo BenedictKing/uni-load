@@ -490,6 +490,58 @@ app.get('/api/cleanup-history', (req, res) => {
   }
 });
 
+// 维护脚本：删除所有模型分组 (sort=10)
+app.post('/api/maintenance/delete-model-groups', async (req, res) => {
+  console.log('🚨 开始执行维护任务：删除所有模型分组 (sort=10)');
+  
+  try {
+    const allGroups = await gptloadService.getAllGroups();
+    
+    // 筛选出所有 sort=10 的分组
+    const modelGroupsToDelete = allGroups.filter(group => group.sort === 10);
+
+    if (modelGroupsToDelete.length === 0) {
+      console.log('✅ 没有找到需要删除的模型分组');
+      return res.json({
+        success: true,
+        message: '没有找到 sort=10 的模型分组，无需操作。'
+      });
+    }
+
+    console.log(`🗑️ 发现 ${modelGroupsToDelete.length} 个模型分组需要删除...`);
+
+    const results = {
+      deleted: [],
+      failed: []
+    };
+
+    for (const group of modelGroupsToDelete) {
+      try {
+        const success = await gptloadService.deleteGroupById(group.id, group._instance.id);
+        if (success) {
+          results.deleted.push(group.name);
+        } else {
+          results.failed.push({ name: group.name, reason: '删除失败' });
+        }
+      } catch (error) {
+        results.failed.push({ name: group.name, reason: error.message });
+      }
+    }
+
+    console.log(`🏁 维护任务完成: 成功删除 ${results.deleted.length} 个, 失败 ${results.failed.length} 个`);
+    
+    res.json({
+      success: true,
+      message: `操作完成。成功删除 ${results.deleted.length} 个分组，失败 ${results.failed.length} 个。`,
+      results
+    });
+
+  } catch (error) {
+    console.error('💥 删除模型分组时发生严重错误:', error);
+    res.status(500).json({ error: '服务器内部错误', details: error.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`🚀 uni-load 服务器启动成功`);
   console.log(`📍 访问地址: http://localhost:${PORT}`);
