@@ -85,9 +85,11 @@ class ModelSyncService {
     console.log(`🔄 开始模型同步检查 - ${new Date().toISOString()}`);
 
     try {
-      // 获取所有站点分组
-      const allGroups = await gptloadService.getAllGroups();
-      const siteGroups = this.filterSiteGroups(allGroups);
+      // 优化：一次性获取所有分组信息作为缓存
+      const allGroupsCache = await gptloadService.getAllGroups();
+      
+      // 使用缓存数据来筛选站点分组
+      const siteGroups = this.filterSiteGroups(allGroupsCache);
       
       console.log(`📊 发现 ${siteGroups.length} 个站点分组需要检查`);
 
@@ -96,7 +98,8 @@ class ModelSyncService {
 
       for (const siteGroup of siteGroups) {
         try {
-          const syncResult = await this.syncSiteModels(siteGroup);
+          // 将缓存传递给子函数
+          const syncResult = await this.syncSiteModels(siteGroup, allGroupsCache);
           if (syncResult.hasChanges) {
             totalSynced++;
             console.log(`✅ ${siteGroup.name}: 同步了 ${syncResult.changes.added.length} 个新模型，移除了 ${syncResult.changes.removed.length} 个模型`);
@@ -144,7 +147,7 @@ class ModelSyncService {
   /**
    * 同步单个站点的模型
    */
-  async syncSiteModels(siteGroup) {
+  async syncSiteModels(siteGroup, allGroupsCache) {
     // 解析站点信息（现在是异步的）
     const siteInfo = await this.parseSiteGroupInfo(siteGroup);
     
@@ -154,15 +157,15 @@ class ModelSyncService {
       siteInfo.apiKey
     );
 
-    // 获取已配置的模型（从模型分组中获取）
-    const configuredModels = await this.getConfiguredModels(siteInfo.siteName);
+    // 获取已配置的模型（从缓存的模型分组中获取）
+    const configuredModels = this.getConfiguredModels(siteInfo.siteName, allGroupsCache);
 
     // 比较差异
     const changes = this.compareModels(configuredModels, currentModels);
 
     if (changes.added.length > 0 || changes.removed.length > 0) {
-      // 有变化，需要同步
-      await this.applyModelChanges(siteInfo, changes);
+      // 有变化，需要同步，传递缓存
+      await this.applyModelChanges(siteInfo, changes, allGroupsCache);
       return { hasChanges: true, changes };
     }
 
@@ -208,11 +211,9 @@ class ModelSyncService {
   /**
    * 获取已配置的模型列表
    */
-  async getConfiguredModels(siteName) {
-    const allGroups = await gptloadService.getAllGroups();
-    
-    // 查找以该站点名开头的模型分组
-    const modelGroups = allGroups.filter(group => {
+  getConfiguredModels(siteName, allGroupsCache) {
+    // 优化：直接从缓存中查找
+    const modelGroups = allGroupsCache.filter(group => {
       // 模型分组的特征：指向gptload proxy的URL
       return group.upstreams?.some(upstream => 
         upstream.url.includes(`/proxy/`) && 
@@ -240,17 +241,16 @@ class ModelSyncService {
   /**
    * 应用模型变更
    */
-  async applyModelChanges(siteInfo, changes) {
+  async applyModelChanges(siteInfo, changes, allGroupsCache) {
     const { siteName, channelType } = siteInfo;
     
     // 添加新模型
     if (changes.added.length > 0) {
       console.log(`➕ 为 ${siteName} 添加新模型: ${changes.added.join(', ')}`);
       
-      // 获取该站点的所有格式分组
-      const allGroups = await gptloadService.getAllGroups();
-      const siteGroups = allGroups.filter(group => 
-        group.name.startsWith(siteName + '-')
+      // 优化：从缓存中获取该站点的所有格式分组
+      const siteGroups = allGroupsCache.filter(group => 
+        group.name.startsWith(siteName + '-') && this.filterSiteGroups([group]).length > 0
       );
 
       // 为每个新模型创建模型分组
@@ -262,13 +262,15 @@ class ModelSyncService {
       console.log(`➖ 为 ${siteName} 移除旧模型: ${changes.removed.join(', ')}`);
       
       for (const model of changes.removed) {
-        await this.removeModelGroup(model);
+        // 传递缓存
+        await this.removeModelGroup(model, allGroupsCache);
       }
     }
 
     // 更新uni-api配置
     if (changes.added.length > 0 || changes.removed.length > 0) {
-      const allModelGroups = await this.getAllModelGroups();
+      // 传递缓存
+      const allModelGroups = this.getAllModelGroups(allGroupsCache);
       await yamlManager.updateUniApiConfig(allModelGroups);
       console.log(`🔧 已更新 uni-api 配置`);
     }
@@ -277,11 +279,11 @@ class ModelSyncService {
   /**
    * 移除模型分组
    */
-  async removeModelGroup(modelName) {
+  async removeModelGroup(modelName, allGroupsCache) {
     try {
       const groupName = modelName.toLowerCase().replace(/[^a-z0-9-]/g, '-');
-      const allGroups = await gptloadService.getAllGroups();
-      const modelGroup = allGroups.find(group => group.name === groupName);
+      // 优化：从缓存中查找
+      const modelGroup = allGroupsCache.find(group => group.name === groupName);
       
       if (modelGroup) {
         // 这里需要实现删除分组的API调用
@@ -308,9 +310,9 @@ class ModelSyncService {
   /**
    * 获取所有模型分组
    */
-  async getAllModelGroups() {
-    const allGroups = await gptloadService.getAllGroups();
-    return allGroups.filter(group => 
+  getAllModelGroups(allGroupsCache) {
+    // 优化：直接从缓存中筛选
+    return allGroupsCache.filter(group => 
       group.upstreams?.some(upstream => upstream.url.includes('/proxy/'))
     );
   }
