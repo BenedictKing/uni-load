@@ -238,7 +238,17 @@ class ModelsService {
       'moonshot-',
       'kimi-k2', // 保留特殊处理
       // Doubao (ByteDance)
-      'doubao-'
+      'doubao-',
+      // Zhipu AI (智谱)
+      'glm-',
+      // xAI
+      'grok-',
+      // Flux
+      'flux-',
+      // Misc / Provider Specific
+      'o1-',
+      'o3-',
+      'o4-'
     ];
 
     const filtered = models.filter(model => {
