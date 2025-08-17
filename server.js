@@ -58,13 +58,12 @@ function generateSiteNameFromUrl(baseUrl) {
         );
 
         if (isCommonPrefix && secondPart) {
+          // 如果是通用前缀，则使用第二个部分作为基础名称
           siteName = secondPart;
-        } else if (firstPart && firstPart.length > 2) {
-          // 如果第一个部分不是通用前缀且长度合理，使用它
-          siteName = firstPart;
         } else {
-          // 否则使用第二个部分
-          siteName = secondPart || parts[parts.length - 2];
+          // 否则，将第一和第二部分组合，以确保唯一性
+          // 例如 v2.voct.dev -> v2-voct
+          siteName = `${firstPart}-${secondPart}`;
         }
       } else {
         // 只有2级域名，取主域名
