@@ -305,10 +305,25 @@ class GptloadService {
    * 创建或更新单个模型分组
    */
   async createOrUpdateModelGroup(originalModelName, siteGroups) {
-    // 1. 根据模型名称确定渠道类型
-    const channelType = this.getChannelTypeForModel(originalModelName);
+    // 1. 根据模型名称确定渠道类型，并考虑可用站点格式
+    const preferredChannelType = this.getChannelTypeForModel(originalModelName);
+    const isPreferredTypeAvailable = siteGroups.some(sg => sg.channel_type === preferredChannelType);
     
-    // 2. 使用模型名和渠道类型生成安全的分组名称
+    let channelType;
+    if (isPreferredTypeAvailable) {
+      // 如果站点提供了模型原生的API格式，则使用该格式
+      channelType = preferredChannelType;
+      console.log(`✅ 找到匹配的模型原生格式 [${preferredChannelType.toUpperCase()}] 的站点分组`);
+    } else {
+      // 否则，回退到第一个可用的站点分组格式
+      const fallbackType = siteGroups[0]?.channel_type || 'openai';
+      if (preferredChannelType !== fallbackType) {
+        console.log(`⚠️ 未找到模型原生格式 [${preferredChannelType.toUpperCase()}] 的站点分组，将回退使用 [${fallbackType.toUpperCase()}] 格式`);
+      }
+      channelType = fallbackType;
+    }
+    
+    // 2. 使用模型名和最终确定的渠道类型生成安全的分组名称
     const groupName = this.generateSafeGroupName(originalModelName, channelType);
     
     // 如果分组名无法生成（太长），跳过这个模型
