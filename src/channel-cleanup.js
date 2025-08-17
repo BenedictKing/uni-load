@@ -1,10 +1,16 @@
 const gptloadService = require('./gptload');
 const axios = require('axios');
+const https = require('https');
 
 class ChannelCleanupService {
   constructor() {
     this.cleanupHistory = []; // 记录清理历史
     this.dryRunMode = false; // 是否为试运行模式
+    
+    // 创建允许自签名证书的 HTTPS Agent
+    this.httpsAgent = new https.Agent({
+      rejectUnauthorized: false // 允许自签名证书和无效证书
+    });
   }
 
   /**
@@ -237,6 +243,7 @@ class ChannelCleanupService {
       
       const response = await axios.get(modelsUrl, {
         timeout,
+        httpsAgent: this.httpsAgent, // 使用自定义的 HTTPS Agent
         validateStatus: (status) => status < 500, // 4xx可接受，5xx表示服务器问题
         headers: {
           'User-Agent': 'uni-load-connectivity-test',

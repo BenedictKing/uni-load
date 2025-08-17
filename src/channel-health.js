@@ -106,13 +106,19 @@ class ChannelHealthMonitor {
   }
 
   /**
-   * 过滤出站点分组
+   * 过滤出站点分组（只处理程序建立的渠道）
    */
   filterSiteGroups(allGroups) {
     return allGroups.filter(group => {
       if (!group.upstreams || group.upstreams.length === 0) {
         return false;
       }
+      
+      // 只处理排序号为20的渠道（程序建立的渠道）
+      if (group.sort !== 20) {
+        return false;
+      }
+      
       // 站点分组的特征：指向外部URL
       const hasExternalUpstream = group.upstreams.some(upstream => 
         !upstream.url.includes('/proxy/')

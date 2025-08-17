@@ -1,10 +1,17 @@
 const axios = require('axios');
+const https = require('https');
 
 class MultiGptloadManager {
   constructor() {
     this.instances = new Map(); // gptload实例配置
     this.healthStatus = new Map(); // 实例健康状态
     this.siteAssignments = new Map(); // 站点到实例的分配
+    
+    // 创建允许自签名证书的 HTTPS Agent
+    this.httpsAgent = new https.Agent({
+      rejectUnauthorized: false // 允许自签名证书和无效证书
+    });
+    
     this.initializeInstances();
   }
 
@@ -101,6 +108,7 @@ class MultiGptloadManager {
       apiClient: axios.create({
         baseURL: config.url + '/api',
         timeout: 30000,
+        httpsAgent: this.httpsAgent, // 使用自定义的 HTTPS Agent
         headers: {
           'Content-Type': 'application/json',
           ...(config.token ? { 'Authorization': `Bearer ${config.token}` } : {})

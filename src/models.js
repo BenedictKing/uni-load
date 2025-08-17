@@ -1,8 +1,14 @@
 const axios = require("axios");
+const https = require("https");
 
 class ModelsService {
   constructor() {
     this.timeout = 30000; // 30秒超时
+    
+    // 创建允许自签名证书的 HTTPS Agent
+    this.httpsAgent = new https.Agent({
+      rejectUnauthorized: false // 允许自签名证书和无效证书
+    });
   }
 
   /**
@@ -18,6 +24,7 @@ class ModelsService {
       // 发送请求
       const response = await axios.get(modelsUrl, {
         timeout: this.timeout,
+        httpsAgent: this.httpsAgent, // 使用自定义的 HTTPS Agent
         headers: {
           Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json",
@@ -143,6 +150,7 @@ class ModelsService {
 
       const response = await axios.post(chatUrl, testRequest, {
         timeout: 15000, // 15秒超时
+        httpsAgent: this.httpsAgent, // 使用自定义的 HTTPS Agent
         headers: {
           Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json",

@@ -130,8 +130,13 @@ class ModelSyncService {
     return allGroups.filter(group => {
       // 站点分组的特征：
       // 1. 有upstreams且指向外部URL
-      // 2. 名称包含格式后缀（如 -openai, -anthropic）
+      // 2. 排序号为20（通过程序建立的渠道）
       if (!group.upstreams || group.upstreams.length === 0) {
+        return false;
+      }
+
+      // 只处理排序号为20的渠道（程序建立的渠道）
+      if (group.sort !== 20) {
         return false;
       }
 
@@ -209,11 +214,16 @@ class ModelSyncService {
   }
 
   /**
-   * 获取已配置的模型列表
+   * 获取已配置的模型列表（只考虑程序建立的模型分组）
    */
   getConfiguredModels(siteName, allGroupsCache) {
     // 优化：直接从缓存中查找
     const modelGroups = allGroupsCache.filter(group => {
+      // 只考虑排序号为10的模型分组（程序建立的模型分组）
+      if (group.sort !== 10) {
+        return false;
+      }
+      
       // 模型分组的特征：指向gptload proxy的URL
       return group.upstreams?.some(upstream => 
         upstream.url.includes(`/proxy/`) && 
@@ -297,24 +307,35 @@ class ModelSyncService {
   }
 
   /**
-   * 获取所有已配置的模型
+   * 获取所有已配置的模型（只考虑程序建立的模型分组）
    */
   async getAllConfiguredModels() {
     const allGroups = await gptloadService.getAllGroups();
-    const modelGroups = allGroups.filter(group => 
-      group.upstreams?.some(upstream => upstream.url.includes('/proxy/'))
-    );
+    const modelGroups = allGroups.filter(group => {
+      // 只考虑排序号为10的模型分组（程序建立的模型分组）
+      if (group.sort !== 10) {
+        return false;
+      }
+      
+      return group.upstreams?.some(upstream => upstream.url.includes('/proxy/'));
+    });
     return modelGroups.map(group => group.test_model).filter(Boolean);
   }
 
   /**
-   * 获取所有模型分组
+   * 获取所有模型分组（只返回程序建立的模型分组）
    */
   getAllModelGroups(allGroupsCache) {
     // 优化：直接从缓存中筛选
-    return allGroupsCache.filter(group => 
-      group.upstreams?.some(upstream => upstream.url.includes('/proxy/'))
-    );
+    return allGroupsCache.filter(group => {
+      // 只返回排序号为10的模型分组（程序建立的模型分组）
+      if (group.sort !== 10) {
+        return false;
+      }
+      
+      // 模型分组的特征：指向gptload proxy的URL
+      return group.upstreams?.some(upstream => upstream.url.includes('/proxy/'));
+    });
   }
 
   /**
