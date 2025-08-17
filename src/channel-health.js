@@ -139,23 +139,65 @@ class ChannelHealthMonitor {
    */
   async performHealthCheck(siteGroup) {
     try {
-      // 这里需要实现实际的健康检查逻辑
-      // 可以通过调用gptload的测试接口或直接测试上游URL
+      // 使用 gptload 的日志接口进行健康检查
+      const healthResult = await gptloadService.analyzeChannelHealth(
+        siteGroup.name, 
+        siteGroup._instance.id, 
+        1 // 检查最近1小时的数据
+      );
+
+      console.log(`🔍 检查 ${siteGroup.name}: 成功率 ${healthResult.successRate}%, 响应时间 ${healthResult.avgResponseTime}ms`);
       
+      // 判断是否健康
+      if (healthResult.status === 'healthy') {
+        return { success: true, healthResult };
+      } else if (healthResult.status === 'no_data') {
+        // 没有数据时，尝试直接测试接口
+        return await this.directHealthCheck(siteGroup);
+      } else {
+        return { 
+          success: false, 
+          error: `${healthResult.message} (${healthResult.status})`,
+          healthResult 
+        };
+      }
+      
+    } catch (error) {
+      console.log(`⚠️ 日志分析失败，尝试直接检测: ${error.message}`);
+      // 如果日志分析失败，尝试直接检测
+      return await this.directHealthCheck(siteGroup);
+    }
+  }
+
+  /**
+   * 直接健康检查（当日志不可用时）
+   */
+  async directHealthCheck(siteGroup) {
+    try {
       const baseUrl = siteGroup.upstreams[0]?.url;
       if (!baseUrl) {
         throw new Error('没有找到上游URL');
       }
 
-      // 模拟健康检查 - 实际应该调用相应的测试接口
-      console.log(`🔍 检查 ${siteGroup.name}: ${baseUrl}`);
+      // 获取API密钥进行测试
+      const apiKeys = await gptloadService.getGroupApiKeys(siteGroup.id, siteGroup._instance.id);
+      if (apiKeys.length === 0) {
+        throw new Error('没有找到有效的API密钥');
+      }
+
+      const apiKey = apiKeys[0];
+      console.log(`🔗 直接测试 ${siteGroup.name}: ${baseUrl}`);
       
-      // 这里可以实现：
-      // 1. 调用 /v1/models 接口
-      // 2. 调用 gptload 的测试接口
-      // 3. 检查响应时间和成功率
+      // 使用 modelsService 测试连接
+      const modelsService = require('./models');
+      const models = await modelsService.getModels(baseUrl, apiKey);
       
-      return { success: true };
+      if (models && models.length > 0) {
+        console.log(`✅ ${siteGroup.name}: 直接测试成功，发现 ${models.length} 个模型`);
+        return { success: true, models: models.length };
+      } else {
+        throw new Error('未能获取到模型列表');
+      }
       
     } catch (error) {
       return { success: false, error: error.message };
@@ -254,84 +296,109 @@ class ChannelHealthMonitor {
   }
 
   /**
-   * 分析日志文件
+   * 通过 gptload 日志 API 分析渠道健康状况
    */
   async checkChannelsByLogs() {
     try {
-      // 检查日志文件是否存在
-      const exists = await fs.access(this.logFilePath).then(() => true).catch(() => false);
-      if (!exists) {
-        console.log(`📝 日志文件不存在: ${this.logFilePath}`);
-        return;
-      }
+      console.log('📊 开始通过日志 API 分析渠道健康状况');
+      
+      const allGroups = await gptloadService.getAllGroups();
+      const siteGroups = this.filterSiteGroups(allGroups);
+      
+      for (const siteGroup of siteGroups) {
+        try {
+          // 使用日志 API 分析渠道健康状况
+          const healthResult = await gptloadService.analyzeChannelHealth(
+            siteGroup.name, 
+            siteGroup._instance.id, 
+            2 // 检查最近2小时的数据
+          );
 
-      // 读取最近的日志内容
-      const logContent = await this.readRecentLogs();
-      
-      // 分析错误模式
-      const failedChannels = this.analyzeLogErrors(logContent);
-      
-      // 处理发现的失败渠道
-      for (const [channelName, errorCount] of failedChannels.entries()) {
-        await this.recordChannelFailure(channelName, `日志中发现 ${errorCount} 个错误`);
+          if (healthResult.status === 'critical' || healthResult.status === 'warning') {
+            await this.recordChannelFailure(
+              siteGroup.name, 
+              `日志分析: ${healthResult.message}`
+            );
+          } else if (healthResult.status === 'healthy') {
+            // 如果健康状态良好，重置失败计数
+            if (this.channelFailures.has(siteGroup.name)) {
+              console.log(`✅ ${siteGroup.name}: 日志分析显示恢复正常，重置失败计数`);
+              this.channelFailures.delete(siteGroup.name);
+            }
+          }
+          
+        } catch (error) {
+          console.error(`分析渠道 ${siteGroup.name} 日志失败:`, error.message);
+        }
       }
 
     } catch (error) {
-      console.error('日志分析失败:', error.message);
+      console.error('日志API分析失败:', error.message);
     }
   }
 
   /**
-   * 读取最近的日志内容
+   * 获取详细的健康报告
    */
-  async readRecentLogs() {
+  async getDetailedHealthReport() {
     try {
-      const stats = await fs.stat(this.logFilePath);
-      const fileSize = stats.size;
+      const allGroups = await gptloadService.getAllGroups();
+      const siteGroups = this.filterSiteGroups(allGroups);
       
-      // 只读取最后1MB的内容
-      const readSize = Math.min(fileSize, 1024 * 1024);
-      const startPos = Math.max(0, fileSize - readSize);
+      const healthReports = [];
       
-      const buffer = Buffer.alloc(readSize);
-      const fd = await fs.open(this.logFilePath, 'r');
-      
-      try {
-        await fd.read(buffer, 0, readSize, startPos);
-        return buffer.toString('utf8');
-      } finally {
-        await fd.close();
+      for (const siteGroup of siteGroups) {
+        try {
+          const healthResult = await gptloadService.analyzeChannelHealth(
+            siteGroup.name, 
+            siteGroup._instance.id, 
+            24 // 检查最近24小时的数据
+          );
+          
+          const failureCount = this.channelFailures.get(siteGroup.name) || 0;
+          
+          healthReports.push({
+            ...healthResult,
+            currentFailures: failureCount,
+            failureThreshold: this.failureThreshold,
+            willBeRemoved: failureCount >= this.failureThreshold
+          });
+          
+        } catch (error) {
+          healthReports.push({
+            groupName: siteGroup.name,
+            status: 'error',
+            message: `检测失败: ${error.message}`,
+            error: error.message,
+            currentFailures: this.channelFailures.get(siteGroup.name) || 0,
+            failureThreshold: this.failureThreshold
+          });
+        }
       }
+      
+      // 按状态排序
+      healthReports.sort((a, b) => {
+        const statusOrder = { 'critical': 0, 'warning': 1, 'error': 2, 'no_data': 3, 'healthy': 4 };
+        return statusOrder[a.status] - statusOrder[b.status];
+      });
+      
+      return {
+        timestamp: new Date().toISOString(),
+        totalChannels: siteGroups.length,
+        summary: {
+          healthy: healthReports.filter(r => r.status === 'healthy').length,
+          warning: healthReports.filter(r => r.status === 'warning').length,
+          critical: healthReports.filter(r => r.status === 'critical').length,
+          error: healthReports.filter(r => r.status === 'error').length,
+          noData: healthReports.filter(r => r.status === 'no_data').length
+        },
+        channels: healthReports
+      };
+      
     } catch (error) {
-      console.error('读取日志文件失败:', error.message);
-      return '';
+      console.error('获取健康报告失败:', error.message);
+      throw error;
     }
-  }
-
-  /**
-   * 分析日志中的错误模式
-   */
-  analyzeLogErrors(logContent) {
-    const failedChannels = new Map();
-    
-    // 常见的错误模式
-    const errorPatterns = [
-      /ERROR.*proxy\/([^\/\s]+).*failed/gi,
-      /Connection refused.*proxy\/([^\/\s]+)/gi,
-      /Timeout.*proxy\/([^\/\s]+)/gi,
-      /HTTP 5\d\d.*proxy\/([^\/\s]+)/gi
-    ];
-
-    for (const pattern of errorPatterns) {
-      let match;
-      while ((match = pattern.exec(logContent)) !== null) {
-        const channelName = match[1];
-        const count = failedChannels.get(channelName) || 0;
-        failedChannels.set(channelName, count + 1);
-      }
-    }
-
-    return failedChannels;
   }
 
   /**

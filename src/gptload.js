@@ -653,6 +653,114 @@ class GptloadService {
   }
 
   /**
+   * 获取渠道日志数据用于健康检测
+   */
+  async getChannelLogs(groupName, instanceId, timeRangeHours = 24) {
+    const instance = this.manager.getInstance(instanceId);
+    if (!instance) {
+      throw new Error(`实例 ${instanceId} 不存在`);
+    }
+
+    try {
+      const endTime = new Date();
+      const startTime = new Date(endTime.getTime() - timeRangeHours * 60 * 60 * 1000);
+
+      // 使用 gptload 的 GET /logs 接口获取日志
+      const params = {
+        group_name: groupName,
+        start_time: startTime.toISOString(),
+        end_time: endTime.toISOString(),
+        page: 1,
+        page_size: 1000 // 获取足够多的日志
+      };
+
+      const response = await instance.apiClient.get('/logs', { params });
+
+      if (response.data && response.data.data && response.data.data.items) {
+        return response.data.data.items;
+      }
+
+      return [];
+    } catch (error) {
+      console.error(`获取渠道 ${groupName} 的日志失败:`, error.message);
+      return [];
+    }
+  }
+
+  /**
+   * 分析渠道健康状况
+   */
+  async analyzeChannelHealth(groupName, instanceId, timeRangeHours = 24) {
+    const logs = await this.getChannelLogs(groupName, instanceId, timeRangeHours);
+    
+    if (logs.length === 0) {
+      return {
+        groupName,
+        status: 'no_data',
+        message: '暂无日志数据',
+        totalRequests: 0,
+        successRate: 0,
+        avgResponseTime: 0,
+        errorTypes: {},
+        lastError: null,
+        timeRangeHours
+      };
+    }
+
+    const totalRequests = logs.length;
+    const successfulRequests = logs.filter(log => log.is_success).length;
+    const successRate = (successfulRequests / totalRequests) * 100;
+
+    // 计算平均响应时间
+    const avgResponseTime = logs.reduce((sum, log) => sum + (log.duration_ms || 0), 0) / totalRequests;
+
+    // 分析错误类型
+    const errorTypes = {};
+    const failedLogs = logs.filter(log => !log.is_success);
+    
+    failedLogs.forEach(log => {
+      const errorKey = `${log.status_code}_${log.error_message?.substring(0, 50) || 'unknown'}`;
+      errorTypes[errorKey] = (errorTypes[errorKey] || 0) + 1;
+    });
+
+    // 获取最新错误
+    const lastError = failedLogs.length > 0 ? 
+      failedLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0] : null;
+
+    // 判断健康状态
+    let status = 'healthy';
+    let message = '渠道运行正常';
+
+    if (successRate < 50) {
+      status = 'critical';
+      message = `成功率过低 (${successRate.toFixed(1)}%)`;
+    } else if (successRate < 80) {
+      status = 'warning';
+      message = `成功率偏低 (${successRate.toFixed(1)}%)`;
+    } else if (avgResponseTime > 10000) {
+      status = 'warning';
+      message = `响应时间过长 (${avgResponseTime.toFixed(0)}ms)`;
+    }
+
+    return {
+      groupName,
+      status,
+      message,
+      totalRequests,
+      successRate: parseFloat(successRate.toFixed(2)),
+      avgResponseTime: parseFloat(avgResponseTime.toFixed(0)),
+      errorTypes,
+      lastError: lastError ? {
+        timestamp: lastError.timestamp,
+        statusCode: lastError.status_code,
+        errorMessage: lastError.error_message,
+        upstreamAddr: lastError.upstream_addr
+      } : null,
+      timeRangeHours
+    };
+  }
+
+  /**
    * 重新分配站点到指定实例
    */
   async reassignSite(siteUrl, instanceId = null) {
