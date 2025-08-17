@@ -385,6 +385,7 @@
                     <button type="button" class="btn-sync" onclick="triggerManualSync()">手动同步</button>
                     <button type="button" class="btn-control" id="syncControlBtn" onclick="toggleSyncService()">控制服务</button>
                     <button type="button" class="btn-refresh" onclick="refreshSyncStatus()">刷新状态</button>
+                    <button type="button" class="btn-warning" onclick="cleanupAndResetModels()">清理并重置</button>
                 </div>
             </div>
             
@@ -715,6 +716,45 @@
                 alert('❌ 操作失败: ' + error.message);
             } finally {
                 btn.disabled = false;
+            }
+        }
+        
+        // 清理并重置所有模型配置
+        async function cleanupAndResetModels() {
+            if (!confirm('您确定要清理所有自动生成的模型分组和相关的uni-api配置吗？\n\n此操作不可逆，通常用于重置或解决配置混乱问题。')) {
+                return;
+            }
+
+            const btn = event.target;
+            const originalText = btn.textContent;
+
+            try {
+                btn.disabled = true;
+                btn.textContent = '清理中...';
+
+                const response = await fetch('/api/sync-models/cleanup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    let successMsg = `✅ ${data.message}\n\n`;
+                    successMsg += `删除的分组: ${data.data.deletedGroups}\n`;
+                    successMsg += `清理的Provider: ${data.data.cleanedProviders}`;
+                    alert(successMsg);
+                    
+                    // 成功后刷新状态
+                    refreshSyncStatus();
+                } else {
+                    throw new Error(data.error || '清理失败');
+                }
+            } catch (error) {
+                alert('❌ 清理操作失败: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = originalText;
             }
         }
         
