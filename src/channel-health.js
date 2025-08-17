@@ -1,3 +1,17 @@
+/**
+ * 渠道健康监控服务
+ * 
+ * 主要功能：
+ * 1. 通过 gptload 的日志 API 分析渠道健康状况
+ * 2. 直接测试 API 连接作为补充检测手段
+ * 3. 自动移除持续失败的渠道
+ * 4. 生成详细的健康报告
+ * 
+ * 使用的 gptload API：
+ * - GET /logs - 获取请求日志进行健康分析
+ * - GET /keys - 获取API密钥进行直接测试
+ */
+
 const gptloadService = require('./gptload');
 const fs = require('fs').promises;
 const path = require('path');
@@ -9,7 +23,6 @@ class ChannelHealthMonitor {
     this.failureThreshold = process.env.CHANNEL_FAILURE_THRESHOLD || 3; // 连续失败3次后移除
     this.isRunning = false;
     this.channelFailures = new Map(); // 记录渠道失败次数
-    this.logFilePath = process.env.GPTLOAD_LOG_PATH || '/tmp/gptload.log';
   }
 
   /**
@@ -60,7 +73,7 @@ class ChannelHealthMonitor {
       // 方法1: 通过API检查渠道状态
       await this.checkChannelsByAPI();
       
-      // 方法2: 分析日志文件（如果存在）
+      // 方法2: 通过日志API分析渠道健康状况
       await this.checkChannelsByLogs();
 
       const duration = (Date.now() - startTime) / 1000;
