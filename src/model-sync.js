@@ -41,6 +41,37 @@ class ModelSyncService {
   }
 
   /**
+   * 清理并重置所有模型配置
+   */
+  async cleanupAndResetModels() {
+    console.log('🚨 开始执行模型清理与重置任务...');
+    const results = {
+      deletedGroups: 0,
+      failedGroups: 0,
+      cleanedProviders: 0
+    };
+
+    // 步骤1: 删除所有 gptload 模型分组
+    const deleteResults = await gptloadService.deleteAllModelGroups();
+    results.deletedGroups = deleteResults.deleted.length;
+    results.failedGroups = deleteResults.failed.length;
+
+    // 步骤2: 清理 uni-api 配置文件
+    // 注意: yamlManager.cleanupProviders 函数已存在，可以直接使用
+    try {
+      const cleanedCount = await yamlManager.cleanupProviders();
+      results.cleanedProviders = cleanedCount;
+      console.log(`✅ uni-api 配置清理完成，移除了 ${cleanedCount} 个 provider`);
+    } catch (error) {
+      console.error('❌ uni-api 配置清理失败:', error.message);
+      throw error; // 抛出错误以便上层捕获
+    }
+
+    console.log('🏁 模型清理与重置任务完成');
+    return results;
+  }
+
+  /**
    * 同步所有站点的模型
    */
   async syncAllModels() {

@@ -155,6 +155,44 @@ class GptloadService {
   }
 
   /**
+   * 删除所有模型分组 (sort=10)
+   */
+  async deleteAllModelGroups() {
+    console.log('🚨 开始删除所有 sort=10 的模型分组...');
+    
+    const allGroups = await this.getAllGroups();
+    const modelGroupsToDelete = allGroups.filter(group => group.sort === 10);
+
+    if (modelGroupsToDelete.length === 0) {
+      console.log('✅ 没有找到需要删除的模型分组');
+      return { deleted: [], failed: [], message: '没有找到 sort=10 的模型分组' };
+    }
+
+    console.log(`🗑️ 发现 ${modelGroupsToDelete.length} 个模型分组需要删除...`);
+
+    const results = {
+      deleted: [],
+      failed: []
+    };
+
+    for (const group of modelGroupsToDelete) {
+      try {
+        const success = await this.deleteGroupById(group.id, group._instance.id);
+        if (success) {
+          results.deleted.push(group.name);
+        } else {
+          results.failed.push({ name: group.name, reason: '删除失败' });
+        }
+      } catch (error) {
+        results.failed.push({ name: group.name, reason: error.message });
+      }
+    }
+    
+    console.log(`🏁 批量删除完成: 成功 ${results.deleted.length} 个, 失败 ${results.failed.length} 个`);
+    return results;
+  }
+
+  /**
    * 创建或更新模型分组（第二层）
    */
   async createOrUpdateModelGroups(models, siteGroups) {

@@ -304,6 +304,23 @@ app.post('/api/sync-models/control', (req, res) => {
   }
 });
 
+// 清理并重置所有模型配置
+app.post('/api/sync-models/cleanup', async (req, res) => {
+  try {
+    const results = await modelSyncService.cleanupAndResetModels();
+    res.json({
+      success: true,
+      message: '模型清理与重置任务完成',
+      data: results
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      error: '清理模型配置时出错', 
+      details: error.message 
+    });
+  }
+});
+
 // 手动触发渠道健康检查
 app.post('/api/check-channels', async (req, res) => {
   try {
