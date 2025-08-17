@@ -320,6 +320,18 @@ app.post('/api/sync-models/cleanup', async (req, res) => {
   }
 });
 
+// 获取所有站点分组
+app.get('/api/channels/site-groups', async (req, res) => {
+  try {
+    const allGroups = await gptloadService.getAllGroups();
+    // 假设站点分组的 sort 值为 20
+    const siteGroups = allGroups.filter(g => g.sort === 20);
+    res.json({ siteGroups });
+  } catch (error) {
+    res.status(500).json({ error: '获取站点分组失败', details: error.message });
+  }
+});
+
 // 手动触发渠道健康检查
 app.post('/api/check-channels', async (req, res) => {
   try {
@@ -554,6 +566,35 @@ app.post('/api/maintenance/delete-model-groups', async (req, res) => {
 
   } catch (error) {
     console.error('💥 删除模型分组时发生严重错误:', error);
+    res.status(500).json({ error: '服务器内部错误', details: error.message });
+  }
+});
+
+// 删除指定的渠道
+app.delete('/api/channels/:channelName', async (req, res) => {
+  try {
+    const { channelName } = req.params;
+    if (!channelName) {
+      return res.status(400).json({ error: '需要提供渠道名称' });
+    }
+
+    const results = await gptloadService.deleteChannelCompletely(channelName);
+
+    if (results.errors.length > 0 && !results.deletedSiteGroup) {
+      return res.status(500).json({
+        success: false,
+        message: `删除渠道 ${channelName} 失败`,
+        data: results
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `渠道 ${channelName} 删除操作完成`,
+      data: results
+    });
+  } catch (error) {
+    console.error(`删除渠道时发生严重错误:`, error);
     res.status(500).json({ error: '服务器内部错误', details: error.message });
   }
 });

@@ -139,6 +139,21 @@ class GptloadService {
   }
 
   /**
+   * 通用更新分组
+   */
+  async updateGroup(groupId, instanceId, updateData) {
+    if (!instanceId) {
+      throw new Error('更新分组需要提供 instanceId');
+    }
+    const instance = this.manager.getInstance(instanceId);
+    if (!instance) {
+      throw new Error(`实例 ${instanceId} 不存在`);
+    }
+    
+    return await instance.apiClient.put(`/groups/${groupId}`, updateData);
+  }
+
+  /**
    * 根据ID删除分组
    */
   async deleteGroupById(groupId, instanceId) {
@@ -627,6 +642,75 @@ class GptloadService {
    */
   async checkAllInstancesHealth() {
     return await this.manager.checkAllInstancesHealth();
+  }
+
+  /**
+   * 彻底删除一个渠道及其所有引用
+   */
+  async deleteChannelCompletely(channelName) {
+    console.log(`🚨 开始彻底删除渠道: ${channelName}`);
+    const results = {
+      deletedSiteGroup: null,
+      updatedModelGroups: [],
+      deletedModelGroups: [],
+      errors: []
+    };
+    
+    const allGroups = await this.getAllGroups();
+
+    // 1. 找到并删除站点分组
+    const siteGroupToDelete = allGroups.find(g => g.name === channelName);
+    if (!siteGroupToDelete) {
+      const errorMsg = `未找到要删除的站点分组: ${channelName}`;
+      console.error(errorMsg);
+      results.errors.push(errorMsg);
+      return results;
+    }
+
+    try {
+      await this.deleteGroupById(siteGroupToDelete.id, siteGroupToDelete._instance.id);
+      results.deletedSiteGroup = channelName;
+      console.log(`✅ 成功删除站点分组: ${channelName}`);
+    } catch (error) {
+      const errorMsg = `删除站点分组 ${channelName} 失败: ${error.message}`;
+      console.error(errorMsg);
+      results.errors.push(errorMsg);
+      // 如果站点分组删除失败，则不继续后续操作
+      return results;
+    }
+
+    // 2. 找到所有引用了该渠道的模型分组并更新它们
+    const upstreamToRemove = `/proxy/${channelName}`;
+    const modelGroupsToUpdate = allGroups.filter(g =>
+      g.upstreams?.some(u => u.url.includes(upstreamToRemove))
+    );
+
+    console.log(`🔍 发现 ${modelGroupsToUpdate.length} 个模型分组引用了该渠道，开始清理...`);
+    
+    for (const modelGroup of modelGroupsToUpdate) {
+      try {
+        const newUpstreams = modelGroup.upstreams.filter(u => !u.url.includes(upstreamToRemove));
+
+        if (newUpstreams.length > 0) {
+          // 如果还有其他上游，则更新分组
+          await this.updateGroup(modelGroup.id, modelGroup._instance.id, { upstreams: newUpstreams });
+          results.updatedModelGroups.push(modelGroup.name);
+          console.log(`🔄 已更新模型分组 ${modelGroup.name} 的上游`);
+        } else {
+          // 如果没有其他上游了，则删除整个模型分组
+          await this.deleteGroupById(modelGroup.id, modelGroup._instance.id);
+          results.deletedModelGroups.push(modelGroup.name);
+          console.log(`🗑️ 模型分组 ${modelGroup.name} 因无可用上游而被删除`);
+        }
+      } catch (error) {
+        const errorMsg = `处理模型分组 ${modelGroup.name} 失败: ${error.message}`;
+        console.error(errorMsg);
+        results.errors.push(errorMsg);
+      }
+    }
+
+    console.log(`🏁 渠道 ${channelName} 删除完成`);
+    return results;
   }
 }
 

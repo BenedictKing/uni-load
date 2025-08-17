@@ -402,6 +402,8 @@
                 <div class="sync-status" id="channelHealthStatus">
                     <p>正在获取状态...</p>
                 </div>
+                <!-- 新增一个用于显示渠道列表的容器 -->
+                <div id="channelListContainer" style="margin-top: 15px;"></div>
                 <div class="sync-controls">
                     <button type="button" class="btn-sync" onclick="triggerChannelCheck()">健康检查</button>
                     <button type="button" class="btn-control" id="healthControlBtn" onclick="toggleHealthMonitor()">控制服务</button>
@@ -801,9 +803,18 @@
         // 刷新渠道健康状态
         async function refreshChannelHealthStatus() {
             try {
-                const response = await fetch('/api/status');
-                const data = await response.json();
-                updateChannelHealthDisplay(data.channelHealth);
+                // 获取服务状态
+                const statusResponse = await fetch('/api/status');
+                const statusData = await statusResponse.json();
+                updateChannelHealthDisplay(statusData.channelHealth);
+
+                // 获取站点分组列表
+                const channelsResponse = await fetch('/api/channels/site-groups');
+                const channelsData = await channelsResponse.json();
+                if (channelsData.siteGroups) {
+                    updateChannelListDisplay(channelsData.siteGroups);
+                }
+
             } catch (error) {
                 document.getElementById('channelHealthStatus').innerHTML = 
                     '<p style="color: #dc3545;">❌ 无法获取健康监控状态</p>';
@@ -850,6 +861,66 @@
             // 更新控制按钮
             controlBtn.textContent = healthStatus.hasInterval ? '停止监控' : '启动监控';
             controlBtn.style.background = healthStatus.hasInterval ? '#dc3545' : '#28a745';
+        }
+
+        // 更新渠道列表显示
+        function updateChannelListDisplay(channels) {
+            const container = document.getElementById('channelListContainer');
+            if (channels.length === 0) {
+                container.innerHTML = '<p><small>暂无已配置的渠道分组。</small></p>';
+                return;
+            }
+
+            let html = '<h4>已配置的渠道分组:</h4><ul style="list-style: none; padding-left: 0;">';
+            channels.forEach(channel => {
+                html += `
+                    <li style="display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee;">
+                        <span>
+                            <strong>${channel.name}</strong>
+                            <small style="color: #6c757d;"> (实例: ${channel._instance.name})</small>
+                        </span>
+                        <button class="btn-warning" style="padding: 5px 10px; font-size: 12px;" onclick="deleteChannel('${channel.name}')">删除</button>
+                    </li>
+                `;
+            });
+            html += '</ul>';
+            container.innerHTML = html;
+        }
+
+        // 删除指定渠道
+        async function deleteChannel(channelName) {
+            if (!confirm(`您确定要彻底删除渠道 "${channelName}" 吗？\n\n此操作将同时：\n1. 删除此渠道分组。\n2. 从所有模型分组中移除对此渠道的引用。\n\n操作不可逆！`)) {
+                return;
+            }
+
+            const btn = event.target;
+            const originalText = btn.textContent;
+            
+            try {
+                btn.disabled = true;
+                btn.textContent = '删除中...';
+
+                const response = await fetch(`/api/channels/${channelName}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+
+                if (data.success) {
+                    let alertMsg = `✅ 渠道 "${channelName}" 已成功删除。\n\n`;
+                    alertMsg += `更新的模型分组: ${data.data.updatedModelGroups.length}\n`;
+                    alertMsg += `删除的模型分组: ${data.data.deletedModelGroups.length}`;
+                    alert(alertMsg);
+                    // 刷新列表
+                    refreshChannelHealthStatus();
+                } else {
+                    throw new Error(data.message || '删除失败');
+                }
+            } catch (error) {
+                alert(`❌ 删除渠道 "${channelName}" 失败: ${error.message}`);
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
         }
         
         // 手动触发渠道健康检查
