@@ -274,7 +274,7 @@ class ModelsService {
     // 黑名单关键词（不区分大小写），包含这些词的模型将被过滤
     const blacklistedKeywords = [
       'vision', 'image', 'audio', 'rag', 'search', 'tool', 'json', 'oss',
-      'tts', 'dall-e', 'whisper', 'embedding', 'embed', 'generation'
+      'tts', 'dall-e', 'whisper', 'embedding', 'embed', 'generation', 'rerank'
     ];
 
     const filtered = models.filter((model) => {
