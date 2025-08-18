@@ -282,32 +282,32 @@ class ChannelHealthMonitor {
    */
   async removeUpstreamFromModelGroup(modelGroup, siteGroupName) {
     try {
-      const upstreamUrl = `${process.env.GPTLOAD_URL || 'http://localhost:3001'}/proxy/${siteGroupName}`;
+      // 从所有可能的实例URL中构建上游路径
+      const upstreamUrlPart = `/proxy/${siteGroupName}`;
       
       // 过滤掉要移除的上游
       const updatedUpstreams = modelGroup.upstreams.filter(upstream => 
-        upstream.url !== upstreamUrl
+        !upstream.url.includes(upstreamUrlPart)
       );
 
       if (updatedUpstreams.length < modelGroup.upstreams.length) {
         // 有上游被移除，更新分组
         if (updatedUpstreams.length === 0) {
-          console.log(`⚠️ 模型分组 ${modelGroup.name} 将没有可用上游，跳过移除`);
-          return false;
+          console.log(`⚠️ 模型分组 ${modelGroup.name} 将没有可用上游，跳过移除上游操作`);
+          return false; // 返回 false 表示跳过
         }
 
         const updateData = { upstreams: updatedUpstreams };
         
-        // 这里需要实现更新分组的API调用
-        // await gptloadService.updateGroup(modelGroup.id, updateData);
+        // 调用 gptload 服务来更新分组
+        await gptloadService.updateGroup(modelGroup.id, modelGroup._instance.id, updateData);
         
-        console.log(`➖ 从模型分组 ${modelGroup.name} 中移除上游 ${siteGroupName}`);
-        console.log(`⚠️ 分组更新功能需要在 gptload 服务中实现`);
+        console.log(`➖ 从模型分组 ${modelGroup.name} 中移除了上游 ${siteGroupName}`);
         
-        return true;
+        return true; // 返回 true 表示成功
       }
 
-      return false;
+      return false; // 没有找到匹配的上游，也算作没有移除成功
     } catch (error) {
       console.error(`从模型分组 ${modelGroup.name} 移除上游失败:`, error.message);
       return false;
