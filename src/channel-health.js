@@ -140,15 +140,39 @@ class ChannelHealthMonitor {
       if (healthCheck.success) {
         // 健康状态良好
         
-        // 如果渠道之前有失败记录，现在恢复了，就重新激活它的密钥
+        // 如果渠道之前有失败记录，现在恢复了，就重新激活相关模型分组的密钥
         if (this.channelFailures.has(groupName)) {
-          console.log(`✅ 渠道 ${groupName} 已恢复健康，正在重新激活其 API 密钥...`);
+          console.log(`✅ 渠道 ${groupName} 已恢复健康，正在重新激活相关模型分组的 API 密钥...`);
+          
           try {
-            await gptloadService.toggleApiKeysStatusForGroup(siteGroup.id, siteGroup._instance.id, 'active');
-            console.log(`👍 渠道 ${groupName} 的密钥已成功激活`);
+            // 获取所有分组，找到依赖该渠道的模型分组
+            const allGroups = await gptloadService.getAllGroups();
+            const dependentModelGroups = allGroups.filter(group => 
+              group.upstreams?.some(upstream => upstream.url.includes(`/proxy/${groupName}`))
+            );
+            
+            let activatedGroupsCount = 0;
+            for (const modelGroup of dependentModelGroups) {
+              try {
+                console.log(`🔄 准备恢复模型分组 ${modelGroup.name} 的无效密钥...`);
+                const restoredCount = await gptloadService.toggleApiKeysStatusForGroup(
+                  modelGroup.id, 
+                  modelGroup._instance.id, 
+                  'active'
+                );
+                console.log(`✅ 成功恢复模型分组 ${modelGroup.name} 的 ${restoredCount} 个密钥`);
+                activatedGroupsCount++;
+              } catch (error) {
+                console.error(`恢复模型分组 ${modelGroup.name} 的密钥失败:`, error.message);
+              }
+            }
+            
+            console.log(`👍 渠道 ${groupName} 恢复：共激活了 ${activatedGroupsCount} 个模型分组的密钥`);
+            
           } catch (error) {
-            console.error(`激活渠道 ${groupName} 的密钥失败:`, error.message);
+            console.error(`激活渠道 ${groupName} 相关密钥失败:`, error.message);
           }
+          
           // 重置失败计数
           console.log(`✅ ${groupName}: 恢复正常，重置失败计数`);
           this.channelFailures.delete(groupName);
@@ -290,10 +314,30 @@ class ChannelHealthMonitor {
       }
 
       // 核心逻辑：如果任何模型分组因为此渠道是最后一个上游而跳过了移除，
-      // 我们就软禁用该渠道，而不是去动 uni-api 配置。
+      // 我们就软禁用依赖该渠道的模型分组的密钥，而不是去动 uni-api 配置。
       if (wasSoftDisabled) {
-        console.log(`🔒 渠道 ${groupName} 是部分模型分组的最后一个上游，将通过禁用其API密钥来禁用它，以避免重启uni-api。`);
-        await gptloadService.toggleApiKeysStatusForGroup(siteGroupToRemove.id, siteGroupToRemove._instance.id, 'disabled');
+        console.log(`🔒 渠道 ${groupName} 是部分模型分组的最后一个上游，将禁用相关模型分组的API密钥来禁用它们，以避免重启uni-api。`);
+        
+        // 禁用所有依赖该渠道的模型分组的密钥
+        let disabledGroupsCount = 0;
+        for (const modelGroup of modelGroups) {
+          const hasThisChannelAsUpstream = modelGroup.upstreams?.some(upstream => 
+            upstream.url.includes(`/proxy/${groupName}`)
+          );
+          
+          if (hasThisChannelAsUpstream) {
+            try {
+              console.log(`🔄 准备验证并禁用模型分组 ${modelGroup.name} 的失效密钥...`);
+              await gptloadService.toggleApiKeysStatusForGroup(modelGroup.id, modelGroup._instance.id, 'disabled');
+              console.log(`✅ 成功禁用模型分组 ${modelGroup.name} 的失效密钥`);
+              disabledGroupsCount++;
+            } catch (error) {
+              console.error(`❌ 禁用模型分组 ${modelGroup.name} 的密钥失败: ${error.message}`);
+            }
+          }
+        }
+        
+        console.log(`✅ 共禁用了 ${disabledGroupsCount} 个模型分组的失效密钥`);
       }
       
       console.log(`✅ 已完成对渠道 ${groupName} 的清理操作`);

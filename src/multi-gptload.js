@@ -684,6 +684,7 @@ class MultiGptloadManager {
 
   /**
    * 切换分组下所有 API 密钥的状态
+   * 使用 ValidateGroupKeys 来禁用密钥，使用 RestoreAllInvalidKeys 来恢复密钥
    */
   async toggleApiKeysStatusForGroup(instance, groupId, newStatus) {
     if (newStatus !== 'active' && newStatus !== 'disabled') {
@@ -691,34 +692,32 @@ class MultiGptloadManager {
     }
     
     try {
-      // 1. 获取该分组的所有密钥 (无论状态如何)
-      const params = { group_id: groupId, page: 1, page_size: 1000 };
-      const response = await instance.apiClient.get('/keys', { params });
-
-      const keys = response.data?.data?.items;
-      if (!keys || keys.length === 0) {
-        console.log(`ℹ️ 分组 ${groupId} (实例: ${instance.name}) 下没有密钥可供操作`);
-        return 0;
+      if (newStatus === 'disabled') {
+        // 使用 ValidateGroupKeys 来验证并禁用失效的密钥
+        console.log(`🔄 准备验证分组 ${groupId} 的密钥并禁用失效的密钥...`);
+        
+        const response = await instance.apiClient.post('/keys/validate-group', { 
+          group_id: groupId 
+        });
+        
+        console.log(`✅ 成功启动分组 ${groupId} 的密钥验证任务`);
+        return response.data?.data || {};
+        
+      } else if (newStatus === 'active') {
+        // 使用 RestoreAllInvalidKeys 来恢复所有无效的密钥
+        console.log(`🔄 准备恢复分组 ${groupId} 的所有无效密钥...`);
+        
+        const response = await instance.apiClient.post('/keys/restore-all-invalid', { 
+          group_id: groupId 
+        });
+        
+        const message = response.data?.data?.message || '密钥恢复完成';
+        console.log(`✅ ${message}`);
+        
+        // 从响应消息中提取影响的行数
+        const match = message.match(/(\d+) keys restored/);
+        return match ? parseInt(match[1]) : 0;
       }
-
-      console.log(`🔄 准备将分组 ${groupId} 的 ${keys.length} 个密钥状态更新为 "${newStatus}"...`);
-
-      // 2. 逐个更新密钥状态
-      let updatedCount = 0;
-      for (const key of keys) {
-        try {
-          // 只更新状态不一致的密钥，减少API调用
-          if (key.status !== newStatus) {
-            await instance.apiClient.put(`/keys/${key.id}`, { status: newStatus });
-            updatedCount++;
-          }
-        } catch (keyError) {
-          console.error(`❌ 更新密钥 ${key.id} 状态失败: ${keyError.message}`);
-        }
-      }
-      
-      console.log(`✅ 成功将 ${updatedCount} 个密钥的状态更新为 "${newStatus}"`);
-      return updatedCount;
 
     } catch (error) {
       console.error(`更新分组 ${groupId} 的密钥状态失败: ${error.message}`);
