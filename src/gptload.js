@@ -184,6 +184,20 @@ class GptloadService {
   }
 
   /**
+   * 切换分组下所有 API 密钥的状态
+   */
+  async toggleApiKeysStatusForGroup(groupId, instanceId, status) {
+    if (!instanceId) {
+      throw new Error('切换密钥状态需要提供 instanceId');
+    }
+    const instance = this.manager.getInstance(instanceId);
+    if (!instance) {
+      throw new Error(`实例 ${instanceId} 不存在`);
+    }
+    return await this.manager.toggleApiKeysStatusForGroup(instance, groupId, status);
+  }
+
+  /**
    * 删除所有模型分组 (sort=10)
    */
   async deleteAllModelGroups() {

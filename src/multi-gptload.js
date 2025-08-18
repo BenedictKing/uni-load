@@ -683,6 +683,50 @@ class MultiGptloadManager {
   }
 
   /**
+   * 切换分组下所有 API 密钥的状态
+   */
+  async toggleApiKeysStatusForGroup(instance, groupId, newStatus) {
+    if (newStatus !== 'active' && newStatus !== 'disabled') {
+      throw new Error('无效的密钥状态，必须是 "active" 或 "disabled"');
+    }
+    
+    try {
+      // 1. 获取该分组的所有密钥 (无论状态如何)
+      const params = { group_id: groupId, page: 1, page_size: 1000 };
+      const response = await instance.apiClient.get('/keys', { params });
+
+      const keys = response.data?.data?.items;
+      if (!keys || keys.length === 0) {
+        console.log(`ℹ️ 分组 ${groupId} (实例: ${instance.name}) 下没有密钥可供操作`);
+        return 0;
+      }
+
+      console.log(`🔄 准备将分组 ${groupId} 的 ${keys.length} 个密钥状态更新为 "${newStatus}"...`);
+
+      // 2. 逐个更新密钥状态
+      let updatedCount = 0;
+      for (const key of keys) {
+        try {
+          // 只更新状态不一致的密钥，减少API调用
+          if (key.status !== newStatus) {
+            await instance.apiClient.put(`/keys/${key.id}`, { status: newStatus });
+            updatedCount++;
+          }
+        } catch (keyError) {
+          console.error(`❌ 更新密钥 ${key.id} 状态失败: ${keyError.message}`);
+        }
+      }
+      
+      console.log(`✅ 成功将 ${updatedCount} 个密钥的状态更新为 "${newStatus}"`);
+      return updatedCount;
+
+    } catch (error) {
+      console.error(`更新分组 ${groupId} 的密钥状态失败: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
    * 从指定实例删除分组
    */
   async deleteGroup(instance, groupId) {
