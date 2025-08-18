@@ -765,7 +765,7 @@ class GptloadService {
     } else if (successRate < 80) {
       status = 'warning';
       message = `成功率偏低 (${successRate.toFixed(1)}%)`;
-    } else if (avgResponseTime > 10000) {
+    } else if (avgResponseTime > 30000) {
       status = 'warning';
       message = `响应时间过长 (${avgResponseTime.toFixed(0)}ms)`;
     }
