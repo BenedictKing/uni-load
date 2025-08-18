@@ -122,6 +122,12 @@ class ModelSyncService {
       if (totalErrors > 0) {
         summaryLog += ` (失败站点: ${errorSites.join(', ')})`;
       }
+      
+      // 如果定时器在运行，则显示下次同步时间
+      if (this.syncInterval) {
+        const nextSyncTime = new Date(Date.now() + this.syncIntervalMinutes * 60 * 1000);
+        summaryLog += `，下次同步: ${nextSyncTime.toLocaleString()}`;
+      }
       console.log(summaryLog);
 
     } catch (error) {
