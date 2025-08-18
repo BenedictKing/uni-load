@@ -138,7 +138,20 @@ class ChannelHealthMonitor {
       const healthCheck = await this.performHealthCheck(siteGroup);
       
       if (healthCheck.success) {
-        // 健康状态良好，重置失败计数
+        // 健康状态良好
+        
+        // 检查是否需要重新激活被禁用的渠道
+        if (siteGroup.status === 'disabled') {
+          try {
+            console.log(`✅ 渠道 ${groupName} 已恢复健康，正在重新激活...`);
+            await gptloadService.updateGroup(siteGroup.id, siteGroup._instance.id, { status: 'active' });
+            console.log(`👍 渠道 ${groupName} 已成功激活`);
+          } catch (error) {
+            console.error(`激活渠道 ${groupName} 失败:`, error.message);
+          }
+        }
+
+        // 重置失败计数
         if (this.channelFailures.has(groupName)) {
           console.log(`✅ ${groupName}: 恢复正常，重置失败计数`);
           this.channelFailures.delete(groupName);
@@ -255,6 +268,12 @@ class ChannelHealthMonitor {
         return;
       }
       
+      // 如果分组已经是 disabled 状态，则无需重复操作
+      if (siteGroupToRemove.status === 'disabled') {
+        console.log(`ℹ️ 渠道 ${groupName} 已处于禁用状态，跳过处理`);
+        return;
+      }
+      
       const modelGroups = allGroups.filter(group => 
         group.upstreams?.some(upstream => upstream.url.includes(`/proxy/${groupName}`))
       );
@@ -275,8 +294,8 @@ class ChannelHealthMonitor {
       // 核心逻辑：如果任何模型分组因为此渠道是最后一个上游而跳过了移除，
       // 我们就软禁用该渠道，而不是去动 uni-api 配置。
       if (wasSoftDisabled) {
-        console.log(`🔒 渠道 ${groupName} 是部分模型分组的最后一个上游，将通过删除其API密钥来禁用它，以避免重启uni-api。`);
-        await gptloadService.deleteAllApiKeysFromGroup(siteGroupToRemove.id, siteGroupToRemove._instance.id);
+        console.log(`🔒 渠道 ${groupName} 是部分模型分组的最后一个上游，将通过禁用该分组来禁用它，以避免重启uni-api。`);
+        await gptloadService.updateGroup(siteGroupToRemove.id, siteGroupToRemove._instance.id, { status: 'disabled' });
       }
       
       console.log(`✅ 已完成对渠道 ${groupName} 的清理操作`);
@@ -441,7 +460,7 @@ class ChannelHealthMonitor {
   async logChannelRemoval(channelName, affectedGroups, wasSoftDisabled = false) {
     const logEntry = {
       timestamp: new Date().toISOString(),
-      action: wasSoftDisabled ? 'channel_soft_disabled' : 'channel_upstreams_removed',
+      action: wasSoftDisabled ? 'channel_disabled' : 'channel_upstreams_removed',
       channel: channelName,
       affectedGroups,
       reason: 'health_check_failure'
