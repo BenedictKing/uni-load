@@ -95,6 +95,7 @@ class ModelSyncService {
 
       let totalSynced = 0;
       let totalErrors = 0;
+      const errorSites = []; // 用于记录出错的站点名称
 
       for (const siteGroup of siteGroups) {
         try {
@@ -108,13 +109,20 @@ class ModelSyncService {
           }
         } catch (error) {
           totalErrors++;
+          errorSites.push(siteGroup.name); // 将出错的站点名称添加到数组中
           console.error(`❌ ${siteGroup.name}: 同步失败 - ${error.message}`);
         }
       }
 
       const duration = (Date.now() - startTime) / 1000;
       console.log(`🏁 模型同步检查完成，耗时 ${duration.toFixed(2)}s`);
-      console.log(`📈 统计：${totalSynced} 个站点有更新，${totalErrors} 个站点出错`);
+      
+      // 更新统计日志
+      let summaryLog = `📈 统计：${totalSynced} 个站点有更新，${totalErrors} 个站点出错`;
+      if (totalErrors > 0) {
+        summaryLog += ` (失败站点: ${errorSites.join(', ')})`;
+      }
+      console.log(summaryLog);
 
     } catch (error) {
       console.error('💥 模型同步过程中发生严重错误:', error);
