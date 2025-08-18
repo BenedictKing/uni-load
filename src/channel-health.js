@@ -245,35 +245,50 @@ class ChannelHealthMonitor {
    */
   async removeFailedChannel(groupName) {
     try {
-      console.log(`🗑️ 开始移除失败的渠道: ${groupName}`);
+      console.log(`🗑️ 开始处理失败的渠道: ${groupName}`);
       
-      // 1. 从所有模型分组中移除该站点分组的上游
       const allGroups = await gptloadService.getAllGroups();
+      const siteGroupToRemove = allGroups.find(g => g.name === groupName && g.sort === 20);
+
+      if (!siteGroupToRemove) {
+        console.error(`未找到要处理的站点分组: ${groupName}`);
+        return;
+      }
+      
       const modelGroups = allGroups.filter(group => 
         group.upstreams?.some(upstream => upstream.url.includes(`/proxy/${groupName}`))
       );
 
-      let removedCount = 0;
+      let wasSoftDisabled = false;
+      let updatedGptloadUpstreams = 0;
+
       for (const modelGroup of modelGroups) {
         const success = await this.removeUpstreamFromModelGroup(modelGroup, groupName);
         if (success) {
-          removedCount++;
+          updatedGptloadUpstreams++;
+        } else {
+          // 如果移除失败是因为它是最后一个上游，则标记需要软禁用
+          wasSoftDisabled = true;
         }
       }
 
-      // 2. 可选：禁用或删除站点分组本身
-      // await this.disableSiteGroup(groupName);
-
-      console.log(`✅ 已从 ${removedCount} 个模型分组中移除渠道 ${groupName}`);
+      // 核心逻辑：如果任何模型分组因为此渠道是最后一个上游而跳过了移除，
+      // 我们就软禁用该渠道，而不是去动 uni-api 配置。
+      if (wasSoftDisabled) {
+        console.log(`🔒 渠道 ${groupName} 是部分模型分组的最后一个上游，将通过删除其API密钥来禁用它，以避免重启uni-api。`);
+        await gptloadService.deleteAllApiKeysFromGroup(siteGroupToRemove.id, siteGroupToRemove._instance.id);
+      }
       
-      // 3. 重置失败计数
+      console.log(`✅ 已完成对渠道 ${groupName} 的清理操作`);
+      
+      // 重置失败计数
       this.channelFailures.delete(groupName);
 
-      // 4. 记录移除操作
-      await this.logChannelRemoval(groupName, removedCount);
+      // 记录移除操作
+      await this.logChannelRemoval(groupName, updatedGptloadUpstreams, wasSoftDisabled);
 
     } catch (error) {
-      console.error(`移除渠道 ${groupName} 失败:`, error.message);
+      console.error(`处理渠道 ${groupName} 失败:`, error.message);
     }
   }
 
@@ -423,10 +438,10 @@ class ChannelHealthMonitor {
   /**
    * 记录渠道移除操作
    */
-  async logChannelRemoval(channelName, affectedGroups) {
+  async logChannelRemoval(channelName, affectedGroups, wasSoftDisabled = false) {
     const logEntry = {
       timestamp: new Date().toISOString(),
-      action: 'channel_removed',
+      action: wasSoftDisabled ? 'channel_soft_disabled' : 'channel_upstreams_removed',
       channel: channelName,
       affectedGroups,
       reason: 'health_check_failure'
