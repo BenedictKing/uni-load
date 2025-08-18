@@ -170,6 +170,20 @@ class GptloadService {
   }
 
   /**
+   * 删除分组下的所有 API 密钥
+   */
+  async deleteAllApiKeysFromGroup(groupId, instanceId) {
+    if (!instanceId) {
+      throw new Error('删除密钥需要提供 instanceId');
+    }
+    const instance = this.manager.getInstance(instanceId);
+    if (!instance) {
+      throw new Error(`实例 ${instanceId} 不存在`);
+    }
+    return await this.manager.deleteAllApiKeysFromGroup(instance, groupId);
+  }
+
+  /**
    * 删除所有模型分组 (sort=10)
    */
   async deleteAllModelGroups() {

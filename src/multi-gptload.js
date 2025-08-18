@@ -646,6 +646,43 @@ class MultiGptloadManager {
   }
 
   /**
+   * 删除分组下的所有 API 密钥
+   */
+  async deleteAllApiKeysFromGroup(instance, groupId) {
+    try {
+      // 1. 获取该分组的所有密钥
+      const params = { group_id: groupId, page: 1, page_size: 1000, status: 'active' };
+      const response = await instance.apiClient.get('/keys', { params });
+
+      const keys = response.data?.data?.items;
+      if (!keys || keys.length === 0) {
+        console.log(`ℹ️ 分组 ${groupId} (实例: ${instance.name}) 下没有可删除的密钥`);
+        return 0;
+      }
+
+      console.log(`🗑️ 准备从分组 ${groupId} (实例: ${instance.name}) 删除 ${keys.length} 个密钥...`);
+
+      // 2. 逐个删除密钥
+      let deletedCount = 0;
+      for (const key of keys) {
+        try {
+          await instance.apiClient.delete(`/keys/${key.id}`);
+          deletedCount++;
+        } catch (keyError) {
+          console.error(`❌ 删除密钥 ${key.id} 失败: ${keyError.message}`);
+        }
+      }
+      
+      console.log(`✅ 成功从分组 ${groupId} 删除了 ${deletedCount} 个密钥`);
+      return deletedCount;
+
+    } catch (error) {
+      console.error(`删除分组 ${groupId} 的密钥失败: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
    * 从指定实例删除分组
    */
   async deleteGroup(instance, groupId) {
