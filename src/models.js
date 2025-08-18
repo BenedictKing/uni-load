@@ -4,10 +4,10 @@ const https = require("https");
 class ModelsService {
   constructor() {
     this.timeout = 30000; // 30秒超时
-    
+
     // 创建允许自签名证书的 HTTPS Agent
     this.httpsAgent = new https.Agent({
-      rejectUnauthorized: false // 允许自签名证书和无效证书
+      rejectUnauthorized: false, // 允许自签名证书和无效证书
     });
   }
 
@@ -248,7 +248,7 @@ class ModelsService {
       "mixtral-",
       "mistral-",
       // 01.ai
-      "yi-",
+      // "yi-",
       // Moonshot
       "kimi-k2",
       // Doubao (ByteDance)
