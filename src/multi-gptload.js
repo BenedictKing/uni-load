@@ -696,12 +696,71 @@ class MultiGptloadManager {
         // 使用 ValidateGroupKeys 来验证并禁用失效的密钥
         console.log(`🔄 准备验证分组 ${groupId} 的密钥并禁用失效的密钥...`);
         
-        const response = await instance.apiClient.post('/keys/validate-group', { 
-          group_id: groupId 
-        });
-        
-        console.log(`✅ 成功启动分组 ${groupId} 的密钥验证任务`);
-        return response.data?.data || {};
+        // 最多验证2次
+        for (let attempt = 1; attempt <= 2; attempt++) {
+          console.log(`🔍 第 ${attempt} 次验证分组 ${groupId} 的密钥...`);
+          
+          // 1. 启动验证任务
+          try {
+            const response = await instance.apiClient.post('/keys/validate-group', { 
+              group_id: groupId 
+            });
+            
+            console.log(`✅ 成功启动分组 ${groupId} 的密钥验证任务`);
+            
+          } catch (error) {
+            // 409 错误表示任务已经在运行，这是正常情况
+            if (error.response && error.response.status === 409) {
+              console.log(`ℹ️ 分组 ${groupId} 的验证任务已在运行中，等待完成...`);
+            } else {
+              throw error;
+            }
+          }
+          
+          // 2. 等待任务完成并获取结果
+          const validationResult = await this.waitForValidationTask(instance, groupId);
+          
+          // 3. 检查验证后的密钥状态
+          const keyStats = await this.getGroupKeyStats(instance, groupId);
+          
+          if (keyStats && keyStats.active_keys === 0 && keyStats.invalid_keys > 0) {
+            // 所有密钥都被标记为无效，验证成功
+            console.log(`✅ 分组 ${groupId} 验证完成: 所有密钥已被标记为无效`);
+            return {
+              success: true,
+              attempt: attempt,
+              ...validationResult,
+              final_stats: keyStats
+            };
+          } else if (keyStats && keyStats.active_keys > 0) {
+            // 仍有有效密钥，可能是临时失败
+            console.log(`⚠️ 分组 ${groupId} 第 ${attempt} 次验证后仍有 ${keyStats.active_keys} 个有效密钥，可能是临时失败`);
+            
+            if (attempt === 2) {
+              // 两次验证后仍然有效，跳过这个分组
+              console.log(`ℹ️ 分组 ${groupId} 经过 ${attempt} 次验证后仍有有效密钥，跳过禁用操作`);
+              return {
+                success: false,
+                reason: 'keys_still_valid_after_retries',
+                attempts: attempt,
+                final_stats: keyStats
+              };
+            }
+            
+            // 等待一段时间后再次验证
+            console.log(`⏳ 等待 3 秒后进行第 ${attempt + 1} 次验证...`);
+            await new Promise(resolve => setTimeout(resolve, 3000));
+          } else {
+            // 获取状态失败或异常情况
+            console.log(`⚠️ 分组 ${groupId} 无法获取密钥状态，验证结果不确定`);
+            return {
+              success: true,
+              attempt: attempt,
+              ...validationResult,
+              final_stats: keyStats || {}
+            };
+          }
+        }
         
       } else if (newStatus === 'active') {
         // 使用 RestoreAllInvalidKeys 来恢复所有无效的密钥
@@ -722,6 +781,76 @@ class MultiGptloadManager {
     } catch (error) {
       console.error(`更新分组 ${groupId} 的密钥状态失败: ${error.message}`);
       throw error;
+    }
+  }
+
+  /**
+   * 等待验证任务完成
+   */
+  async waitForValidationTask(instance, groupId) {
+    let maxWaitTime = 30000; // 最多等待30秒
+    let interval = 1000; // 每秒检查一次
+    let elapsedTime = 0;
+    
+    while (elapsedTime < maxWaitTime) {
+      try {
+        const statusResponse = await instance.apiClient.get('/tasks/status');
+        const taskStatus = statusResponse.data?.data;
+        
+        if (!taskStatus) {
+          console.log(`⚠️ 未找到分组 ${groupId} 的任务状态`);
+          break;
+        }
+        
+        if (!taskStatus.is_running) {
+          // 任务已完成
+          const result = taskStatus.result;
+          if (result) {
+            const { invalid_keys, valid_keys, total_keys } = result;
+            console.log(`📊 分组 ${groupId} 验证结果: ${total_keys} 个密钥中 ${invalid_keys} 个无效, ${valid_keys} 个有效`);
+            return { invalid_keys, valid_keys, total_keys };
+          } else {
+            console.log(`✅ 分组 ${groupId} 的密钥验证任务已完成`);
+            return {};
+          }
+        }
+        
+        // 任务还在运行，继续等待
+        console.log(`⏳ 分组 ${groupId} 验证进度: ${taskStatus.processed}/${taskStatus.total}`);
+        await new Promise(resolve => setTimeout(resolve, interval));
+        elapsedTime += interval;
+        
+      } catch (statusError) {
+        console.error(`检查任务状态失败: ${statusError.message}`);
+        break;
+      }
+    }
+    
+    if (elapsedTime >= maxWaitTime) {
+      console.log(`⚠️ 分组 ${groupId} 验证任务等待超时`);
+    }
+    
+    return {};
+  }
+
+  /**
+   * 获取分组的密钥统计信息
+   */
+  async getGroupKeyStats(instance, groupId) {
+    try {
+      const response = await instance.apiClient.get(`/groups/${groupId}/stats`);
+      const keyStats = response.data?.data?.key_stats;
+      
+      if (keyStats) {
+        console.log(`📊 分组 ${groupId} 密钥状态: 总计 ${keyStats.total_keys}, 有效 ${keyStats.active_keys}, 无效 ${keyStats.invalid_keys}`);
+        return keyStats;
+      } else {
+        console.log(`⚠️ 无法获取分组 ${groupId} 的密钥统计信息`);
+        return null;
+      }
+    } catch (error) {
+      console.error(`获取分组 ${groupId} 密钥统计失败: ${error.message}`);
+      return null;
     }
   }
 

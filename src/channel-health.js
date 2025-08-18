@@ -320,6 +320,8 @@ class ChannelHealthMonitor {
         
         // 禁用所有依赖该渠道的模型分组的密钥
         let disabledGroupsCount = 0;
+        let skippedGroupsCount = 0;
+        
         for (const modelGroup of modelGroups) {
           const hasThisChannelAsUpstream = modelGroup.upstreams?.some(upstream => 
             upstream.url.includes(`/proxy/${groupName}`)
@@ -328,16 +330,29 @@ class ChannelHealthMonitor {
           if (hasThisChannelAsUpstream) {
             try {
               console.log(`🔄 准备验证并禁用模型分组 ${modelGroup.name} 的失效密钥...`);
-              await gptloadService.toggleApiKeysStatusForGroup(modelGroup.id, modelGroup._instance.id, 'disabled');
-              console.log(`✅ 成功禁用模型分组 ${modelGroup.name} 的失效密钥`);
-              disabledGroupsCount++;
+              const result = await gptloadService.toggleApiKeysStatusForGroup(
+                modelGroup.id, 
+                modelGroup._instance.id, 
+                'disabled'
+              );
+              
+              if (result && result.success === true) {
+                console.log(`✅ 成功禁用模型分组 ${modelGroup.name} 的失效密钥`);
+                disabledGroupsCount++;
+              } else if (result && result.success === false && result.reason === 'keys_still_valid_after_retries') {
+                console.log(`ℹ️ 模型分组 ${modelGroup.name} 的密钥经过验证后仍然有效，跳过禁用`);
+                skippedGroupsCount++;
+              } else {
+                console.log(`✅ 模型分组 ${modelGroup.name} 的密钥验证完成`);
+                disabledGroupsCount++;
+              }
             } catch (error) {
               console.error(`❌ 禁用模型分组 ${modelGroup.name} 的密钥失败: ${error.message}`);
             }
           }
         }
         
-        console.log(`✅ 共禁用了 ${disabledGroupsCount} 个模型分组的失效密钥`);
+        console.log(`✅ 渠道处理完成: 禁用了 ${disabledGroupsCount} 个模型分组，跳过了 ${skippedGroupsCount} 个模型分组（密钥仍有效）`);
       }
       
       console.log(`✅ 已完成对渠道 ${groupName} 的清理操作`);

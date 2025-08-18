@@ -273,15 +273,28 @@ class ModelsService {
 
     // 黑名单关键词（不区分大小写），包含这些词的模型将被过滤
     const blacklistedKeywords = [
-      'vision', 'image', 'audio', 'rag', 'search', 'tool', 'json', 'oss',
-      'tts', 'dall-e', 'whisper', 'embedding', 'embed', 'generation', 'rerank'
+      "vision",
+      "image",
+      "audio",
+      "rag",
+      "json",
+      "rerank",
+      "tts",
+      "dall-e",
+      "whisper",
+      "embedding",
+      "embed",
+      "generation",
+      "sora",
     ];
 
     const filtered = models.filter((model) => {
       const name = model.toLowerCase();
 
       // 黑名单检查：如果模型名称包含任何黑名单关键词，则过滤掉
-      const isBlacklisted = blacklistedKeywords.some(keyword => name.includes(keyword));
+      const isBlacklisted = blacklistedKeywords.some((keyword) =>
+        name.includes(keyword)
+      );
       if (isBlacklisted) {
         console.log(`🚫 过滤掉模型（在黑名单中）: ${model}`);
         return false;
