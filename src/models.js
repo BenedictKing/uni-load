@@ -271,36 +271,19 @@ class ModelsService {
       "minimax-",
     ];
 
+    // 黑名单关键词（不区分大小写），包含这些词的模型将被过滤
+    const blacklistedKeywords = [
+      'vision', 'image', 'audio', 'rag', 'search', 'tool', 'json', 'oss',
+      'tts', 'dall-e', 'whisper', 'embedding', 'embed', 'generation'
+    ];
+
     const filtered = models.filter((model) => {
       const name = model.toLowerCase();
 
-      // 跳过嵌入模型
-      if (name.includes("embedding") || name.includes("embed")) {
-        return false;
-      }
-
-      // 跳过图像生成模型
-      if (
-        name.includes("dall-e") ||
-        name.includes("midjourney") ||
-        name.includes("imagen") ||
-        name.includes("image-generation") ||
-        name.includes("generate")
-      ) {
-        return false;
-      }
-
-      // 跳过音频模型
-      if (
-        name.includes("whisper") ||
-        name.includes("tts") ||
-        name.includes("audio")
-      ) {
-        return false;
-      }
-
-      // 跳过文本嵌入模型
-      if (name.includes("text-embedding")) {
+      // 黑名单检查：如果模型名称包含任何黑名单关键词，则过滤掉
+      const isBlacklisted = blacklistedKeywords.some(keyword => name.includes(keyword));
+      if (isBlacklisted) {
+        console.log(`🚫 过滤掉模型（在黑名单中）: ${model}`);
         return false;
       }
 
