@@ -170,10 +170,11 @@ class ModelSyncService {
     // 解析站点信息（现在是异步的）
     const siteInfo = await this.parseSiteGroupInfo(siteGroup);
     
-    // 获取当前模型列表
+    // 获取当前模型列表（增加重试次数）
     const currentModels = await modelsService.getModels(
       siteInfo.baseUrl, 
-      siteInfo.apiKey
+      siteInfo.apiKey,
+      3 // 最多重试3次
     );
 
     // 获取已配置的模型（从缓存的模型分组中获取）

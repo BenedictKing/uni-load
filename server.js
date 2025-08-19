@@ -160,9 +160,9 @@ app.post('/api/process-ai-site', async (req, res) => {
     console.log(`开始处理AI站点：${siteName} (${baseUrl})，格式：${selectedChannelTypes.join(', ')}`);
     console.log(`自动生成的站点名称：${siteName}`);
     
-    // 步骤1：获取AI站点支持的模型
+    // 步骤1：获取AI站点支持的模型（增加重试）
     console.log('获取模型列表...');
-    const allModels = await modelsService.getModels(baseUrl, apiKeys[0]);
+    const allModels = await modelsService.getModels(baseUrl, apiKeys[0], 3);
     
     if (!allModels || allModels.length === 0) {
       return res.status(400).json({ error: '无法获取模型列表或模型列表为空' });
