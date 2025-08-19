@@ -5,6 +5,8 @@ const https = require('https');
 const PREFERRED_TEST_MODELS = [
   // OpenAI 小模型
   'gpt-4o-mini',
+  'gpt-4.1-mini',
+  'gpt-4.1-nano',
   'gpt-3.5-turbo',
   
   // Google 小模型
@@ -13,6 +15,7 @@ const PREFERRED_TEST_MODELS = [
   'gemini-1.5-flash',
   
   // DeepSeek 小模型
+  'deepseek-v3-250324',
   'deepseek-v3',
   'deepseek-chat',
   
