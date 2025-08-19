@@ -236,7 +236,9 @@ class YamlManager {
    */
   addOrUpdateModelProvider(config, originalModelName, groupName, validationEndpoint, channelType, gptloadToken = 'sk-uni-load-auto-generated') {
     // 标准化模型名称用于重定向
-    const normalizedModelName = this.normalizeModelName(originalModelName);
+    const normalizedResult = this.normalizeModelName(originalModelName);
+    const withoutOrgName = normalizedResult.withoutOrg;
+    const simplifiedName = normalizedResult.simplified;
     
     // 使用 gptload 服务生成的、确切的分组名
     const modelNameForUrl = groupName;
