@@ -1,1049 +1,1568 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>uni-load - AI站点配置器</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        backdrop-filter: blur(10px);
+        overflow: hidden;
+      }
+
+      .header {
+        background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+      }
+
+      .header h1 {
+        font-size: 2.5em;
+        margin-bottom: 10px;
+        font-weight: 300;
+      }
+
+      .header p {
+        font-size: 1.1em;
+        opacity: 0.9;
+      }
+
+      .form-container {
+        padding: 40px;
+      }
+
+      .form-group {
+        margin-bottom: 25px;
+      }
+
+      .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #555;
+        font-size: 1.1em;
+      }
+
+      .form-group input,
+      .form-group textarea,
+      .form-group select {
+        width: 100%;
+        padding: 15px;
+        border: 2px solid #e1e5e9;
+        border-radius: 10px;
+        font-size: 16px;
+        transition: all 0.3s ease;
+        background: #f8f9fa;
+      }
+
+      .form-group input:focus,
+      .form-group textarea:focus,
+      .form-group select:focus {
+        outline: none;
+        border-color: #4caf50;
+        background: white;
+        box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+      }
+
+      .form-group textarea {
+        height: 120px;
+        resize: vertical;
+        font-family: "Courier New", monospace;
+      }
+
+      .btn-submit {
+        width: 100%;
+        background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+        color: white;
+        border: none;
+        padding: 18px;
+        border-radius: 12px;
+        font-size: 18px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-top: 20px;
+      }
+
+      .btn-submit:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(76, 175, 80, 0.3);
+      }
+
+      .btn-submit:disabled {
+        background: #6c757d;
+        cursor: not-allowed;
+      }
+
+      .result {
+        margin-top: 30px;
+        padding: 20px;
+        border-radius: 10px;
+        display: none;
+      }
+
+      .result.success {
+        background: #d4edda;
+        border: 1px solid #c3e6cb;
+        color: #155724;
+      }
+
+      .result.error {
+        background: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+      }
+
+      .loading {
+        text-align: center;
+        padding: 20px;
+        display: none;
+      }
+
+      .spinner {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #4caf50;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 15px;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
         }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
+        100% {
+          transform: rotate(360deg);
         }
-        
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
-            overflow: hidden;
-        }
-        
-        .header {
-            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-        
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-            font-weight: 300;
-        }
-        
-        .header p {
-            font-size: 1.1em;
-            opacity: 0.9;
-        }
-        
-        .form-container {
-            padding: 40px;
-        }
-        
-        .form-group {
-            margin-bottom: 25px;
-        }
-        
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #555;
-            font-size: 1.1em;
-        }
-        
-        .form-group input, .form-group textarea, .form-group select {
-            width: 100%;
-            padding: 15px;
-            border: 2px solid #e1e5e9;
-            border-radius: 10px;
-            font-size: 16px;
-            transition: all 0.3s ease;
-            background: #f8f9fa;
-        }
-        
-        .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
-            outline: none;
-            border-color: #4CAF50;
-            background: white;
-            box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
-        }
-        
-        .form-group textarea {
-            height: 120px;
-            resize: vertical;
-            font-family: 'Courier New', monospace;
-        }
-        
-        .btn-submit {
-            width: 100%;
-            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-            color: white;
-            border: none;
-            padding: 18px;
-            border-radius: 12px;
-            font-size: 18px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-top: 20px;
-        }
-        
-        .btn-submit:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(76, 175, 80, 0.3);
-        }
-        
-        .btn-submit:disabled {
-            background: #6c757d;
-            cursor: not-allowed;
-        }
-        
-        .result {
-            margin-top: 30px;
-            padding: 20px;
-            border-radius: 10px;
-            display: none;
-        }
-        
-        .result.success {
-            background: #d4edda;
-            border: 1px solid #c3e6cb;
-            color: #155724;
-        }
-        
-        .result.error {
-            background: #f8d7da;
-            border: 1px solid #f5c6cb;
-            color: #721c24;
-        }
-        
-        .loading {
-            text-align: center;
-            padding: 20px;
-            display: none;
-        }
-        
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #4CAF50;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 15px;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .help-text {
-            font-size: 0.9em;
-            color: #6c757d;
-            margin-top: 5px;
-        }
-        
-        .example {
-            background: #e9ecef;
-            padding: 10px;
-            border-radius: 5px;
-            font-family: 'Courier New', monospace;
-            font-size: 0.9em;
-            margin-top: 5px;
-        }
-        
-        .checkbox-group {
-            margin-top: 10px;
-            display: flex;
-            gap: 20px;
-            flex-wrap: wrap;
-        }
-        
-        .checkbox-item {
-            display: flex;
-            align-items: center;
-            cursor: pointer;
-            font-weight: normal;
-            font-size: 16px;
-            white-space: nowrap;
-        }
-        
-        .checkbox-item input[type="checkbox"] {
-            margin-right: 12px;
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
-        }
-        
-        .checkbox-item:hover {
-            background: #f8f9fa;
-            padding: 8px;
-            border-radius: 8px;
-            transition: all 0.2s ease;
-        }
-        
-        .sync-panel {
-            margin-top: 40px;
-            padding: 25px;
-            background: #f8f9fa;
-            border-radius: 15px;
-            border: 2px solid #e1e5e9;
-        }
-        
-        .sync-panel h3 {
-            margin-bottom: 20px;
-            color: #495057;
-            font-weight: 600;
-        }
-        
-        .sync-status {
-            background: white;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            border: 1px solid #dee2e6;
-        }
-        
-        .sync-controls {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-        
-        .btn-sync, .btn-control, .btn-refresh, .btn-warning {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .btn-sync {
-            background: #17a2b8;
-            color: white;
-        }
-        
-        .btn-sync:hover {
-            background: #138496;
-            transform: translateY(-1px);
-        }
-        
-        .btn-control {
-            background: #ffc107;
-            color: #212529;
-        }
-        
-        .btn-control:hover {
-            background: #e0a800;
-            transform: translateY(-1px);
-        }
-        
-        .btn-refresh {
-            background: #6c757d;
-            color: white;
-        }
-        
-        .btn-refresh:hover {
-            background: #545b62;
-            transform: translateY(-1px);
-        }
-        
-        .btn-warning {
-            background: #dc3545;
-            color: white;
-        }
-        
-        .btn-warning:hover {
-            background: #c82333;
-            transform: translateY(-1px);
-        }
-        
-        .status-indicator {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            margin-right: 8px;
-        }
-        
-        .status-running {
-            background: #28a745;
-        }
-        
-        .status-stopped {
-            background: #dc3545;
-        }
-        
-        .status-idle {
-            background: #ffc107;
-        }
+      }
+
+      .help-text {
+        font-size: 0.9em;
+        color: #6c757d;
+        margin-top: 5px;
+      }
+
+      .example {
+        background: #e9ecef;
+        padding: 10px;
+        border-radius: 5px;
+        font-family: "Courier New", monospace;
+        font-size: 0.9em;
+        margin-top: 5px;
+      }
+
+      .checkbox-group {
+        margin-top: 10px;
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+      }
+
+      .checkbox-item {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        font-weight: normal;
+        font-size: 16px;
+        white-space: nowrap;
+      }
+
+      .checkbox-item input[type="checkbox"] {
+        margin-right: 12px;
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+      }
+
+      .checkbox-item:hover {
+        background: #f8f9fa;
+        padding: 8px;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+      }
+
+      .sync-panel {
+        margin-top: 40px;
+        padding: 25px;
+        background: #f8f9fa;
+        border-radius: 15px;
+        border: 2px solid #e1e5e9;
+      }
+
+      .sync-panel h3 {
+        margin-bottom: 20px;
+        color: #495057;
+        font-weight: 600;
+      }
+
+      .sync-status {
+        background: white;
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        border: 1px solid #dee2e6;
+      }
+
+      .sync-controls {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .btn-sync,
+      .btn-control,
+      .btn-refresh,
+      .btn-warning {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      .btn-sync {
+        background: #17a2b8;
+        color: white;
+      }
+
+      .btn-sync:hover {
+        background: #138496;
+        transform: translateY(-1px);
+      }
+
+      .btn-control {
+        background: #ffc107;
+        color: #212529;
+      }
+
+      .btn-control:hover {
+        background: #e0a800;
+        transform: translateY(-1px);
+      }
+
+      .btn-refresh {
+        background: #6c757d;
+        color: white;
+      }
+
+      .btn-refresh:hover {
+        background: #545b62;
+        transform: translateY(-1px);
+      }
+
+      .btn-warning {
+        background: #dc3545;
+        color: white;
+      }
+
+      .btn-warning:hover {
+        background: #c82333;
+        transform: translateY(-1px);
+      }
+
+      .status-indicator {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 8px;
+      }
+
+      .status-running {
+        background: #28a745;
+      }
+
+      .status-stopped {
+        background: #dc3545;
+      }
+
+      .status-idle {
+        background: #ffc107;
+      }
+      /* 渠道网格布局 */
+      .channels-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+      }
+
+      /* 渠道卡片样式 */
+      .channel-card {
+        border: 1px solid #e1e5e9;
+        border-radius: 10px;
+        padding: 1rem;
+        background: white;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .channel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.8rem;
+      }
+
+      .channel-header h5 {
+        margin: 0;
+        color: #333;
+        font-size: 1.1em;
+      }
+
+      .channel-type {
+        background: #6c757d;
+        color: white;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.8em;
+        font-weight: bold;
+      }
+
+      .channel-info {
+        margin-bottom: 1rem;
+        font-size: 0.9em;
+        color: #666;
+      }
+
+      .channel-info div {
+        margin-bottom: 0.3rem;
+      }
+
+      .channel-actions {
+        display: flex;
+        gap: 0.5rem;
+      }
+
+      .btn-update {
+        background: #28a745;
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.9em;
+        flex: 1;
+      }
+
+      .btn-update:hover {
+        background: #218838;
+      }
+
+      /* 模态框样式 */
+      .modal {
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(5px);
+      }
+
+      .modal-content {
+        background-color: white;
+        margin: 5% auto;
+        border-radius: 15px;
+        width: 90%;
+        max-width: 500px;
+        max-height: 80vh;
+        overflow-y: auto;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      }
+
+      .modal-header {
+        padding: 1.5rem;
+        border-bottom: 1px solid #e1e5e9;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #f8f9fa;
+        border-radius: 15px 15px 0 0;
+      }
+
+      .modal-header h3 {
+        margin: 0;
+        color: #333;
+      }
+
+      .close {
+        font-size: 24px;
+        cursor: pointer;
+        color: #666;
+        background: none;
+        border: none;
+      }
+
+      .close:hover {
+        color: #000;
+      }
+
+      .modal-body {
+        padding: 1.5rem;
+      }
+
+      .info-display {
+        background: #f8f9fa;
+        padding: 0.8rem;
+        border-radius: 5px;
+        font-family: "Courier New", monospace;
+        border: 1px solid #e1e5e9;
+        color: #495057;
+      }
+
+      .modal-actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1.5rem;
+      }
+
+      .btn-primary {
+        background: #4caf50;
+        color: white;
+        border: none;
+        padding: 0.8rem 1.5rem;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 1em;
+        flex: 1;
+      }
+
+      .btn-primary:hover {
+        background: #45a049;
+      }
+
+      .btn-secondary {
+        background: #6c757d;
+        color: white;
+        border: none;
+        padding: 0.8rem 1.5rem;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 1em;
+        flex: 1;
+      }
+
+      .btn-secondary:hover {
+        background: #545b62;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <div class="header">
-            <h1>🚀 uni-load</h1>
-            <p>AI站点自动配置工具 - 连接 uni-api 与 gpt-load</p>
+      <div class="header">
+        <h1>🚀 uni-load</h1>
+        <p>AI站点自动配置工具 - 连接 uni-api 与 gpt-load</p>
+      </div>
+
+      <div class="form-container">
+        <form id="aiSiteForm">
+          <div class="form-group">
+            <label for="baseUrl">API 基础地址 *</label>
+            <input
+              type="url"
+              id="baseUrl"
+              name="baseUrl"
+              required
+              placeholder="https://api.example.com"
+              oninput="debouncedUpdateSiteName()"
+            />
+            <div class="help-text">AI站点的API地址</div>
+          </div>
+
+          <div class="form-group">
+            <label>自动生成的站点名称</label>
+            <div
+              style="
+                background: #f8f9fa;
+                padding: 15px;
+                border-radius: 10px;
+                border: 2px solid #e1e5e9;
+              "
+            >
+              <div
+                id="generatedSiteName"
+                style="
+                  font-family: 'Courier New', monospace;
+                  font-weight: bold;
+                  color: #28a745;
+                "
+              >
+                请先输入 API 基础地址
+              </div>
+              <div class="help-text">根据域名自动生成</div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>API 格式类型 * (可多选)</label>
+            <div class="checkbox-group">
+              <label class="checkbox-item">
+                <input
+                  type="checkbox"
+                  id="channelType_openai"
+                  name="channelTypes"
+                  value="openai"
+                  checked
+                  onchange="updateValidationEndpointHelp()"
+                />
+                <span class="checkmark"></span>
+                OpenAI 兼容格式
+              </label>
+              <label class="checkbox-item">
+                <input
+                  type="checkbox"
+                  id="channelType_anthropic"
+                  name="channelTypes"
+                  value="anthropic"
+                  onchange="updateValidationEndpointHelp()"
+                />
+                <span class="checkmark"></span>
+                Anthropic Claude 格式
+              </label>
+              <label class="checkbox-item">
+                <input
+                  type="checkbox"
+                  id="channelType_gemini"
+                  name="channelTypes"
+                  value="gemini"
+                  onchange="updateValidationEndpointHelp()"
+                />
+                <span class="checkmark"></span>
+                Google Gemini 格式
+              </label>
+            </div>
+            <div class="help-text">选择该AI站点支持的API格式</div>
+          </div>
+
+          <div class="form-group">
+            <label for="apiKeys">API 密钥 *</label>
+            <textarea
+              id="apiKeys"
+              name="apiKeys"
+              required
+              placeholder="sk-xxx...&#10;sk-yyy..., sk-zzz...&#10;sk-aaa... sk-bbb...; sk-ccc...&#10;&#10;支持分隔符：换行、空格、逗号、分号"
+              rows="6"
+            ></textarea>
+          </div>
+
+          <!-- 新的动态验证端点输入区域 -->
+          <div id="validationEndpointsContainer">
+            <div
+              id="validationEndpoint_openai_group"
+              class="form-group"
+              style="display: none"
+            >
+              <label for="validationEndpoint_openai"
+                >验证端点 (OpenAI 格式)</label
+              >
+              <input
+                type="text"
+                id="validationEndpoint_openai"
+                name="validationEndpoint_openai"
+                placeholder="留空则使用默认值 /v1/chat/completions"
+              />
+              <div class="help-text">用于 OpenAI 格式的健康检查端点。</div>
+            </div>
+            <div
+              id="validationEndpoint_anthropic_group"
+              class="form-group"
+              style="display: none"
+            >
+              <label for="validationEndpoint_anthropic"
+                >验证端点 (Claude 格式)</label
+              >
+              <input
+                type="text"
+                id="validationEndpoint_anthropic"
+                name="validationEndpoint_anthropic"
+                placeholder="留空则使用默认值 /v1/messages"
+              />
+              <div class="help-text">
+                用于 Anthropic Claude 格式的健康检查端点。
+              </div>
+            </div>
+            <div
+              id="validationEndpoint_gemini_group"
+              class="form-group"
+              style="display: none"
+            >
+              <label for="validationEndpoint_gemini"
+                >验证端点 (Gemini 格式)</label
+              >
+              <input
+                type="text"
+                id="validationEndpoint_gemini"
+                name="validationEndpoint_gemini"
+                placeholder="留空则使用默认值 /v1beta/models"
+              />
+              <div class="help-text">
+                用于 Google Gemini 格式的健康检查端点。
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-submit" id="submitBtn">
+            🔧 开始配置
+          </button>
+        </form>
+
+        <div class="loading" id="loading">
+          <div class="spinner"></div>
+          <p>正在配置中，请稍候...</p>
         </div>
-        
-        <div class="form-container">
-            <form id="aiSiteForm">
-                <div class="form-group">
-                    <label for="baseUrl">API 基础地址 *</label>
-                    <input type="url" id="baseUrl" name="baseUrl" required 
-                           placeholder="https://api.example.com"
-                           oninput="debouncedUpdateSiteName()">
-                    <div class="help-text">AI站点的API地址</div>
-                </div>
-                
-                <div class="form-group">
-                    <label>自动生成的站点名称</label>
-                    <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; border: 2px solid #e1e5e9;">
-                        <div id="generatedSiteName" style="font-family: 'Courier New', monospace; font-weight: bold; color: #28a745;">
-                            请先输入 API 基础地址
-                        </div>
-                        <div class="help-text">根据域名自动生成</div>
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label>API 格式类型 * (可多选)</label>
-                    <div class="checkbox-group">
-                        <label class="checkbox-item">
-                            <input type="checkbox" id="channelType_openai" name="channelTypes" value="openai" checked onchange="updateValidationEndpointHelp()">
-                            <span class="checkmark"></span>
-                            OpenAI 兼容格式
-                        </label>
-                        <label class="checkbox-item">
-                            <input type="checkbox" id="channelType_anthropic" name="channelTypes" value="anthropic" onchange="updateValidationEndpointHelp()">
-                            <span class="checkmark"></span>
-                            Anthropic Claude 格式
-                        </label>
-                        <label class="checkbox-item">
-                            <input type="checkbox" id="channelType_gemini" name="channelTypes" value="gemini" onchange="updateValidationEndpointHelp()">
-                            <span class="checkmark"></span>
-                            Google Gemini 格式
-                        </label>
-                    </div>
-                    <div class="help-text">选择该AI站点支持的API格式</div>
-                </div>
-                
-                <div class="form-group">
-                    <label for="apiKeys">API 密钥 *</label>
-                    <textarea id="apiKeys" name="apiKeys" required 
-                              placeholder="sk-xxx...&#10;sk-yyy..., sk-zzz...&#10;sk-aaa... sk-bbb...; sk-ccc...&#10;&#10;支持分隔符：换行、空格、逗号、分号"
-                              rows="6"></textarea>
-                </div>
-                
-                <!-- 新的动态验证端点输入区域 -->
-                <div id="validationEndpointsContainer">
-                    <div id="validationEndpoint_openai_group" class="form-group" style="display: none;">
-                        <label for="validationEndpoint_openai">验证端点 (OpenAI 格式)</label>
-                        <input type="text" id="validationEndpoint_openai" name="validationEndpoint_openai" placeholder="留空则使用默认值 /v1/chat/completions">
-                        <div class="help-text">用于 OpenAI 格式的健康检查端点。</div>
-                    </div>
-                    <div id="validationEndpoint_anthropic_group" class="form-group" style="display: none;">
-                        <label for="validationEndpoint_anthropic">验证端点 (Claude 格式)</label>
-                        <input type="text" id="validationEndpoint_anthropic" name="validationEndpoint_anthropic" placeholder="留空则使用默认值 /v1/messages">
-                        <div class="help-text">用于 Anthropic Claude 格式的健康检查端点。</div>
-                    </div>
-                    <div id="validationEndpoint_gemini_group" class="form-group" style="display: none;">
-                        <label for="validationEndpoint_gemini">验证端点 (Gemini 格式)</label>
-                        <input type="text" id="validationEndpoint_gemini" name="validationEndpoint_gemini" placeholder="留空则使用默认值 /v1beta/models">
-                        <div class="help-text">用于 Google Gemini 格式的健康检查端点。</div>
-                    </div>
-                </div>
-                
-                <button type="submit" class="btn-submit" id="submitBtn">
-                    🔧 开始配置
-                </button>
-            </form>
-            
-            <div class="loading" id="loading">
-                <div class="spinner"></div>
-                <p>正在配置中，请稍候...</p>
-            </div>
-            
-            <div class="result" id="result"></div>
-            
-            <!-- 模型同步控制面板 -->
-            <div class="sync-panel">
-                <h3>🔄 模型同步服务</h3>
-                <div class="sync-status" id="syncStatus">
-                    <p>正在获取状态...</p>
-                </div>
-                <div class="sync-controls">
-                    <button type="button" class="btn-sync" onclick="triggerManualSync()">手动同步</button>
-                    <button type="button" class="btn-control" id="syncControlBtn" onclick="toggleSyncService()">控制服务</button>
-                    <button type="button" class="btn-refresh" onclick="refreshSyncStatus()">刷新状态</button>
-                    <button type="button" class="btn-warning" onclick="cleanupAndResetModels()">清理并重置</button>
-                </div>
-            </div>
-            
-            <!-- 渠道健康监控面板 -->
-            <div class="sync-panel">
-                <h3>🩺 渠道健康监控</h3>
-                <div class="sync-status" id="channelHealthStatus">
-                    <p>正在获取状态...</p>
-                </div>
-                <!-- 新增一个用于显示渠道列表的容器 -->
-                <div id="channelListContainer" style="margin-top: 15px;"></div>
-                <div class="sync-controls">
-                    <button type="button" class="btn-sync" onclick="triggerChannelCheck()">健康检查</button>
-                    <button type="button" class="btn-control" id="healthControlBtn" onclick="toggleHealthMonitor()">控制服务</button>
-                    <button type="button" class="btn-warning" onclick="showFailedChannels()">查看失败渠道</button>
-                    <button type="button" class="btn-refresh" onclick="refreshChannelHealthStatus()">刷新状态</button>
-                </div>
-            </div>
+
+        <div class="result" id="result"></div>
+
+        <!-- 模型同步控制面板 -->
+        <div class="sync-panel">
+          <h3>🔄 模型同步服务</h3>
+          <div class="sync-status" id="syncStatus">
+            <p>正在获取状态...</p>
+          </div>
+          <div class="sync-controls">
+            <button
+              type="button"
+              class="btn-sync"
+              onclick="triggerManualSync()"
+            >
+              手动同步
+            </button>
+            <button
+              type="button"
+              class="btn-control"
+              id="syncControlBtn"
+              onclick="toggleSyncService()"
+            >
+              控制服务
+            </button>
+            <button
+              type="button"
+              class="btn-refresh"
+              onclick="refreshSyncStatus()"
+            >
+              刷新状态
+            </button>
+            <button
+              type="button"
+              class="btn-warning"
+              onclick="cleanupAndResetModels()"
+            >
+              清理并重置
+            </button>
+          </div>
         </div>
+
+        <!-- 渠道健康监控面板 -->
+        <div class="sync-panel">
+          <h3>🩺 渠道健康监控</h3>
+          <div class="sync-status" id="channelHealthStatus">
+            <p>正在获取状态...</p>
+          </div>
+          <!-- 新增一个用于显示渠道列表的容器 -->
+          <div id="channelListContainer" style="margin-top: 15px"></div>
+          <div class="sync-controls">
+            <button
+              type="button"
+              class="btn-sync"
+              onclick="triggerChannelCheck()"
+            >
+              健康检查
+            </button>
+            <button
+              type="button"
+              class="btn-control"
+              id="healthControlBtn"
+              onclick="toggleHealthMonitor()"
+            >
+              控制服务
+            </button>
+            <button
+              type="button"
+              class="btn-warning"
+              onclick="showFailedChannels()"
+            >
+              查看失败渠道
+            </button>
+            <button
+              type="button"
+              class="btn-refresh"
+              onclick="refreshChannelHealthStatus()"
+            >
+              刷新状态
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
+    <!-- 更新渠道模态框 -->
+    <div id="updateChannelModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>🔄 更新渠道配置</h3>
+          <span class="close" onclick="closeUpdateModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+          <form id="updateChannelForm">
+            <input type="hidden" id="updateChannelName" />
+            <input type="hidden" id="updateOriginalBaseUrl" />
+            <input type="hidden" id="updateChannelType" />
 
+            <div class="form-group">
+              <label>渠道名称：</label>
+              <div class="info-display" id="updateChannelDisplayName"></div>
+            </div>
+
+            <div class="form-group">
+              <label>原始地址：</label>
+              <div class="info-display" id="updateBaseUrlDisplay"></div>
+            </div>
+
+            <div class="form-group">
+              <label for="updateApiKeys">🔑 API 密钥 *</label>
+              <textarea
+                id="updateApiKeys"
+                placeholder="sk-xxx...&#10;sk-yyy..."
+                rows="4"
+                required
+              ></textarea>
+              <div class="help-text">添加新的API密钥，现有密钥会保留</div>
+            </div>
+
+            <div class="modal-actions">
+              <button type="submit" class="btn-primary">🔄 更新配置</button>
+              <button
+                type="button"
+                class="btn-secondary"
+                onclick="closeUpdateModal()"
+              >
+                取消
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
     <script>
-        // 自动生成站点名称 - 通过后端API
-        async function updateSiteName() {
-            const baseUrlInput = document.getElementById('baseUrl');
-            const siteNameDiv = document.getElementById('generatedSiteName');
-            const baseUrl = baseUrlInput.value.trim();
-            
-            if (!baseUrl) {
-                siteNameDiv.textContent = '请先输入 API 基础地址';
-                siteNameDiv.style.color = '#6c757d';
-                return;
-            }
-            
-            try {
-                // 调用后端API获取站点名称
-                const response = await fetch('/api/preview-site-name', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ baseUrl })
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok) {
-                    siteNameDiv.textContent = data.siteName;
-                    siteNameDiv.style.color = '#28a745';
-                } else {
-                    siteNameDiv.textContent = data.error || '无法生成站点名称';
-                    siteNameDiv.style.color = '#dc3545';
-                }
-            } catch (error) {
-                siteNameDiv.textContent = '网络错误，无法生成站点名称';
-                siteNameDiv.style.color = '#dc3545';
-            }
-        }
-        
-        // 防抖函数，避免频繁调用API
-        let debounceTimer;
-        function debouncedUpdateSiteName() {
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(updateSiteName, 500); // 500ms 延迟
-        }
-        
-        function debouncedUpdateSiteName() {
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(updateSiteName, 500); // 500ms 延迟
+      // 自动生成站点名称 - 通过后端API
+      async function updateSiteName() {
+        const baseUrlInput = document.getElementById("baseUrl");
+        const siteNameDiv = document.getElementById("generatedSiteName");
+        const baseUrl = baseUrlInput.value.trim();
+
+        if (!baseUrl) {
+          siteNameDiv.textContent = "请先输入 API 基础地址";
+          siteNameDiv.style.color = "#6c757d";
+          return;
         }
 
-        // 动态更新验证端点的帮助信息
-        function updateValidationEndpointHelp() {
-            const checkedTypes = Array.from(document.querySelectorAll('input[name="channelTypes"]:checked')).map(cb => cb.value);
-            const allTypes = ['openai', 'anthropic', 'gemini'];
+        try {
+          // 调用后端API获取站点名称
+          const response = await fetch("/api/preview-site-name", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ baseUrl }),
+          });
 
-            allTypes.forEach(type => {
-                const groupDiv = document.getElementById(`validationEndpoint_${type}_group`);
-                if (groupDiv) {
-                    if (checkedTypes.includes(type)) {
-                        groupDiv.style.display = 'block';
-                    } else {
-                        groupDiv.style.display = 'none';
-                    }
-                }
+          const data = await response.json();
+
+          if (response.ok) {
+            siteNameDiv.textContent = data.siteName;
+            siteNameDiv.style.color = "#28a745";
+          } else {
+            siteNameDiv.textContent = data.error || "无法生成站点名称";
+            siteNameDiv.style.color = "#dc3545";
+          }
+        } catch (error) {
+          siteNameDiv.textContent = "网络错误，无法生成站点名称";
+          siteNameDiv.style.color = "#dc3545";
+        }
+      }
+
+      // 防抖函数，避免频繁调用API
+      let debounceTimer;
+      function debouncedUpdateSiteName() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(updateSiteName, 500); // 500ms 延迟
+      }
+
+      function debouncedUpdateSiteName() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(updateSiteName, 500); // 500ms 延迟
+      }
+
+      // 动态更新验证端点的帮助信息
+      function updateValidationEndpointHelp() {
+        const checkedTypes = Array.from(
+          document.querySelectorAll('input[name="channelTypes"]:checked')
+        ).map((cb) => cb.value);
+        const allTypes = ["openai", "anthropic", "gemini"];
+
+        allTypes.forEach((type) => {
+          const groupDiv = document.getElementById(
+            `validationEndpoint_${type}_group`
+          );
+          if (groupDiv) {
+            if (checkedTypes.includes(type)) {
+              groupDiv.style.display = "block";
+            } else {
+              groupDiv.style.display = "none";
+            }
+          }
+        });
+      }
+
+      function addApiKey() {
+        // 这个函数不再需要，但保留以防止错误
+      }
+
+      function removeApiKey(button) {
+        // 这个函数不再需要，但保留以防止错误
+      }
+
+      // 解析多行API密钥文本
+      function parseApiKeys(text) {
+        if (!text || !text.trim()) {
+          return [];
+        }
+
+        // 使用多种分隔符：换行、空格、逗号、分号
+        const keys = text
+          .split(/[\n\r\s,;]+/) // 按换行、空格、逗号、分号分割
+          .map((key) => key.trim()) // 去除首尾空格
+          .filter((key) => key.length > 0) // 过滤空字符串
+          .filter((key, index, arr) => arr.indexOf(key) === index); // 去重
+
+        return keys;
+      }
+
+      document
+        .getElementById("aiSiteForm")
+        .addEventListener("submit", async function (e) {
+          e.preventDefault();
+
+          const submitBtn = document.getElementById("submitBtn");
+          const loading = document.getElementById("loading");
+          const result = document.getElementById("result");
+
+          // 收集表单数据
+          const baseUrl = document.getElementById("baseUrl").value.trim();
+
+          // 收集选中的 channelTypes
+          const channelTypeCheckboxes = document.querySelectorAll(
+            'input[name="channelTypes"]:checked'
+          );
+          const channelTypes = Array.from(channelTypeCheckboxes).map(
+            (cb) => cb.value
+          );
+
+          if (channelTypes.length === 0) {
+            alert("请至少选择一种API格式类型");
+            return;
+          }
+
+          // 通过API获取站点名称
+          let siteName;
+          try {
+            const response = await fetch("/api/preview-site-name", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ baseUrl }),
             });
-        }
-        
-        function addApiKey() {
-            // 这个函数不再需要，但保留以防止错误
-        }
-        
-        function removeApiKey(button) {
-            // 这个函数不再需要，但保留以防止错误
-        }
-        
-        // 解析多行API密钥文本
-        function parseApiKeys(text) {
-            if (!text || !text.trim()) {
-                return [];
+
+            const data = await response.json();
+
+            if (response.ok) {
+              siteName = data.siteName;
+            } else {
+              alert("无法生成站点名称: " + (data.error || "未知错误"));
+              return;
             }
-            
-            // 使用多种分隔符：换行、空格、逗号、分号
-            const keys = text
-                .split(/[\n\r\s,;]+/) // 按换行、空格、逗号、分号分割
-                .map(key => key.trim()) // 去除首尾空格
-                .filter(key => key.length > 0) // 过滤空字符串
-                .filter((key, index, arr) => arr.indexOf(key) === index); // 去重
-            
-            return keys;
-        }
-        
-        document.getElementById('aiSiteForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const submitBtn = document.getElementById('submitBtn');
-            const loading = document.getElementById('loading');
-            const result = document.getElementById('result');
-            
-            // 收集表单数据
-            const baseUrl = document.getElementById('baseUrl').value.trim();
-            
-            // 收集选中的 channelTypes
-            const channelTypeCheckboxes = document.querySelectorAll('input[name="channelTypes"]:checked');
-            const channelTypes = Array.from(channelTypeCheckboxes).map(cb => cb.value);
-            
-            if (channelTypes.length === 0) {
-                alert('请至少选择一种API格式类型');
-                return;
+          } catch (error) {
+            alert("获取站点名称失败: " + error.message);
+            return;
+          }
+
+          // 解析多行API密钥文本
+          const apiKeysText = document.getElementById("apiKeys").value;
+          const apiKeys = parseApiKeys(apiKeysText);
+
+          // 收集自定义验证端点
+          const customValidationEndpoints = {};
+          channelTypes.forEach((type) => {
+            const input = document.getElementById(`validationEndpoint_${type}`);
+            if (input && input.value.trim()) {
+              customValidationEndpoints[type] = input.value.trim();
             }
-            
-            // 通过API获取站点名称
-            let siteName;
-            try {
-                const response = await fetch('/api/preview-site-name', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ baseUrl })
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok) {
-                    siteName = data.siteName;
-                } else {
-                    alert('无法生成站点名称: ' + (data.error || '未知错误'));
-                    return;
-                }
-            } catch (error) {
-                alert('获取站点名称失败: ' + error.message);
-                return;
-            }
-            
-            // 解析多行API密钥文本
-            const apiKeysText = document.getElementById('apiKeys').value;
-            const apiKeys = parseApiKeys(apiKeysText);
-            
-            // 收集自定义验证端点
-            const customValidationEndpoints = {};
-            channelTypes.forEach(type => {
-                const input = document.getElementById(`validationEndpoint_${type}`);
-                if (input && input.value.trim()) {
-                    customValidationEndpoints[type] = input.value.trim();
-                }
+          });
+
+          if (apiKeys.length === 0) {
+            alert("请至少输入一个API密钥");
+            return;
+          }
+
+          // 显示加载状态
+          submitBtn.disabled = true;
+          loading.style.display = "block";
+          result.style.display = "none";
+
+          try {
+            const response = await fetch("/api/process-ai-site", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                siteName,
+                baseUrl,
+                apiKeys,
+                channelTypes,
+                customValidationEndpoints, // 使用新的对象
+              }),
             });
-            
-            if (apiKeys.length === 0) {
-                alert('请至少输入一个API密钥');
-                return;
-            }
-            
-            // 显示加载状态
-            submitBtn.disabled = true;
-            loading.style.display = 'block';
-            result.style.display = 'none';
-            
-            try {
-                const response = await fetch('/api/process-ai-site', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        siteName,
-                        baseUrl,
-                        apiKeys,
-                        channelTypes,
-                        customValidationEndpoints // 使用新的对象
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    result.className = 'result success';
-                    result.innerHTML = `
+
+            const data = await response.json();
+
+            if (data.success) {
+              result.className = "result success";
+              result.innerHTML = `
                         <h3>✅ 配置成功！</h3>
                         <p><strong>站点名称:</strong> ${data.data.siteName}</p>
-                        <p><strong>API格式:</strong> ${data.data.channelTypes.join(', ')}</p>
-                        <p><strong>创建分组:</strong> ${data.data.groupsCreated} 个</p>
-                        <p><strong>发现模型:</strong> ${data.data.modelsCount} 个</p>
+                        <p><strong>API格式:</strong> ${data.data.channelTypes.join(
+                          ", "
+                        )}</p>
+                        <p><strong>创建分组:</strong> ${
+                          data.data.groupsCreated
+                        } 个</p>
+                        <p><strong>发现模型:</strong> ${
+                          data.data.modelsCount
+                        } 个</p>
                         <p><strong>模型列表:</strong></p>
                         <ul style="margin-left: 20px; margin-top: 10px;">
-                            ${data.data.models.map(model => `<li>${model}</li>`).join('')}
+                            ${data.data.models
+                              .map((model) => `<li>${model}</li>`)
+                              .join("")}
                         </ul>
                         <p style="margin-top: 15px; color: #28a745;">
                             <strong>✨ 现在可以通过 uni-api 访问这些模型了！</strong>
                         </p>
                     `;
-                } else {
-                    throw new Error(data.error || '配置失败');
-                }
-                
-            } catch (error) {
-                result.className = 'result error';
-                result.innerHTML = `
+            } else {
+              throw new Error(data.error || "配置失败");
+            }
+          } catch (error) {
+            result.className = "result error";
+            result.innerHTML = `
                     <h3>❌ 配置失败</h3>
                     <p><strong>错误信息:</strong> ${error.message}</p>
                     <p>请检查输入的信息是否正确，或查看控制台获取更多详情。</p>
                 `;
-            } finally {
-                submitBtn.disabled = false;
-                loading.style.display = 'none';
-                result.style.display = 'block';
-            }
+          } finally {
+            submitBtn.disabled = false;
+            loading.style.display = "none";
+            result.style.display = "block";
+          }
         });
-        
-        // 页面加载时添加一些示例提示
-        document.addEventListener('DOMContentLoaded', function() {
-            // 检查服务状态
-            fetch('/api/health')
-                .then(response => response.json())
-                .then(data => {
-                    console.log('✅ uni-load 服务运行正常');
-                })
-                .catch(error => {
-                    console.error('❌ uni-load 服务连接失败:', error);
-                });
-                
-            // 初始化同步状态
-            refreshSyncStatus();
-            
-            // 初始化渠道健康状态
-            refreshChannelHealthStatus();
 
-            // 初始化验证端点帮助信息
-            updateValidationEndpointHelp();
-        });
-        
-        // 刷新同步状态
-        async function refreshSyncStatus() {
-            try {
-                const response = await fetch('/api/status');
-                const data = await response.json();
-                updateSyncStatusDisplay(data.modelSync);
-            } catch (error) {
-                document.getElementById('syncStatus').innerHTML = 
-                    '<p style="color: #dc3545;">❌ 无法获取同步状态</p>';
-            }
+      // 页面加载时添加一些示例提示
+      document.addEventListener("DOMContentLoaded", function () {
+        // 检查服务状态
+        fetch("/api/health")
+          .then((response) => response.json())
+          .then((data) => {
+            console.log("✅ uni-load 服务运行正常");
+          })
+          .catch((error) => {
+            console.error("❌ uni-load 服务连接失败:", error);
+          });
+
+        // 初始化同步状态
+        refreshSyncStatus();
+
+        // 初始化渠道健康状态
+        refreshChannelHealthStatus();
+
+        // 初始化验证端点帮助信息
+        updateValidationEndpointHelp();
+      });
+
+      // 刷新同步状态
+      async function refreshSyncStatus() {
+        try {
+          const response = await fetch("/api/status");
+          const data = await response.json();
+          updateSyncStatusDisplay(data.modelSync);
+        } catch (error) {
+          document.getElementById("syncStatus").innerHTML =
+            '<p style="color: #dc3545;">❌ 无法获取同步状态</p>';
         }
-        
-        // 更新同步状态显示
-        function updateSyncStatusDisplay(syncStatus) {
-            const statusDiv = document.getElementById('syncStatus');
-            const controlBtn = document.getElementById('syncControlBtn');
-            
-            if (!syncStatus) {
-                statusDiv.innerHTML = '<p style="color: #dc3545;">❌ 同步服务不可用</p>';
-                return;
-            }
-            
-            let statusIndicator = '';
-            let statusText = '';
-            
-            if (syncStatus.isRunning) {
-                statusIndicator = '<span class="status-indicator status-running"></span>';
-                statusText = '正在同步中...';
-            } else if (syncStatus.hasInterval) {
-                statusIndicator = '<span class="status-indicator status-idle"></span>';
-                statusText = `服务运行中，每 ${syncStatus.intervalMinutes} 分钟检查一次`;
-                if (syncStatus.nextSync) {
-                    statusText += `<br><small>下次同步: ${new Date(syncStatus.nextSync).toLocaleString()}</small>`;
-                }
-            } else {
-                statusIndicator = '<span class="status-indicator status-stopped"></span>';
-                statusText = '服务已停止';
-            }
-            
-            statusDiv.innerHTML = `
+      }
+
+      // 更新同步状态显示
+      function updateSyncStatusDisplay(syncStatus) {
+        const statusDiv = document.getElementById("syncStatus");
+        const controlBtn = document.getElementById("syncControlBtn");
+
+        if (!syncStatus) {
+          statusDiv.innerHTML =
+            '<p style="color: #dc3545;">❌ 同步服务不可用</p>';
+          return;
+        }
+
+        let statusIndicator = "";
+        let statusText = "";
+
+        if (syncStatus.isRunning) {
+          statusIndicator =
+            '<span class="status-indicator status-running"></span>';
+          statusText = "正在同步中...";
+        } else if (syncStatus.hasInterval) {
+          statusIndicator =
+            '<span class="status-indicator status-idle"></span>';
+          statusText = `服务运行中，每 ${syncStatus.intervalMinutes} 分钟检查一次`;
+          if (syncStatus.nextSync) {
+            statusText += `<br><small>下次同步: ${new Date(
+              syncStatus.nextSync
+            ).toLocaleString()}</small>`;
+          }
+        } else {
+          statusIndicator =
+            '<span class="status-indicator status-stopped"></span>';
+          statusText = "服务已停止";
+        }
+
+        statusDiv.innerHTML = `
                 <p>${statusIndicator}${statusText}</p>
                 <p><small>同步间隔: ${syncStatus.intervalMinutes} 分钟</small></p>
             `;
-            
-            // 更新控制按钮
-            controlBtn.textContent = syncStatus.hasInterval ? '停止服务' : '启动服务';
-            controlBtn.style.background = syncStatus.hasInterval ? '#dc3545' : '#28a745';
+
+        // 更新控制按钮
+        controlBtn.textContent = syncStatus.hasInterval
+          ? "停止服务"
+          : "启动服务";
+        controlBtn.style.background = syncStatus.hasInterval
+          ? "#dc3545"
+          : "#28a745";
+      }
+
+      // 手动触发同步
+      async function triggerManualSync() {
+        const btn = event.target;
+        const originalText = btn.textContent;
+
+        try {
+          btn.disabled = true;
+          btn.textContent = "同步中...";
+
+          const response = await fetch("/api/sync-models", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            alert("✅ " + data.message);
+            setTimeout(refreshSyncStatus, 2000); // 2秒后刷新状态
+          } else {
+            throw new Error(data.error || "同步失败");
+          }
+        } catch (error) {
+          alert("❌ 手动同步失败: " + error.message);
+        } finally {
+          btn.disabled = false;
+          btn.textContent = originalText;
         }
-        
-        // 手动触发同步
-        async function triggerManualSync() {
-            const btn = event.target;
-            const originalText = btn.textContent;
-            
-            try {
-                btn.disabled = true;
-                btn.textContent = '同步中...';
-                
-                const response = await fetch('/api/sync-models', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    alert('✅ ' + data.message);
-                    setTimeout(refreshSyncStatus, 2000); // 2秒后刷新状态
-                } else {
-                    throw new Error(data.error || '同步失败');
-                }
-                
-            } catch (error) {
-                alert('❌ 手动同步失败: ' + error.message);
-            } finally {
-                btn.disabled = false;
-                btn.textContent = originalText;
-            }
+      }
+
+      // 切换同步服务状态
+      async function toggleSyncService() {
+        const btn = document.getElementById("syncControlBtn");
+        const isRunning = btn.textContent === "停止服务";
+        const action = isRunning ? "stop" : "start";
+
+        try {
+          btn.disabled = true;
+
+          const response = await fetch("/api/sync-models/control", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ action }),
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            alert("✅ " + data.message);
+            refreshSyncStatus();
+          } else {
+            throw new Error(data.error || "操作失败");
+          }
+        } catch (error) {
+          alert("❌ 操作失败: " + error.message);
+        } finally {
+          btn.disabled = false;
         }
-        
-        // 切换同步服务状态
-        async function toggleSyncService() {
-            const btn = document.getElementById('syncControlBtn');
-            const isRunning = btn.textContent === '停止服务';
-            const action = isRunning ? 'stop' : 'start';
-            
-            try {
-                btn.disabled = true;
-                
-                const response = await fetch('/api/sync-models/control', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ action })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    alert('✅ ' + data.message);
-                    refreshSyncStatus();
-                } else {
-                    throw new Error(data.error || '操作失败');
-                }
-                
-            } catch (error) {
-                alert('❌ 操作失败: ' + error.message);
-            } finally {
-                btn.disabled = false;
-            }
+      }
+
+      // 清理并重置所有模型配置
+      async function cleanupAndResetModels() {
+        if (
+          !confirm(
+            "您确定要清理所有自动生成的模型分组和相关的uni-api配置吗？\n\n此操作不可逆，通常用于重置或解决配置混乱问题。"
+          )
+        ) {
+          return;
         }
-        
-        // 清理并重置所有模型配置
-        async function cleanupAndResetModels() {
-            if (!confirm('您确定要清理所有自动生成的模型分组和相关的uni-api配置吗？\n\n此操作不可逆，通常用于重置或解决配置混乱问题。')) {
-                return;
-            }
 
-            const btn = event.target;
-            const originalText = btn.textContent;
+        const btn = event.target;
+        const originalText = btn.textContent;
 
-            try {
-                btn.disabled = true;
-                btn.textContent = '清理中...';
+        try {
+          btn.disabled = true;
+          btn.textContent = "清理中...";
 
-                const response = await fetch('/api/sync-models/cleanup', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
+          const response = await fetch("/api/sync-models/cleanup", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+          });
 
-                const data = await response.json();
+          const data = await response.json();
 
-                if (data.success) {
-                    let successMsg = `✅ ${data.message}\n\n`;
-                    successMsg += `删除的分组: ${data.data.deletedGroups}\n`;
-                    successMsg += `清理的Provider: ${data.data.cleanedProviders}`;
-                    alert(successMsg);
-                    
-                    // 成功后刷新状态
-                    refreshSyncStatus();
-                } else {
-                    throw new Error(data.error || '清理失败');
-                }
-            } catch (error) {
-                alert('❌ 清理操作失败: ' + error.message);
-            } finally {
-                btn.disabled = false;
-                btn.textContent = originalText;
-            }
+          if (data.success) {
+            let successMsg = `✅ ${data.message}\n\n`;
+            successMsg += `删除的分组: ${data.data.deletedGroups}\n`;
+            successMsg += `清理的Provider: ${data.data.cleanedProviders}`;
+            alert(successMsg);
+
+            // 成功后刷新状态
+            refreshSyncStatus();
+          } else {
+            throw new Error(data.error || "清理失败");
+          }
+        } catch (error) {
+          alert("❌ 清理操作失败: " + error.message);
+        } finally {
+          btn.disabled = false;
+          btn.textContent = originalText;
         }
-        
-        // === 渠道健康监控功能 ===
-        
-        // 刷新渠道健康状态
-        async function refreshChannelHealthStatus() {
-            try {
-                // 获取服务状态
-                const statusResponse = await fetch('/api/status');
-                const statusData = await statusResponse.json();
-                updateChannelHealthDisplay(statusData.channelHealth);
+      }
 
-                // 获取站点分组列表
-                const channelsResponse = await fetch('/api/channels/site-groups');
-                const channelsData = await channelsResponse.json();
-                if (channelsData.siteGroups) {
-                    updateChannelListDisplay(channelsData.siteGroups);
-                }
+      // === 渠道健康监控功能 ===
 
-            } catch (error) {
-                document.getElementById('channelHealthStatus').innerHTML = 
-                    '<p style="color: #dc3545;">❌ 无法获取健康监控状态</p>';
-            }
+      // 刷新渠道健康状态
+      async function refreshChannelHealthStatus() {
+        try {
+          // 获取服务状态
+          const statusResponse = await fetch("/api/status");
+          const statusData = await statusResponse.json();
+          updateChannelHealthDisplay(statusData.channelHealth);
+
+          // 获取站点分组列表
+          const channelsResponse = await fetch("/api/channels/site-groups");
+          const channelsData = await channelsResponse.json();
+          if (channelsData.siteGroups) {
+            updateChannelListDisplay(channelsData.siteGroups);
+          }
+        } catch (error) {
+          document.getElementById("channelHealthStatus").innerHTML =
+            '<p style="color: #dc3545;">❌ 无法获取健康监控状态</p>';
         }
-        
-        // 更新渠道健康状态显示
-        function updateChannelHealthDisplay(healthStatus) {
-            const statusDiv = document.getElementById('channelHealthStatus');
-            const controlBtn = document.getElementById('healthControlBtn');
-            
-            if (!healthStatus) {
-                statusDiv.innerHTML = '<p style="color: #dc3545;">❌ 健康监控服务不可用</p>';
-                return;
-            }
-            
-            let statusIndicator = '';
-            let statusText = '';
-            
-            if (healthStatus.isRunning) {
-                statusIndicator = '<span class="status-indicator status-running"></span>';
-                statusText = '正在检查渠道健康...';
-            } else if (healthStatus.hasInterval) {
-                statusIndicator = '<span class="status-indicator status-idle"></span>';
-                statusText = `监控运行中，每 ${healthStatus.intervalMinutes} 分钟检查一次`;
-                if (healthStatus.nextCheck) {
-                    statusText += `<br><small>下次检查: ${new Date(healthStatus.nextCheck).toLocaleString()}</small>`;
-                }
-            } else {
-                statusIndicator = '<span class="status-indicator status-stopped"></span>';
-                statusText = '监控已停止';
-            }
-            
-            let failureInfo = '';
-            if (healthStatus.failureCount > 0) {
-                failureInfo = `<br><span style="color: #dc3545;"><small>⚠️ ${healthStatus.failureCount} 个渠道存在失败记录</small></span>`;
-            }
-            
-            statusDiv.innerHTML = `
+      }
+
+      // 更新渠道健康状态显示
+      function updateChannelHealthDisplay(healthStatus) {
+        const statusDiv = document.getElementById("channelHealthStatus");
+        const controlBtn = document.getElementById("healthControlBtn");
+
+        if (!healthStatus) {
+          statusDiv.innerHTML =
+            '<p style="color: #dc3545;">❌ 健康监控服务不可用</p>';
+          return;
+        }
+
+        let statusIndicator = "";
+        let statusText = "";
+
+        if (healthStatus.isRunning) {
+          statusIndicator =
+            '<span class="status-indicator status-running"></span>';
+          statusText = "正在检查渠道健康...";
+        } else if (healthStatus.hasInterval) {
+          statusIndicator =
+            '<span class="status-indicator status-idle"></span>';
+          statusText = `监控运行中，每 ${healthStatus.intervalMinutes} 分钟检查一次`;
+          if (healthStatus.nextCheck) {
+            statusText += `<br><small>下次检查: ${new Date(
+              healthStatus.nextCheck
+            ).toLocaleString()}</small>`;
+          }
+        } else {
+          statusIndicator =
+            '<span class="status-indicator status-stopped"></span>';
+          statusText = "监控已停止";
+        }
+
+        let failureInfo = "";
+        if (healthStatus.failureCount > 0) {
+          failureInfo = `<br><span style="color: #dc3545;"><small>⚠️ ${healthStatus.failureCount} 个渠道存在失败记录</small></span>`;
+        }
+
+        statusDiv.innerHTML = `
                 <p>${statusIndicator}${statusText}${failureInfo}</p>
                 <p><small>失败阈值: ${healthStatus.failureThreshold} 次，检查间隔: ${healthStatus.intervalMinutes} 分钟</small></p>
             `;
-            
-            // 更新控制按钮
-            controlBtn.textContent = healthStatus.hasInterval ? '停止监控' : '启动监控';
-            controlBtn.style.background = healthStatus.hasInterval ? '#dc3545' : '#28a745';
+
+        // 更新控制按钮
+        controlBtn.textContent = healthStatus.hasInterval
+          ? "停止监控"
+          : "启动监控";
+        controlBtn.style.background = healthStatus.hasInterval
+          ? "#dc3545"
+          : "#28a745";
+      }
+
+      // 更新渠道列表显示
+      function updateChannelListDisplay(channels) {
+        const container = document.getElementById("channelListContainer");
+        if (channels.length === 0) {
+          container.innerHTML = "<p><small>暂无已配置的渠道分组。</small></p>";
+          return;
         }
 
-        // 更新渠道列表显示
-        function updateChannelListDisplay(channels) {
-            const container = document.getElementById('channelListContainer');
-            if (channels.length === 0) {
-                container.innerHTML = '<p><small>暂无已配置的渠道分组。</small></p>';
-                return;
-            }
+        let html = "<h4>已配置的渠道分组:</h4>";
+        html += '<div class="channels-grid">';
 
-            let html = '<h4>已配置的渠道分组:</h4><ul style="list-style: none; padding-left: 0;">';
-            channels.forEach(channel => {
-                html += `
-                    <li style="display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee;">
-                        <span>
-                            <strong>${channel.name}</strong>
-                            <small style="color: #6c757d;"> (实例: ${channel._instance.name})</small>
-                        </span>
-                        <button class="btn-warning" style="padding: 5px 10px; font-size: 12px;" onclick="deleteChannel('${channel.name}')">删除</button>
-                    </li>
-                `;
-            });
-            html += '</ul>';
-            container.innerHTML = html;
+        channels.forEach((channel) => {
+          // 从渠道名称解析信息
+          const parts = channel.name.split("-");
+          const channelType = parts[parts.length - 1];
+          const siteName = parts.slice(0, -1).join("-");
+
+          html += `
+            <div class="channel-card">
+                <div class="channel-header">
+                    <h5>${channel.name}</h5>
+                    <span class="channel-type">${channelType.toUpperCase()}</span>
+                </div>
+                <div class="channel-info">
+                    <div><strong>站点:</strong> ${siteName}</div>
+                    <div><strong>实例:</strong> ${channel._instance.name}</div>
+                    <div><strong>上游:</strong> ${
+                      channel.upstreams?.[0]?.url || "N/A"
+                    }</div>
+                </div>
+                <div class="channel-actions">
+                    <button class="btn-update" onclick="showUpdateChannelModal('${
+                      channel.name
+                    }', '${
+            channel.upstreams?.[0]?.url || ""
+          }', '${channelType}')">
+                        🔄 更新
+                    </button>
+
+                    <button class="btn-delete" onclick="deleteChannel('${
+                      channel.name
+                    }')">
+                        🗑️ 删除
+                    <button class="btn-delete" onclick="deleteChannel('${
+                      channel.name
+                    }')">
+                    </button>
+                </div>
+            </div>
+        `;
+        });
+        html += "</div>";
+        container.innerHTML = html;
+      }
+
+      // 删除指定渠道
+      async function deleteChannel(channelName) {
+        if (
+          !confirm(
+            `您确定要彻底删除渠道 "${channelName}" 吗？\n\n此操作将同时：\n1. 删除此渠道分组。\n2. 从所有模型分组中移除对此渠道的引用。\n\n操作不可逆！`
+          )
+        ) {
+          return;
         }
 
-        // 删除指定渠道
-        async function deleteChannel(channelName) {
-            if (!confirm(`您确定要彻底删除渠道 "${channelName}" 吗？\n\n此操作将同时：\n1. 删除此渠道分组。\n2. 从所有模型分组中移除对此渠道的引用。\n\n操作不可逆！`)) {
-                return;
+        const btn = event.target;
+        const originalText = btn.textContent;
+
+        try {
+          btn.disabled = true;
+          btn.textContent = "删除中...";
+
+          const response = await fetch(`/api/channels/${channelName}`, {
+            method: "DELETE",
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            let alertMsg = `✅ 渠道 "${channelName}" 已成功删除。\n\n`;
+            alertMsg += `更新的模型分组: ${data.data.updatedModelGroups.length}\n`;
+            alertMsg += `删除的模型分组: ${data.data.deletedModelGroups.length}`;
+            alert(alertMsg);
+            // 刷新列表
+            refreshChannelHealthStatus();
+          } else {
+            throw new Error(data.message || "删除失败");
+          }
+        } catch (error) {
+          alert(`❌ 删除渠道 "${channelName}" 失败: ${error.message}`);
+          btn.disabled = false;
+          btn.textContent = originalText;
+        }
+      }
+
+      // 手动触发渠道健康检查
+      async function triggerChannelCheck() {
+        const btn = event.target;
+        const originalText = btn.textContent;
+
+        try {
+          btn.disabled = true;
+          btn.textContent = "检查中...";
+
+          const response = await fetch("/api/check-channels", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            alert("✅ " + data.message);
+            setTimeout(refreshChannelHealthStatus, 2000);
+          } else {
+            throw new Error(data.error || "检查失败");
+          }
+        } catch (error) {
+          alert("❌ 手动健康检查失败: " + error.message);
+        } finally {
+          btn.disabled = false;
+          btn.textContent = originalText;
+        }
+      }
+
+      // 切换渠道健康监控服务状态
+      async function toggleHealthMonitor() {
+        const btn = document.getElementById("healthControlBtn");
+        const isRunning = btn.textContent === "停止监控";
+        const action = isRunning ? "stop" : "start";
+
+        try {
+          btn.disabled = true;
+
+          const response = await fetch("/api/check-channels/control", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ action }),
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            alert("✅ " + data.message);
+            refreshChannelHealthStatus();
+          } else {
+            throw new Error(data.error || "操作失败");
+          }
+        } catch (error) {
+          alert("❌ 操作失败: " + error.message);
+        } finally {
+          btn.disabled = false;
+        }
+      }
+
+      // 显示失败的渠道
+      async function showFailedChannels() {
+        try {
+          const response = await fetch("/api/failed-channels");
+          const data = await response.json();
+
+          if (data.failedChannels.length === 0) {
+            alert("✅ 当前没有失败的渠道");
+            return;
+          }
+
+          let message = "🚨 失败的渠道列表:\n\n";
+          data.failedChannels.forEach((channel) => {
+            message += `• ${channel.name}: ${channel.failures}/${channel.threshold} 次失败`;
+            if (channel.willBeRemoved) {
+              message += " (将被移除)";
+            }
+            message += "\n";
+          });
+
+          message += "\n是否要重置所有失败计数?";
+
+          if (confirm(message)) {
+            await resetAllChannelFailures();
+          }
+        } catch (error) {
+          alert("❌ 获取失败渠道列表失败: " + error.message);
+        }
+      }
+
+      // 重置所有渠道失败计数
+      async function resetAllChannelFailures() {
+        try {
+          const response = await fetch("/api/reset-channel-failures", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({}),
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            alert("✅ " + data.message);
+            refreshChannelHealthStatus();
+          } else {
+            throw new Error(data.error || "重置失败");
+          }
+        } catch (error) {
+          alert("❌ 重置失败: " + error.message);
+        }
+      }
+      // 显示更新渠道模态框
+      function showUpdateChannelModal(channelName, baseUrl, channelType) {
+        document.getElementById("updateChannelName").value = channelName;
+        document.getElementById("updateOriginalBaseUrl").value = baseUrl;
+        document.getElementById("updateChannelType").value = channelType;
+
+        document.getElementById("updateChannelDisplayName").textContent =
+          channelName;
+        document.getElementById("updateBaseUrlDisplay").textContent = baseUrl;
+
+        // 清空API密钥文本框
+        document.getElementById("updateApiKeys").value = "";
+
+        document.getElementById("updateChannelModal").style.display = "block";
+      }
+
+      // 关闭更新模态框
+      function closeUpdateModal() {
+        document.getElementById("updateChannelModal").style.display = "none";
+      }
+
+      // 点击模态框外部关闭
+      window.onclick = function (event) {
+        const modal = document.getElementById("updateChannelModal");
+        if (event.target === modal) {
+          closeUpdateModal();
+        }
+      };
+
+      // 处理更新表单提交
+      document.addEventListener("DOMContentLoaded", function () {
+        document
+          .getElementById("updateChannelForm")
+          .addEventListener("submit", async function (e) {
+            e.preventDefault();
+
+            const channelName =
+              document.getElementById("updateChannelName").value;
+            const baseUrl = document.getElementById(
+              "updateOriginalBaseUrl"
+            ).value;
+            const channelType =
+              document.getElementById("updateChannelType").value;
+            const apiKeysText = document.getElementById("updateApiKeys").value;
+
+            // 解析API密钥
+            const apiKeys = parseApiKeys(apiKeysText);
+
+            if (apiKeys.length === 0) {
+              alert("请至少输入一个API密钥");
+              return;
             }
 
-            const btn = event.target;
-            const originalText = btn.textContent;
-            
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+
             try {
-                btn.disabled = true;
-                btn.textContent = '删除中...';
+              submitBtn.disabled = true;
+              submitBtn.textContent = "更新中...";
 
-                const response = await fetch(`/api/channels/${channelName}`, {
-                    method: 'DELETE'
-                });
-                
-                const data = await response.json();
+              // 调用现有的API来更新配置
+              const response = await fetch("/api/process-ai-site", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  baseUrl: baseUrl,
+                  apiKeys: apiKeys,
+                  channelTypes: [channelType], // 保持原有格式
+                }),
+              });
 
-                if (data.success) {
-                    let alertMsg = `✅ 渠道 "${channelName}" 已成功删除。\n\n`;
-                    alertMsg += `更新的模型分组: ${data.data.updatedModelGroups.length}\n`;
-                    alertMsg += `删除的模型分组: ${data.data.deletedModelGroups.length}`;
-                    alert(alertMsg);
-                    // 刷新列表
-                    refreshChannelHealthStatus();
-                } else {
-                    throw new Error(data.message || '删除失败');
-                }
+              const data = await response.json();
+
+              if (data.success) {
+                alert(
+                  `✅ 渠道 ${channelName} 更新成功！\n\n` +
+                    `更新的密钥数量: ${apiKeys.length}\n` +
+                    `模型数量: ${data.data.modelsCount}`
+                );
+
+                // 关闭模态框并刷新列表
+                closeUpdateModal();
+                refreshChannelHealthStatus();
+              } else {
+                throw new Error(data.error || "更新失败");
+              }
             } catch (error) {
-                alert(`❌ 删除渠道 "${channelName}" 失败: ${error.message}`);
-                btn.disabled = false;
-                btn.textContent = originalText;
-            }
-        }
-        
-        // 手动触发渠道健康检查
-        async function triggerChannelCheck() {
-            const btn = event.target;
-            const originalText = btn.textContent;
-            
-            try {
-                btn.disabled = true;
-                btn.textContent = '检查中...';
-                
-                const response = await fetch('/api/check-channels', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    alert('✅ ' + data.message);
-                    setTimeout(refreshChannelHealthStatus, 2000);
-                } else {
-                    throw new Error(data.error || '检查失败');
-                }
-                
-            } catch (error) {
-                alert('❌ 手动健康检查失败: ' + error.message);
+              alert(`❌ 更新渠道失败: ${error.message}`);
             } finally {
-                btn.disabled = false;
-                btn.textContent = originalText;
+              submitBtn.disabled = false;
+              submitBtn.textContent = originalText;
             }
-        }
-        
-        // 切换渠道健康监控服务状态
-        async function toggleHealthMonitor() {
-            const btn = document.getElementById('healthControlBtn');
-            const isRunning = btn.textContent === '停止监控';
-            const action = isRunning ? 'stop' : 'start';
-            
-            try {
-                btn.disabled = true;
-                
-                const response = await fetch('/api/check-channels/control', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ action })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    alert('✅ ' + data.message);
-                    refreshChannelHealthStatus();
-                } else {
-                    throw new Error(data.error || '操作失败');
-                }
-                
-            } catch (error) {
-                alert('❌ 操作失败: ' + error.message);
-            } finally {
-                btn.disabled = false;
-            }
-        }
-        
-        // 显示失败的渠道
-        async function showFailedChannels() {
-            try {
-                const response = await fetch('/api/failed-channels');
-                const data = await response.json();
-                
-                if (data.failedChannels.length === 0) {
-                    alert('✅ 当前没有失败的渠道');
-                    return;
-                }
-                
-                let message = '🚨 失败的渠道列表:\n\n';
-                data.failedChannels.forEach(channel => {
-                    message += `• ${channel.name}: ${channel.failures}/${channel.threshold} 次失败`;
-                    if (channel.willBeRemoved) {
-                        message += ' (将被移除)';
-                    }
-                    message += '\n';
-                });
-                
-                message += '\n是否要重置所有失败计数?';
-                
-                if (confirm(message)) {
-                    await resetAllChannelFailures();
-                }
-                
-            } catch (error) {
-                alert('❌ 获取失败渠道列表失败: ' + error.message);
-            }
-        }
-        
-        // 重置所有渠道失败计数
-        async function resetAllChannelFailures() {
-            try {
-                const response = await fetch('/api/reset-channel-failures', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({})
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    alert('✅ ' + data.message);
-                    refreshChannelHealthStatus();
-                } else {
-                    throw new Error(data.error || '重置失败');
-                }
-                
-            } catch (error) {
-                alert('❌ 重置失败: ' + error.message);
-            }
-        }
+          });
+      });
     </script>
-</body>
+  </body>
 </html>
