@@ -304,73 +304,129 @@
       .status-idle {
         background: #ffc107;
       }
-      /* 渠道网格布局 */
-      .channels-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-        gap: 1rem;
-        margin-top: 1rem;
+      /* 渠道列表样式 */
+      .channels-list {
+          margin-top: 1rem;
       }
 
-      /* 渠道卡片样式 */
-      .channel-card {
-        border: 1px solid #e1e5e9;
-        border-radius: 10px;
-        padding: 1rem;
-        background: white;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      /* 单个渠道项目样式 */
+      .channel-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 1rem;
+          border: 1px solid #e1e5e9;
+          border-radius: 8px;
+          background: white;
+          margin-bottom: 0.8rem;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          transition: all 0.2s ease;
       }
 
-      .channel-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 0.8rem;
-      }
-
-      .channel-header h5 {
-        margin: 0;
-        color: #333;
-        font-size: 1.1em;
-      }
-
-      .channel-type {
-        background: #6c757d;
-        color: white;
-        padding: 0.2rem 0.5rem;
-        border-radius: 4px;
-        font-size: 0.8em;
-        font-weight: bold;
+      .channel-item:hover {
+          background: #f8f9fa;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
       }
 
       .channel-info {
-        margin-bottom: 1rem;
-        font-size: 0.9em;
-        color: #666;
+          flex: 1;
+          min-width: 0; /* 允许内容截断 */
       }
 
-      .channel-info div {
-        margin-bottom: 0.3rem;
+      .channel-name {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          margin-bottom: 0.5rem;
+      }
+
+      .channel-name strong {
+          color: #333;
+          font-size: 1.1em;
+      }
+
+      .channel-type-badge {
+          background: #6c757d;
+          color: white;
+          padding: 0.2rem 0.4rem;
+          border-radius: 4px;
+          font-size: 0.75em;
+          font-weight: bold;
+      }
+
+      .channel-details {
+          display: flex;
+          gap: 1rem;
+          flex-wrap: wrap;
+          font-size: 0.9em;
+          color: #666;
+      }
+
+      .detail-item {
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
       }
 
       .channel-actions {
-        display: flex;
-        gap: 0.5rem;
+          display: flex;
+          gap: 0.5rem;
+          flex-shrink: 0;
       }
 
       .btn-update {
-        background: #28a745;
-        color: white;
-        border: none;
-        padding: 0.5rem 1rem;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 0.9em;
-        flex: 1;
+          background: #28a745;
+          color: white;
+          border: none;
+          padding: 0.5rem 1rem;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 0.9em;
+          white-space: nowrap;
+          transition: background 0.2s ease;
       }
 
       .btn-update:hover {
-        background: #218838;
+          background: #218838;
+      }
+
+      .btn-delete {
+          background: #dc3545;
+          color: white;
+          border: none;
+          padding: 0.5rem 1rem;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 0.9em;
+          white-space: nowrap;
+          transition: background 0.2s ease;
+      }
+
+      .btn-delete:hover {
+          background: #c82333;
+      }
+
+      /* 响应式设计 */
+      @media (max-width: 768px) {
+          .channel-item {
+              flex-direction: column;
+              align-items: stretch;
+          }
+          
+          .channel-details {
+              flex-direction: column;
+              gap: 0.3rem;
+          }
+          
+          .channel-actions {
+              margin-top: 1rem;
+              justify-content: center;
+          }
+          
+          .detail-item {
+              overflow: visible;
+              white-space: normal;
+          }
       }
 
       /* 模态框样式 */
@@ -1264,49 +1320,39 @@
         }
 
         let html = "<h4>已配置的渠道分组:</h4>";
-        html += '<div class="channels-grid">';
-
-        channels.forEach((channel) => {
+        html += '<div class="channels-list">';
+        
+        channels.forEach(channel => {
           // 从渠道名称解析信息
-          const parts = channel.name.split("-");
+          const parts = channel.name.split('-');
           const channelType = parts[parts.length - 1];
-          const siteName = parts.slice(0, -1).join("-");
-
+          const siteName = parts.slice(0, -1).join('-');
+          
           html += `
-            <div class="channel-card">
-                <div class="channel-header">
-                    <h5>${channel.name}</h5>
-                    <span class="channel-type">${channelType.toUpperCase()}</span>
-                </div>
+            <div class="channel-item">
                 <div class="channel-info">
-                    <div><strong>站点:</strong> ${siteName}</div>
-                    <div><strong>实例:</strong> ${channel._instance.name}</div>
-                    <div><strong>上游:</strong> ${
-                      channel.upstreams?.[0]?.url || "N/A"
-                    }</div>
+                    <div class="channel-name">
+                        <strong>${channel.name}</strong>
+                        <span class="channel-type-badge">${channelType.toUpperCase()}</span>
+                    </div>
+                    <div class="channel-details">
+                        <span class="detail-item">站点: ${siteName}</span>
+                        <span class="detail-item">实例: ${channel._instance.name}</span>
+                        <span class="detail-item">上游: ${channel.upstreams?.[0]?.url || 'N/A'}</span>
+                    </div>
                 </div>
                 <div class="channel-actions">
-                    <button class="btn-update" onclick="showUpdateChannelModal('${
-                      channel.name
-                    }', '${
-            channel.upstreams?.[0]?.url || ""
-          }', '${channelType}')">
+                    <button class="btn-update" onclick="showUpdateChannelModal('${channel.name}', '${channel.upstreams?.[0]?.url || ''}', '${channelType}')">
                         🔄 更新
                     </button>
-
-                    <button class="btn-delete" onclick="deleteChannel('${
-                      channel.name
-                    }')">
+                    <button class="btn-delete" onclick="deleteChannel('${channel.name}')">
                         🗑️ 删除
-                    <button class="btn-delete" onclick="deleteChannel('${
-                      channel.name
-                    }')">
                     </button>
                 </div>
             </div>
         `;
         });
-        html += "</div>";
+        html += '</div>';
         container.innerHTML = html;
       }
 
