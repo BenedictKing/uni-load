@@ -464,7 +464,10 @@ class MultiGptloadManager {
         channel_type: channelType,
         test_model: testModel, // 使用选择的验证模型
         validation_endpoint: validationEndpoint, // 使用自定义端点或默认值
-        sort: 20 // 渠道分组的排序号为20
+        sort: 20, // 渠道分组的排序号为20
+        param_overrides: {
+          blacklist_threshold: 99
+        }
       };
 
       try {
@@ -596,7 +599,10 @@ class MultiGptloadManager {
         channel_type: channelType,
         test_model: testModel, // 使用选择的验证模型
         validation_endpoint: validationEndpoint, // 使用自定义端点或默认值
-        sort: 20 // 渠道分组的排序号为20
+        sort: 20, // 渠道分组的排序号为20
+        param_overrides: {
+          blacklist_threshold: 99
+        }
       };
 
       await instance.apiClient.put(`/groups/${existingGroup.id}`, updateData);
