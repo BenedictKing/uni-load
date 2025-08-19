@@ -310,19 +310,50 @@ class YamlManager {
       tools: true,
     };
 
-    // 构建模型映射：同时包含原始名称和重命名后的名称
-    if (originalModelName !== normalizedModelName) {
-      // 如果有重定向，使用混合格式：数组 + 键值对
-      providerConfig.model = [
-        originalModelName, // 保留原始模型名
-        { [originalModelName]: normalizedModelName }, // 添加重命名映射
-      ];
-      console.log(
-        `📝 添加模型配置: ${originalModelName} (原始) + ${originalModelName} -> ${normalizedModelName} (重命名)`
-      );
+    // 构建模型映射：提供原始名称和多个重命名版本
+    const modelMappings = [originalModelName]; // 始终包含原始名称
+    
+    // 检查是否需要添加重命名映射
+    const needsWithoutOrgMapping = originalModelName !== withoutOrgName;
+    const needsSimplifiedMapping = withoutOrgName !== simplifiedName && originalModelName !== simplifiedName;
+    
+    if (needsWithoutOrgMapping || needsSimplifiedMapping) {
+      // 添加重命名映射对象
+      const renameMap = {};
+      
+      if (needsWithoutOrgMapping) {
+        renameMap[originalModelName] = withoutOrgName;
+        console.log(`📝 添加重命名映射: ${originalModelName} -> ${withoutOrgName}`);
+      }
+      
+      if (needsSimplifiedMapping) {
+        // 注意：如果两个重命名不同，需要添加两个映射
+        if (needsWithoutOrgMapping) {
+          // 添加第二个重命名映射
+          modelMappings.push({ [originalModelName]: simplifiedName });
+          console.log(`📝 添加重命名映射: ${originalModelName} -> ${simplifiedName}`);
+        } else {
+          renameMap[originalModelName] = simplifiedName;
+          console.log(`📝 添加重命名映射: ${originalModelName} -> ${simplifiedName}`);
+        }
+      }
+      
+      // 添加第一个重命名映射
+      if (Object.keys(renameMap).length > 0) {
+        modelMappings.push(renameMap);
+      }
+    }
+    
+    providerConfig.model = modelMappings;
+    
+    // 日志输出
+    if (needsWithoutOrgMapping || needsSimplifiedMapping) {
+      let logMsg = `📝 添加模型配置: ${originalModelName} (原始)`;
+      if (needsWithoutOrgMapping) logMsg += ` + -> ${withoutOrgName}`;
+      if (needsSimplifiedMapping) logMsg += ` + -> ${simplifiedName}`;
+      console.log(logMsg);
     } else {
-      // 如果没有重定向，使用数组格式
-      providerConfig.model = [normalizedModelName];
+      console.log(`📝 添加模型配置: ${originalModelName} (仅原始名称)`);
     }
 
     if (existingProviderIndex >= 0) {
