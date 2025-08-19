@@ -1556,14 +1556,16 @@
             ).value;
             const channelType =
               document.getElementById("updateChannelType").value;
-            const apiKeysText = document.getElementById("updateApiKeys").value;
+            const apiKeysText = document.getElementById("updateApiKeys").value.trim();
 
-            // 解析API密钥
-            const apiKeys = parseApiKeys(apiKeysText);
-
-            if (apiKeys.length === 0) {
-              alert("请至少输入一个API密钥");
-              return;
+            // 如果API密钥为空，设置为空数组，后端会跳过密钥更新
+            let apiKeys = [];
+            if (apiKeysText) {
+              apiKeys = parseApiKeys(apiKeysText);
+              if (apiKeys.length === 0) {
+                alert("API密钥格式错误，请检查输入");
+                return;
+              }
             }
 
             const submitBtn = e.target.querySelector('button[type="submit"]');
@@ -1573,27 +1575,39 @@
               submitBtn.disabled = true;
               submitBtn.textContent = "更新中...";
 
-              // 调用现有的API来更新配置
+              // 构建请求体，只有在有新密钥时才发送
+              const requestBody = {
+                baseUrl: baseUrl,
+                channelTypes: [channelType],
+              };
+
+              // 只有在用户输入了新密钥时才添加到请求中
+              if (apiKeys.length > 0) {
+                requestBody.apiKeys = apiKeys;
+              }
+
               const response = await fetch("/api/process-ai-site", {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
                 },
-                body: JSON.stringify({
-                  baseUrl: baseUrl,
-                  apiKeys: apiKeys,
-                  channelTypes: [channelType], // 保持原有格式
-                }),
+                body: JSON.stringify(requestBody),
               });
 
               const data = await response.json();
 
               if (data.success) {
-                alert(
-                  `✅ 渠道 ${channelName} 更新成功！\n\n` +
-                    `更新的密钥数量: ${apiKeys.length}\n` +
-                    `模型数量: ${data.data.modelsCount}`
-                );
+                let successMsg = `✅ 渠道 ${channelName} 更新成功！\n\n`;
+                
+                if (apiKeys.length > 0) {
+                  successMsg += `新增的密钥数量: ${apiKeys.length}\n`;
+                } else {
+                  successMsg += `保持现有API密钥不变\n`;
+                }
+                
+                successMsg += `模型数量: ${data.data.modelsCount}`;
+                
+                alert(successMsg);
 
                 // 关闭模态框并刷新列表
                 closeUpdateModal();

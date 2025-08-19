@@ -118,10 +118,17 @@ app.post('/api/process-ai-site', async (req, res) => {
   try {
     const { baseUrl, apiKeys, channelTypes, customValidationEndpoints } = req.body;
     
-    if (!baseUrl || !apiKeys || !Array.isArray(apiKeys) || apiKeys.length === 0) {
+    if (!baseUrl) {
       return res.status(400).json({ 
-        error: '参数不完整：需要 baseUrl 和 apiKeys 数组' 
+        error: '参数不完整：需要 baseUrl' 
       });
+    }
+
+    // apiKeys 现在是可选的，如果为空或未提供，后续处理中会跳过密钥更新
+    const hasNewApiKeys = apiKeys && Array.isArray(apiKeys) && apiKeys.length > 0;
+    
+    if (!hasNewApiKeys) {
+      console.log('⚠️ 未提供新的API密钥，将保持现有密钥不变');
     }
 
     // 验证和处理 channelTypes
@@ -160,9 +167,45 @@ app.post('/api/process-ai-site', async (req, res) => {
     console.log(`开始处理AI站点：${siteName} (${baseUrl})，格式：${selectedChannelTypes.join(', ')}`);
     console.log(`自动生成的站点名称：${siteName}`);
     
-    // 步骤1：获取AI站点支持的模型（增加重试）
+    // 步骤1：获取AI站点支持的模型
     console.log('获取模型列表...');
-    const allModels = await modelsService.getModels(baseUrl, apiKeys[0], 3);
+    
+    let allModels;
+    if (hasNewApiKeys) {
+      // 有新密钥，使用新密钥获取模型
+      allModels = await modelsService.getModels(baseUrl, apiKeys[0], 3);
+    } else {
+      // 没有新密钥，需要从现有渠道分组中获取密钥来获取模型
+      console.log('尝试从现有渠道配置中获取API密钥...');
+      
+      const siteName = generateSiteNameFromUrl(baseUrl);
+      const channelName = `${siteName}-${selectedChannelTypes[0]}`;
+      
+      // 查找现有的渠道分组
+      const allGroups = await gptloadService.getAllGroups();
+      const existingChannel = allGroups.find(g => g.name === channelName);
+      
+      if (existingChannel) {
+        // 获取现有渠道的API密钥
+        const existingKeys = await gptloadService.getGroupApiKeys(
+          existingChannel.id, 
+          existingChannel._instance.id
+        );
+        
+        if (existingKeys.length > 0) {
+          console.log(`✅ 使用现有渠道的API密钥 (${existingKeys.length} 个)`);
+          allModels = await modelsService.getModels(baseUrl, existingKeys[0], 3);
+        } else {
+          return res.status(400).json({ 
+            error: '现有渠道没有可用的API密钥，且未提供新的API密钥' 
+          });
+        }
+      } else {
+        return res.status(400).json({ 
+          error: '首次配置渠道时必须提供API密钥' 
+        });
+      }
+    }
     
     if (!allModels || allModels.length === 0) {
       return res.status(400).json({ error: '无法获取模型列表或模型列表为空' });
