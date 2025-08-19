@@ -12,6 +12,48 @@ class ModelsService {
   }
 
   /**
+   * 判断错误是否可重试
+   */
+  isRetryableError(error) {
+    // 网络连接错误
+    if (error.code === 'ECONNRESET' || 
+        error.code === 'ECONNREFUSED' || 
+        error.code === 'ETIMEDOUT' ||
+        error.code === 'ENOTFOUND') {
+      return true;
+    }
+    
+    // Socket 连接异常断开
+    if (error.message && error.message.includes('socket connection was closed')) {
+      return true;
+    }
+    
+    // 超时错误
+    if (error.message && error.message.includes('timeout')) {
+      return true;
+    }
+    
+    // 5xx 服务器错误（可能是临时的）
+    if (error.response && error.response.status >= 500) {
+      return true;
+    }
+    
+    // 429 限流错误
+    if (error.response && error.response.status === 429) {
+      return true;
+    }
+    
+    return false;
+  }
+
+  /**
+   * 等待指定时间
+   */
+  sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
    * 从AI站点获取支持的模型列表（带重试机制）
    */
   async getModels(baseUrl, apiKey, maxRetries = 3) {
@@ -360,44 +402,3 @@ class ModelsService {
 }
 
 module.exports = new ModelsService();
-  /**
-   * 判断错误是否可重试
-   */
-  isRetryableError(error) {
-    // 网络连接错误
-    if (error.code === 'ECONNRESET' || 
-        error.code === 'ECONNREFUSED' || 
-        error.code === 'ETIMEDOUT' ||
-        error.code === 'ENOTFOUND') {
-      return true;
-    }
-    
-    // Socket 连接异常断开
-    if (error.message && error.message.includes('socket connection was closed')) {
-      return true;
-    }
-    
-    // 超时错误
-    if (error.message && error.message.includes('timeout')) {
-      return true;
-    }
-    
-    // 5xx 服务器错误（可能是临时的）
-    if (error.response && error.response.status >= 500) {
-      return true;
-    }
-    
-    // 429 限流错误
-    if (error.response && error.response.status === 429) {
-      return true;
-    }
-    
-    return false;
-  }
-
-  /**
-   * 等待指定时间
-   */
-  sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
