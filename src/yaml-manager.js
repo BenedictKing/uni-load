@@ -274,13 +274,14 @@ class YamlManager {
       tools: true
     };
 
-    // 构建模型映射：原始名称 -> 标准化名称
+    // 构建模型映射：同时包含原始名称和重命名后的名称
     if (originalModelName !== normalizedModelName) {
-      // 如果有重定向，使用键值对格式
-      providerConfig.model = {
-        [originalModelName]: normalizedModelName
-      };
-      console.log(`📝 添加模型重命名: ${originalModelName} -> ${normalizedModelName}`);
+      // 如果有重定向，使用混合格式：数组 + 键值对
+      providerConfig.model = [
+        originalModelName,  // 保留原始模型名
+        { [originalModelName]: normalizedModelName }  // 添加重命名映射
+      ];
+      console.log(`📝 添加模型配置: ${originalModelName} (原始) + ${originalModelName} -> ${normalizedModelName} (重命名)`);
     } else {
       // 如果没有重定向，使用数组格式
       providerConfig.model = [normalizedModelName];
