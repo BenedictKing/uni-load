@@ -96,8 +96,19 @@ class YamlManager {
       const exists = await this.checkYamlExists();
       if (!exists) return;
 
+      // 确保backup目录存在
+      const backupDir = path.join(path.dirname(this.yamlPath), "backup");
+      try {
+        await fs.mkdir(backupDir, { recursive: true });
+      } catch (error) {
+        // 目录可能已存在，忽略错误
+      }
+
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-      const backupPath = `${this.yamlPath}.backup.${timestamp}`;
+      const backupFileName = `${path.basename(
+        this.yamlPath
+      )}.backup.${timestamp}`;
+      const backupPath = path.join(backupDir, backupFileName);
 
       const content = await fs.readFile(this.yamlPath, "utf8");
       await fs.writeFile(backupPath, content, "utf8");
