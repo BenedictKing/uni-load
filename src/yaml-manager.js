@@ -219,20 +219,21 @@ class YamlManager {
     // 转换为小写
     normalizedModel = normalizedModel.toLowerCase();
 
-    // 移除日期后缀，常见格式：
-    // - model-20241201 -> model
-    // - model-2024-12-01 -> model
-    // - model-preview-05-20 -> model-preview
-    // - model-001 -> model
-    // - model-latest -> model
-    // - model-2024 -> model
+    // 使用正则表达式移除日期格式
     const furtherSimplified = normalizedModel
-      .replace(/-\d{8}$/, "") // 移除 -20241201 格式
-      .replace(/-\d{4}-\d{2}-\d{2}$/, "") // 移除 -2024-12-01 格式
-      .replace(/-\d{2}-\d{2}$/, "") // 移除 -05-20 格式（月-日）
-      .replace(/-\d{3,4}$/, "") // 移除 -001, -0324 等格式
-      .replace(/-latest$/, "") // 移除 -latest 后缀
-      .replace(/-\d{4}$/, ""); // 移除 -2024 格式
+      // 移除 YYYY-MM-DD 格式的日期 (如 2025-08-07)
+      .replace(/-\d{4}-\d{2}-\d{2}/g, "")
+      // 移除 YYYYMMDD 格式的日期 (如 20250219) 
+      .replace(/-?\d{8}/g, "")
+      // 移除其他常见的版本号和日期模式
+      .replace(/-\d{2}-\d{2}$/g, "") // 移除 -05-20 格式（月-日）
+      .replace(/-\d{3,4}$/g, "") // 移除 -001, -0324 等格式
+      .replace(/-latest$/g, "") // 移除 -latest 后缀
+      .replace(/-v?\d+(\.\d+)*$/g, "") // 移除版本号如 -v3, -2.5
+      // 替换连续的多个连字符为单个连字符
+      .replace(/-+/g, "-")
+      // 移除字符串开头和结尾的连字符
+      .replace(/^-+|-+$/g, "");
 
     if (originalModel !== normalizedModel) {
       console.log(`🔄 模型名称处理: ${originalModel} -> ${normalizedModel}`);
