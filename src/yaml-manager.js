@@ -223,13 +223,12 @@ class YamlManager {
     const furtherSimplified = normalizedModel
       // 移除 YYYY-MM-DD 格式的日期 (如 2025-08-07)
       .replace(/-\d{4}-\d{2}-\d{2}/g, "")
-      // 移除 YYYYMMDD 格式的日期 (如 20250219) 
+      // 移除 YYYYMMDD 格式的日期 (如 20250219)
       .replace(/-?\d{8}/g, "")
       // 移除其他常见的版本号和日期模式
       .replace(/-\d{2}-\d{2}$/g, "") // 移除 -05-20 格式（月-日）
       .replace(/-\d{3,4}$/g, "") // 移除 -001, -0324 等格式
       .replace(/-latest$/g, "") // 移除 -latest 后缀
-      .replace(/-v?\d+(\.\d+)*$/g, "") // 移除版本号如 -v3, -2.5
       // 替换连续的多个连字符为单个连字符
       .replace(/-+/g, "-")
       // 移除字符串开头和结尾的连字符
@@ -313,40 +312,47 @@ class YamlManager {
 
     // 构建模型映射：提供原始名称和多个重命名版本
     const modelMappings = [originalModelName]; // 始终包含原始名称
-    
+
     // 检查是否需要添加重命名映射
     const needsWithoutOrgMapping = originalModelName !== withoutOrgName;
-    const needsSimplifiedMapping = withoutOrgName !== simplifiedName && originalModelName !== simplifiedName;
-    
+    const needsSimplifiedMapping =
+      withoutOrgName !== simplifiedName && originalModelName !== simplifiedName;
+
     if (needsWithoutOrgMapping || needsSimplifiedMapping) {
       // 添加重命名映射对象
       const renameMap = {};
-      
+
       if (needsWithoutOrgMapping) {
         renameMap[originalModelName] = withoutOrgName;
-        console.log(`📝 添加重命名映射: ${originalModelName} -> ${withoutOrgName}`);
+        console.log(
+          `📝 添加重命名映射: ${originalModelName} -> ${withoutOrgName}`
+        );
       }
-      
+
       if (needsSimplifiedMapping) {
         // 注意：如果两个重命名不同，需要添加两个映射
         if (needsWithoutOrgMapping) {
           // 添加第二个重命名映射
           modelMappings.push({ [originalModelName]: simplifiedName });
-          console.log(`📝 添加重命名映射: ${originalModelName} -> ${simplifiedName}`);
+          console.log(
+            `📝 添加重命名映射: ${originalModelName} -> ${simplifiedName}`
+          );
         } else {
           renameMap[originalModelName] = simplifiedName;
-          console.log(`📝 添加重命名映射: ${originalModelName} -> ${simplifiedName}`);
+          console.log(
+            `📝 添加重命名映射: ${originalModelName} -> ${simplifiedName}`
+          );
         }
       }
-      
+
       // 添加第一个重命名映射
       if (Object.keys(renameMap).length > 0) {
         modelMappings.push(renameMap);
       }
     }
-    
+
     providerConfig.model = modelMappings;
-    
+
     // 日志输出
     if (needsWithoutOrgMapping || needsSimplifiedMapping) {
       let logMsg = `📝 添加模型配置: ${originalModelName} (原始)`;

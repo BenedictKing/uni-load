@@ -9,14 +9,14 @@ const PREFERRED_TEST_MODELS = [
   "gpt-4.1-nano",
   "gpt-3.5-turbo",
 
+  // DeepSeek 小模型
+  "deepseek-v3",
+  "deepseek-chat",
+
   // Google 小模型
   "gemini-2.5-flash-lite",
   "gemini-2.5-flash",
   "gemini-1.5-flash",
-
-  // DeepSeek 小模型
-  "deepseek-v3",
-  "deepseek-chat",
 
   // Anthropic 小模型
   "claude-3-haiku",
@@ -535,7 +535,8 @@ class MultiGptloadManager {
           test_model: testModel, // 使用选择的验证模型
           validation_endpoint: validationEndpoint, // 使用自定义端点或默认值
           sort: 20, // 渠道分组的排序号为20
-          param_overrides: {
+          param_overrides: {},
+          config: {
             blacklist_threshold: 99,
           },
         };
@@ -759,7 +760,8 @@ class MultiGptloadManager {
         test_model: testModel, // 使用选择的验证模型
         validation_endpoint: validationEndpoint, // 使用自定义端点或默认值
         sort: 20, // 渠道分组的排序号为20
-        param_overrides: {
+        param_overrides: {},
+        config: {
           blacklist_threshold: 99,
         },
       };

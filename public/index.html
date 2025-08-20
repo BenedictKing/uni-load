@@ -306,127 +306,127 @@
       }
       /* 渠道列表样式 */
       .channels-list {
-          margin-top: 1rem;
+        margin-top: 1rem;
       }
 
       /* 单个渠道项目样式 */
       .channel-item {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 1rem;
-          border: 1px solid #e1e5e9;
-          border-radius: 8px;
-          background: white;
-          margin-bottom: 0.8rem;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-          transition: all 0.2s ease;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        border: 1px solid #e1e5e9;
+        border-radius: 8px;
+        background: white;
+        margin-bottom: 0.8rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        transition: all 0.2s ease;
       }
 
       .channel-item:hover {
-          background: #f8f9fa;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        background: #f8f9fa;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
       }
 
       .channel-info {
-          flex: 1;
-          min-width: 0; /* 允许内容截断 */
+        flex: 1;
+        min-width: 0; /* 允许内容截断 */
       }
 
       .channel-name {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
       }
 
       .channel-name strong {
-          color: #333;
-          font-size: 1.1em;
+        color: #333;
+        font-size: 1.1em;
       }
 
       .channel-type-badge {
-          background: #6c757d;
-          color: white;
-          padding: 0.2rem 0.4rem;
-          border-radius: 4px;
-          font-size: 0.75em;
-          font-weight: bold;
+        background: #6c757d;
+        color: white;
+        padding: 0.2rem 0.4rem;
+        border-radius: 4px;
+        font-size: 0.75em;
+        font-weight: bold;
       }
 
       .channel-details {
-          display: flex;
-          gap: 1rem;
-          flex-wrap: wrap;
-          font-size: 0.9em;
-          color: #666;
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        font-size: 0.9em;
+        color: #666;
       }
 
       .detail-item {
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
       .channel-actions {
-          display: flex;
-          gap: 0.5rem;
-          flex-shrink: 0;
+        display: flex;
+        gap: 0.5rem;
+        flex-shrink: 0;
       }
 
       .btn-update {
-          background: #28a745;
-          color: white;
-          border: none;
-          padding: 0.5rem 1rem;
-          border-radius: 6px;
-          cursor: pointer;
-          font-size: 0.9em;
-          white-space: nowrap;
-          transition: background 0.2s ease;
+        background: #28a745;
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.9em;
+        white-space: nowrap;
+        transition: background 0.2s ease;
       }
 
       .btn-update:hover {
-          background: #218838;
+        background: #218838;
       }
 
       .btn-delete {
-          background: #dc3545;
-          color: white;
-          border: none;
-          padding: 0.5rem 1rem;
-          border-radius: 6px;
-          cursor: pointer;
-          font-size: 0.9em;
-          white-space: nowrap;
-          transition: background 0.2s ease;
+        background: #dc3545;
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.9em;
+        white-space: nowrap;
+        transition: background 0.2s ease;
       }
 
       .btn-delete:hover {
-          background: #c82333;
+        background: #c82333;
       }
 
       /* 响应式设计 */
       @media (max-width: 768px) {
-          .channel-item {
-              flex-direction: column;
-              align-items: stretch;
-          }
-          
-          .channel-details {
-              flex-direction: column;
-              gap: 0.3rem;
-          }
-          
-          .channel-actions {
-              margin-top: 1rem;
-              justify-content: center;
-          }
-          
-          .detail-item {
-              overflow: visible;
-              white-space: normal;
-          }
+        .channel-item {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .channel-details {
+          flex-direction: column;
+          gap: 0.3rem;
+        }
+
+        .channel-actions {
+          margin-top: 1rem;
+          justify-content: center;
+        }
+
+        .detail-item {
+          overflow: visible;
+          white-space: normal;
+        }
       }
 
       /* 模态框样式 */
@@ -800,14 +800,15 @@
             </div>
 
             <div class="form-group">
-              <label for="updateApiKeys">🔑 API 密钥 *</label>
+              <label for="updateApiKeys">🔑 API 密钥 (可选)</label>
               <textarea
                 id="updateApiKeys"
-                placeholder="sk-xxx...&#10;sk-yyy..."
+                placeholder="留空则保持现有密钥不变&#10;如需添加新密钥，请输入:&#10;sk-xxx...&#10;sk-yyy..."
                 rows="4"
-                required
               ></textarea>
-              <div class="help-text">添加新的API密钥，现有密钥会保留</div>
+              <div class="help-text">
+                留空则保持现有API密钥不变，填写则会添加新的密钥到现有密钥中
+              </div>
             </div>
 
             <div class="modal-actions">
@@ -1321,13 +1322,13 @@
 
         let html = "<h4>已配置的渠道分组:</h4>";
         html += '<div class="channels-list">';
-        
-        channels.forEach(channel => {
+
+        channels.forEach((channel) => {
           // 从渠道名称解析信息
-          const parts = channel.name.split('-');
+          const parts = channel.name.split("-");
           const channelType = parts[parts.length - 1];
-          const siteName = parts.slice(0, -1).join('-');
-          
+          const siteName = parts.slice(0, -1).join("-");
+
           html += `
             <div class="channel-item">
                 <div class="channel-info">
@@ -1337,22 +1338,32 @@
                     </div>
                     <div class="channel-details">
                         <span class="detail-item">站点: ${siteName}</span>
-                        <span class="detail-item">实例: ${channel._instance.name}</span>
-                        <span class="detail-item">上游: ${channel.upstreams?.[0]?.url || 'N/A'}</span>
+                        <span class="detail-item">实例: ${
+                          channel._instance.name
+                        }</span>
+                        <span class="detail-item">上游: ${
+                          channel.upstreams?.[0]?.url || "N/A"
+                        }</span>
                     </div>
                 </div>
                 <div class="channel-actions">
-                    <button class="btn-update" onclick="showUpdateChannelModal('${channel.name}', '${channel.upstreams?.[0]?.url || ''}', '${channelType}')">
+                    <button class="btn-update" onclick="showUpdateChannelModal('${
+                      channel.name
+                    }', '${
+            channel.upstreams?.[0]?.url || ""
+          }', '${channelType}')">
                         🔄 更新
                     </button>
-                    <button class="btn-delete" onclick="deleteChannel('${channel.name}')">
+                    <button class="btn-delete" onclick="deleteChannel('${
+                      channel.name
+                    }')">
                         🗑️ 删除
                     </button>
                 </div>
             </div>
         `;
         });
-        html += '</div>';
+        html += "</div>";
         container.innerHTML = html;
       }
 
@@ -1556,7 +1567,9 @@
             ).value;
             const channelType =
               document.getElementById("updateChannelType").value;
-            const apiKeysText = document.getElementById("updateApiKeys").value.trim();
+            const apiKeysText = document
+              .getElementById("updateApiKeys")
+              .value.trim();
 
             // 如果API密钥为空，设置为空数组，后端会跳过密钥更新
             let apiKeys = [];
@@ -1598,15 +1611,15 @@
 
               if (data.success) {
                 let successMsg = `✅ 渠道 ${channelName} 更新成功！\n\n`;
-                
+
                 if (apiKeys.length > 0) {
                   successMsg += `新增的密钥数量: ${apiKeys.length}\n`;
                 } else {
                   successMsg += `保持现有API密钥不变\n`;
                 }
-                
+
                 successMsg += `模型数量: ${data.data.modelsCount}`;
-                
+
                 alert(successMsg);
 
                 // 关闭模态框并刷新列表
