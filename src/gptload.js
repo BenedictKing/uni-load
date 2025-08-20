@@ -820,6 +820,31 @@ class GptloadService {
   }
 
   /**
+   * 验证分组健康状况
+   */
+  async validateGroupHealth(groupId, instanceId) {
+    const instance = this.manager.getInstance(instanceId);
+    if (!instance) {
+      throw new Error(`实例 ${instanceId} 不存在`);
+    }
+
+    try {
+      const response = await instance.apiClient.post('/keys/validate-group', {
+        group_id: groupId
+      });
+
+      if (response.data && typeof response.data.code === 'number') {
+        return response.data.data;
+      }
+      return response.data;
+      
+    } catch (error) {
+      console.error(`验证分组 ${groupId} 健康状况失败:`, error.message);
+      throw error;
+    }
+  }
+
+  /**
    * 分析渠道健康状况
    */
   async analyzeChannelHealth(groupName, instanceId, timeRangeHours = 24) {

@@ -134,15 +134,13 @@ class ChannelHealthMonitor {
     const groupName = siteGroup.name;
     
     try {
-      // 使用gptload的健康检查接口
-      const healthCheck = await this.performHealthCheck(siteGroup);
+      // 优先使用 gptload 的分组验证接口
+      const validationResult = await this.validateGroupHealth(siteGroup);
       
-      if (healthCheck.success) {
-        // 健康状态良好
-        
-        // 如果渠道之前有失败记录，现在恢复了，就重新激活相关模型分组的密钥
+      if (validationResult.success) {
+        // 验证成功，渠道健康
         if (this.channelFailures.has(groupName)) {
-          console.log(`✅ 渠道 ${groupName} 已恢复健康，正在重新激活相关模型分组的 API 密钥...`);
+          console.log(`✅ 渠道 ${groupName} 验证通过，正在重新激活相关模型分组的 API 密钥...`);
           
           try {
             // 获取所有分组，找到依赖该渠道的模型分组
@@ -174,13 +172,13 @@ class ChannelHealthMonitor {
           }
           
           // 重置失败计数
-          console.log(`✅ ${groupName}: 恢复正常，重置失败计数`);
+          console.log(`✅ ${groupName}: 验证通过，重置失败计数`);
           this.channelFailures.delete(groupName);
         }
 
       } else {
-        // 健康检查失败
-        await this.recordChannelFailure(groupName, healthCheck.error);
+        // 验证失败，记录失败
+        await this.recordChannelFailure(groupName, validationResult.error);
       }
 
     } catch (error) {
@@ -189,9 +187,51 @@ class ChannelHealthMonitor {
   }
 
   /**
-   * 执行健康检查
+   * 使用 gptload 的 validate-group 接口验证分组健康状况
    */
-  async performHealthCheck(siteGroup) {
+  async validateGroupHealth(siteGroup) {
+    const gptloadService = require('./gptload');
+    const instance = gptloadService.manager.getInstance(siteGroup._instance.id);
+    
+    if (!instance) {
+      throw new Error(`实例 ${siteGroup._instance.id} 不存在`);
+    }
+
+    try {
+      console.log(`🔍 使用 validate-group 接口验证分组 ${siteGroup.name} 的健康状况...`);
+      
+      // 调用 gptload 的分组验证接口
+      const response = await instance.apiClient.post('/keys/validate-group', {
+        group_id: siteGroup.id
+      });
+
+      console.log(`✅ 分组 ${siteGroup.name} 验证接口调用成功`);
+      return { 
+        success: true, 
+        validationResult: response.data 
+      };
+      
+    } catch (error) {
+      console.log(`❌ 分组 ${siteGroup.name} 验证接口调用失败: ${error.message}`);
+      
+      // 如果验证接口不可用，回退到原有的检查方法
+      if (error.response && (error.response.status === 404 || error.response.status === 405)) {
+        console.log(`⚠️ 验证接口不存在或不可用，回退到日志分析和直接健康检查`);
+        return await this.performHealthCheckFallback(siteGroup);
+      }
+      
+      // 其他错误视为验证失败
+      return {
+        success: false,
+        error: `验证接口调用失败: ${error.message}`
+      };
+    }
+  }
+
+  /**
+   * 回退的健康检查方法（原有逻辑）
+   */
+  async performHealthCheckFallback(siteGroup) {
     try {
       // 使用 gptload 的日志接口进行健康检查
       const healthResult = await gptloadService.analyzeChannelHealth(
@@ -200,7 +240,7 @@ class ChannelHealthMonitor {
         1 // 检查最近1小时的数据
       );
 
-      console.log(`🔍 检查 ${siteGroup.name}: 成功率 ${healthResult.successRate}%, 响应时间 ${healthResult.avgResponseTime}ms`);
+      console.log(`🔍 日志分析 ${siteGroup.name}: 成功率 ${healthResult.successRate}%, 响应时间 ${healthResult.avgResponseTime}ms`);
       
       // 判断是否健康
       if (healthResult.status === 'healthy') {
