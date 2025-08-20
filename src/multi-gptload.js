@@ -988,7 +988,20 @@ class MultiGptloadManager {
     while (elapsedTime < maxWaitTime) {
       try {
         const statusResponse = await instance.apiClient.get("/tasks/status");
-        const taskStatus = statusResponse.data?.data;
+        
+        // 处理 gptload 特定格式的响应
+        let taskStatus;
+        if (statusResponse.data && typeof statusResponse.data.code === 'number') {
+          // gptload 格式: { code: 0, message: "Success", data: {...} }
+          if (statusResponse.data.code !== 0) {
+            console.log(`⚠️ 任务状态检查返回错误: ${statusResponse.data.message}`);
+            break;
+          }
+          taskStatus = statusResponse.data.data;
+        } else {
+          // 直接返回数据格式
+          taskStatus = statusResponse.data;
+        }
 
         if (!taskStatus) {
           console.log(`⚠️ 未找到分组 ${groupId} 的任务状态`);
@@ -997,22 +1010,21 @@ class MultiGptloadManager {
 
         if (!taskStatus.is_running) {
           // 任务已完成
-          const result = taskStatus.result;
-          if (result) {
-            const { invalid_keys, valid_keys, total_keys } = result;
-            console.log(
-              `📊 分组 ${groupId} 验证结果: ${total_keys} 个密钥中 ${invalid_keys} 个无效, ${valid_keys} 个有效`
-            );
-            return { invalid_keys, valid_keys, total_keys };
-          } else {
-            console.log(`✅ 分组 ${groupId} 的密钥验证任务已完成`);
-            return {};
-          }
+          console.log(`✅ 分组 ${groupId} 的验证任务已完成`);
+          
+          // 获取最终的密钥统计信息
+          const keyStats = await this.getGroupKeyStats(instance, groupId);
+          return {
+            processed: taskStatus.processed || 0,
+            total: taskStatus.total || 0,
+            task_type: taskStatus.task_type,
+            key_stats: keyStats
+          };
         }
 
         // 任务还在运行，继续等待
         console.log(
-          `⏳ 分组 ${groupId} 验证进度: ${taskStatus.processed}/${taskStatus.total}`
+          `⏳ 分组 ${groupId} 验证进度: ${taskStatus.processed}/${taskStatus.total} (${taskStatus.task_type})`
         );
         await new Promise((resolve) => setTimeout(resolve, interval));
         elapsedTime += interval;
@@ -1035,7 +1047,22 @@ class MultiGptloadManager {
   async getGroupKeyStats(instance, groupId) {
     try {
       const response = await instance.apiClient.get(`/groups/${groupId}/stats`);
-      const keyStats = response.data?.data?.key_stats;
+      
+      // 处理 gptload 特定格式的响应
+      let statsData;
+      if (response.data && typeof response.data.code === 'number') {
+        // gptload 格式: { code: 0, message: "Success", data: {...} }
+        if (response.data.code !== 0) {
+          console.log(`⚠️ 获取统计信息返回错误: ${response.data.message}`);
+          return null;
+        }
+        statsData = response.data.data;
+      } else {
+        // 直接返回数据格式
+        statsData = response.data;
+      }
+
+      const keyStats = statsData?.key_stats;
 
       if (keyStats) {
         console.log(
