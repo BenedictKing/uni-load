@@ -235,8 +235,8 @@ class ChannelHealthMonitor {
       if (error.response && error.response.status === 409) {
         console.log(`⚠️ 分组 ${siteGroup.name} 的验证任务已在运行中，等待完成...`);
         
-        // 等待现有任务完成
-        const waitResult = await this.waitForExistingValidationTask(instance, siteGroup.id);
+        // 调用 multi-gptload 中的方法
+        const waitResult = await gptloadService.manager.waitForExistingValidationTask(instance, siteGroup.id);
         
         if (waitResult.success) {
           console.log(`✅ 分组 ${siteGroup.name} 现有验证任务完成`);
