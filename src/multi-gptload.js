@@ -1029,12 +1029,41 @@ class MultiGptloadManager {
           
           // 获取最终的密钥统计信息
           const keyStats = await this.getGroupKeyStats(instance, groupId);
+          
+          // 判断验证是否成功
+          let validationSuccess = false;
+          if (keyStats) {
+            // 如果有可用的密钥，说明验证成功
+            const availableKeys = keyStats.available || 0;
+            const totalKeys = keyStats.total || 0;
+            
+            console.log(`📊 验证完成统计: ${availableKeys}/${totalKeys} 个密钥可用`);
+            
+            if (availableKeys > 0) {
+              validationSuccess = true;
+              console.log(`✅ 分组 ${groupId} 验证成功，有 ${availableKeys} 个可用密钥`);
+            } else {
+              console.log(`❌ 分组 ${groupId} 验证失败，没有可用密钥`);
+            }
+          } else {
+            // 如果无法获取统计信息，根据任务类型判断
+            if (taskStatus.task_type === 'KEY_VALIDATION' && taskStatus.processed > 0) {
+              // 假设如果处理了密钥就是成功的，这个逻辑可能需要根据实际情况调整
+              validationSuccess = true;
+              console.log(`✅ 分组 ${groupId} 验证任务处理了 ${taskStatus.processed} 个密钥`);
+            } else {
+              console.log(`⚠️ 分组 ${groupId} 无法确定验证结果，假设失败`);
+            }
+          }
+          
           return {
-            success: true,
+            success: validationSuccess,
             processed: taskStatus.processed || 0,
             total: taskStatus.total || 0,
             task_type: taskStatus.task_type,
-            key_stats: keyStats
+            key_stats: keyStats,
+            valid: validationSuccess,
+            error: validationSuccess ? null : '验证后没有可用密钥'
           };
         }
 

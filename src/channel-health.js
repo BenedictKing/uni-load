@@ -306,30 +306,75 @@ class ChannelHealthMonitor {
         console.log(`📝 解析后的结果数据: ${JSON.stringify(result)}`);
       }
 
-      if (result && result.valid) {
-        console.log(`✅ 分组 ${siteGroup.name} 验证通过`);
-        console.log(`📝 验证详情: ${JSON.stringify(result)}`);
-        return {
-          success: true,
-          validationResult: result,
-        };
+      // 检查是否有验证结果
+      if (result && typeof result.valid === 'boolean') {
+        // 直接的验证结果
+        if (result.valid) {
+          console.log(`✅ 分组 ${siteGroup.name} 验证通过`);
+          console.log(`📝 验证详情: ${JSON.stringify(result)}`);
+          return {
+            success: true,
+            validationResult: result,
+          };
+        } else {
+          const error = result?.error || result?.message || "分组验证失败";
+          console.log(`❌ 分组 ${siteGroup.name} 验证失败: ${error}`);
+          console.log(`📝 失败详情: ${JSON.stringify(result)}`);
+          
+          // 如果是对象形式的错误，尝试提取更多信息
+          if (typeof result === 'object' && result !== null) {
+            if (result.errors && Array.isArray(result.errors)) {
+              console.log(`📝 具体错误列表:`);
+              result.errors.forEach((err, index) => {
+                console.log(`  ${index + 1}. ${JSON.stringify(err)}`);
+              });
+            }
+            if (result.details) {
+              console.log(`📝 错误详细信息: ${JSON.stringify(result.details)}`);
+            }
+          }
+          
+          return {
+            success: false,
+            error: error,
+            validationResult: result,
+          };
+        }
+      } else if (result && result.is_running === true) {
+        // 验证任务正在运行，需要等待完成
+        console.log(`⏳ 分组 ${siteGroup.name} 的验证任务正在运行中，等待完成...`);
+        console.log(`📝 任务详情: ${JSON.stringify(result)}`);
+        
+        // 等待任务完成
+        const waitResult = await gptloadService.manager.waitForValidationTask(
+          instance,
+          siteGroup.id
+        );
+        
+        if (waitResult.success) {
+          console.log(`✅ 分组 ${siteGroup.name} 验证任务完成`);
+          return {
+            success: true,
+            validationResult: waitResult,
+          };
+        } else {
+          // 检查是否有 valid 字段来更准确地判断
+          const isValid = waitResult.valid === true;
+          const error = waitResult.error || (isValid ? null : '验证失败');
+          
+          console.log(`${isValid ? '✅' : '❌'} 分组 ${siteGroup.name} 验证${isValid ? '成功' : '失败'}${error ? ': ' + error : ''}`);
+          
+          return {
+            success: isValid,
+            error: error,
+            validationResult: waitResult,
+          };
+        }
       } else {
+        // 未知的响应格式
         const error = result?.error || result?.message || "分组验证失败";
         console.log(`❌ 分组 ${siteGroup.name} 验证失败: ${error}`);
         console.log(`📝 失败详情: ${JSON.stringify(result)}`);
-        
-        // 如果是对象形式的错误，尝试提取更多信息
-        if (typeof result === 'object' && result !== null) {
-          if (result.errors && Array.isArray(result.errors)) {
-            console.log(`📝 具体错误列表:`);
-            result.errors.forEach((err, index) => {
-              console.log(`  ${index + 1}. ${JSON.stringify(err)}`);
-            });
-          }
-          if (result.details) {
-            console.log(`📝 错误详细信息: ${JSON.stringify(result.details)}`);
-          }
-        }
         
         return {
           success: false,
