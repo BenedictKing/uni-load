@@ -205,14 +205,49 @@ class ChannelHealthMonitor {
         group_id: siteGroup.id
       });
 
-      console.log(`✅ 分组 ${siteGroup.name} 验证接口调用成功`);
-      return { 
-        success: true, 
-        validationResult: response.data 
-      };
+      // 处理验证结果
+      let result = response.data;
+      if (response.data && typeof response.data.code === 'number') {
+        // gptload 特定格式
+        result = response.data.data;
+      }
+
+      if (result && result.valid) {
+        console.log(`✅ 分组 ${siteGroup.name} 验证通过`);
+        return { 
+          success: true, 
+          validationResult: result 
+        };
+      } else {
+        const error = result?.error || '分组验证失败';
+        console.log(`❌ 分组 ${siteGroup.name} 验证失败: ${error}`);
+        return { 
+          success: false, 
+          error: error,
+          validationResult: result 
+        };
+      }
       
     } catch (error) {
       console.log(`❌ 分组 ${siteGroup.name} 验证接口调用失败: ${error.message}`);
+      
+      // 409 错误特殊处理：任务已在运行
+      if (error.response && error.response.status === 409) {
+        console.log(`⚠️ 分组 ${siteGroup.name} 的验证任务已在运行中，等待完成...`);
+        
+        // 等待现有任务完成
+        const waitResult = await this.waitForExistingValidationTask(instance, siteGroup.id);
+        
+        if (waitResult.success) {
+          console.log(`✅ 分组 ${siteGroup.name} 现有验证任务完成`);
+          return waitResult;
+        } else {
+          return {
+            success: false,
+            error: `验证任务超时或失败: ${waitResult.error}`
+          };
+        }
+      }
       
       // 如果验证接口不可用，回退到原有的检查方法
       if (error.response && (error.response.status === 404 || error.response.status === 405)) {

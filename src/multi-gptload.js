@@ -1042,6 +1042,64 @@ class MultiGptloadManager {
   }
 
   /**
+   * 等待现有的验证任务完成
+   */
+  async waitForExistingValidationTask(instance, groupId) {
+    let maxWaitTime = 60000; // 最多等待60秒
+    let interval = 2000; // 每2秒检查一次
+    let elapsedTime = 0;
+
+    while (elapsedTime < maxWaitTime) {
+      try {
+        const statusResponse = await instance.apiClient.get("/tasks/status");
+        
+        // 处理 gptload 特定格式的响应
+        let taskStatus;
+        if (statusResponse.data && typeof statusResponse.data.code === 'number') {
+          if (statusResponse.data.code !== 0) {
+            console.log(`⚠️ 任务状态检查返回错误: ${statusResponse.data.message}`);
+            break;
+          }
+          taskStatus = statusResponse.data.data;
+        } else {
+          taskStatus = statusResponse.data;
+        }
+
+        if (!taskStatus || !taskStatus.is_running) {
+          // 任务已完成，获取最终的密钥统计信息
+          const keyStats = await this.getGroupKeyStats(instance, groupId);
+          
+          if (keyStats && keyStats.invalid_keys === 0 && keyStats.active_keys > 0) {
+            return {
+              success: true,
+              validationResult: { keyStats }
+            };
+          } else {
+            return {
+              success: false,
+              error: `验证完成但密钥状态异常: 有效密钥=${keyStats?.active_keys || 0}, 无效密钥=${keyStats?.invalid_keys || 0}`
+            };
+          }
+        }
+
+        // 任务还在运行，继续等待
+        console.log(`⏳ 分组 ${groupId} 验证任务进行中，已等待 ${elapsedTime/1000}s...`);
+        await new Promise(resolve => setTimeout(resolve, interval));
+        elapsedTime += interval;
+        
+      } catch (statusError) {
+        console.error(`检查任务状态失败: ${statusError.message}`);
+        break;
+      }
+    }
+
+    return {
+      success: false,
+      error: '等待验证任务完成超时'
+    };
+  }
+
+  /**
    * 获取分组的密钥统计信息
    */
   async getGroupKeyStats(instance, groupId) {
