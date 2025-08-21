@@ -978,26 +978,39 @@ class MultiGptloadManager {
   }
 
   /**
+   * 等待现有验证任务完成 (别名方法)
+   */
+  async waitForExistingValidationTask(instance, groupId) {
+    return await this.waitForValidationTask(instance, groupId);
+  }
+
+  /**
    * 等待验证任务完成
    */
   async waitForValidationTask(instance, groupId) {
+    console.log(`⏳ 开始等待分组 ${groupId} 的验证任务完成...`);
     let maxWaitTime = 30000; // 最多等待30秒
     let interval = 1000; // 每秒检查一次
     let elapsedTime = 0;
 
     while (elapsedTime < maxWaitTime) {
       try {
+        console.log(`📋 检查分组 ${groupId} 的任务状态 (已等待 ${elapsedTime / 1000}s)...`);
         const statusResponse = await instance.apiClient.get("/tasks/status");
+        
+        console.log(`📝 任务状态响应: ${JSON.stringify(statusResponse.data)}`);
         
         // 处理 gptload 特定格式的响应
         let taskStatus;
         if (statusResponse.data && typeof statusResponse.data.code === 'number') {
           // gptload 格式: { code: 0, message: "Success", data: {...} }
+          console.log(`📝 检测到gptload任务状态格式，code: ${statusResponse.data.code}`);
           if (statusResponse.data.code !== 0) {
             console.log(`⚠️ 任务状态检查返回错误: ${statusResponse.data.message}`);
             break;
           }
           taskStatus = statusResponse.data.data;
+          console.log(`📝 解析后的任务状态: ${JSON.stringify(taskStatus)}`);
         } else {
           // 直接返回数据格式
           taskStatus = statusResponse.data;
@@ -1008,6 +1021,8 @@ class MultiGptloadManager {
           break;
         }
 
+        console.log(`📋 任务状态详情: 运行中=${taskStatus.is_running}, 进度=${taskStatus.processed}/${taskStatus.total}, 类型=${taskStatus.task_type}`);
+
         if (!taskStatus.is_running) {
           // 任务已完成
           console.log(`✅ 分组 ${groupId} 的验证任务已完成`);
@@ -1015,6 +1030,7 @@ class MultiGptloadManager {
           // 获取最终的密钥统计信息
           const keyStats = await this.getGroupKeyStats(instance, groupId);
           return {
+            success: true,
             processed: taskStatus.processed || 0,
             total: taskStatus.total || 0,
             task_type: taskStatus.task_type,
@@ -1030,15 +1046,117 @@ class MultiGptloadManager {
         elapsedTime += interval;
       } catch (statusError) {
         console.error(`检查任务状态失败: ${statusError.message}`);
+        console.log(`📝 状态检查错误详情:`);
+        console.log(`  - 错误类型: ${statusError.name || 'Unknown'}`);
+        console.log(`  - 错误代码: ${statusError.code || 'N/A'}`);
+        if (statusError.response) {
+          console.log(`  - 响应状态: ${statusError.response.status}`);
+          console.log(`  - 响应数据: ${JSON.stringify(statusError.response.data)}`);
+        }
         break;
       }
     }
 
     if (elapsedTime >= maxWaitTime) {
       console.log(`⚠️ 分组 ${groupId} 验证任务等待超时`);
+      return {
+        success: false,
+        error: '验证任务等待超时'
+      };
     }
 
-    return {};
+    return {
+      success: false,
+      error: '验证任务未能完成'
+    };
+  }
+
+  /**
+   * 获取分组密钥统计信息
+   */
+  async getGroupKeyStats(instance, groupId) {
+    try {
+      console.log(`📊 获取分组 ${groupId} 的密钥统计信息...`);
+      const response = await instance.apiClient.get(`/groups/${groupId}/stats`);
+      
+      console.log(`📝 统计响应状态: ${response.status}`);
+      console.log(`📝 统计响应数据: ${JSON.stringify(response.data)}`);
+      
+      // 处理 gptload 特定格式的响应
+      let statsData;
+      if (response.data && typeof response.data.code === 'number') {
+        // gptload 格式: { code: 0, message: "Success", data: {...} }
+        console.log(`📝 检测到gptload统计格式，code: ${response.data.code}`);
+        if (response.data.code !== 0) {
+          console.log(`⚠️ 获取统计信息返回错误: ${response.data.message}`);
+          return null;
+        }
+        statsData = response.data.data;
+        console.log(`📝 解析后的统计数据: ${JSON.stringify(statsData)}`);
+      } else {
+        // 直接返回数据格式
+        statsData = response.data;
+      }
+
+      const keyStats = statsData?.key_stats;
+      
+      if (!keyStats) {
+        console.log(`⚠️ 未找到分组 ${groupId} 的密钥统计信息`);
+        console.log(`📝 statsData结构: ${JSON.stringify(statsData)}`);
+        return null;
+      }
+
+      console.log(`📊 分组 ${groupId} 密钥统计: ${JSON.stringify(keyStats)}`);
+      return keyStats;
+    } catch (error) {
+      console.error(`获取分组 ${groupId} 统计信息失败: ${error.message}`);
+      console.log(`📝 统计获取错误详情:`);
+      console.log(`  - 错误类型: ${error.name || 'Unknown'}`);
+      console.log(`  - 错误代码: ${error.code || 'N/A'}`);
+      if (error.response) {
+        console.log(`  - 响应状态: ${error.response.status}`);
+        console.log(`  - 响应数据: ${JSON.stringify(error.response.data)}`);
+      }
+      return null;
+    }
+  }
+
+  /**
+   * 获取分组详细信息（用于调试）
+   */
+  async getGroupDetails(instance, groupId) {
+    try {
+      console.log(`🔍 获取分组 ${groupId} 的详细信息...`);
+      const response = await instance.apiClient.get(`/groups/${groupId}`);
+      
+      console.log(`📝 分组详情响应状态: ${response.status}`);
+      console.log(`📝 分组详情响应数据: ${JSON.stringify(response.data)}`);
+      
+      // 处理 gptload 特定格式的响应
+      let groupDetails;
+      if (response.data && typeof response.data.code === 'number') {
+        console.log(`📝 检测到gptload分组格式，code: ${response.data.code}`);
+        if (response.data.code !== 0) {
+          console.log(`⚠️ 获取分组详情返回错误: ${response.data.message}`);
+          return null;
+        }
+        groupDetails = response.data.data;
+      } else {
+        groupDetails = response.data;
+      }
+
+      return groupDetails;
+    } catch (error) {
+      console.error(`获取分组 ${groupId} 详情失败: ${error.message}`);
+      console.log(`📝 详情获取错误详情:`);
+      console.log(`  - 错误类型: ${error.name || 'Unknown'}`);
+      console.log(`  - 错误代码: ${error.code || 'N/A'}`);
+      if (error.response) {
+        console.log(`  - 响应状态: ${error.response.status}`);
+        console.log(`  - 响应数据: ${JSON.stringify(error.response.data)}`);
+      }
+      return null;
+    }
   }
 
 
