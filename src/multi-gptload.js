@@ -1033,11 +1033,13 @@ class MultiGptloadManager {
           // 判断验证是否成功
           let validationSuccess = false;
           if (keyStats) {
-            // 如果有可用的密钥，说明验证成功
-            const availableKeys = keyStats.available || 0;
-            const totalKeys = keyStats.total || 0;
+            // 根据实际的字段名获取可用密钥数量
+            // 从日志看到字段名是 active_keys 而不是 available
+            const availableKeys = keyStats.active_keys || keyStats.available || 0;
+            const totalKeys = keyStats.total_keys || keyStats.total || 0;
             
             console.log(`📊 验证完成统计: ${availableKeys}/${totalKeys} 个密钥可用`);
+            console.log(`📊 密钥详细统计: active=${keyStats.active_keys}, total=${keyStats.total_keys}, invalid=${keyStats.invalid_keys}`);
             
             if (availableKeys > 0) {
               validationSuccess = true;
@@ -1046,11 +1048,16 @@ class MultiGptloadManager {
               console.log(`❌ 分组 ${groupId} 验证失败，没有可用密钥`);
             }
           } else {
-            // 如果无法获取统计信息，根据任务类型判断
-            if (taskStatus.task_type === 'KEY_VALIDATION' && taskStatus.processed > 0) {
-              // 假设如果处理了密钥就是成功的，这个逻辑可能需要根据实际情况调整
+            // 如果无法获取统计信息，尝试从任务结果中获取
+            if (taskStatus.result && taskStatus.result.valid_keys > 0) {
               validationSuccess = true;
-              console.log(`✅ 分组 ${groupId} 验证任务处理了 ${taskStatus.processed} 个密钥`);
+              const validKeys = taskStatus.result.valid_keys;
+              const totalKeys = taskStatus.result.total_keys || taskStatus.total;
+              console.log(`✅ 分组 ${groupId} 验证成功，从任务结果获得 ${validKeys}/${totalKeys} 个有效密钥`);
+            } else if (taskStatus.task_type === 'KEY_VALIDATION' && taskStatus.processed > 0) {
+              // 备用逻辑：如果处理了密钥但无统计信息
+              validationSuccess = true;
+              console.log(`✅ 分组 ${groupId} 验证任务处理了 ${taskStatus.processed} 个密钥，假设成功`);
             } else {
               console.log(`⚠️ 分组 ${groupId} 无法确定验证结果，假设失败`);
             }
