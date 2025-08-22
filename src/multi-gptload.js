@@ -1,5 +1,6 @@
 const axios = require("axios");
 const https = require("https");
+const modelConfig = require("./model-config");
 
 // 优先使用的小模型列表（按优先级排序）
 const PREFERRED_TEST_MODELS = [
@@ -537,7 +538,7 @@ class MultiGptloadManager {
           sort: 20, // 渠道分组的排序号为20
           param_overrides: {},
           config: {
-            blacklist_threshold: 99,
+            blacklist_threshold: modelConfig.getSiteGroupConfig().blacklist_threshold,
           },
         };
 
@@ -762,7 +763,7 @@ class MultiGptloadManager {
         sort: 20, // 渠道分组的排序号为20
         param_overrides: {},
         config: {
-          blacklist_threshold: 99,
+          blacklist_threshold: modelConfig.getSiteGroupConfig().blacklist_threshold,
         },
       };
 

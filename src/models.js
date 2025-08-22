@@ -1,5 +1,6 @@
 const axios = require("axios");
 const https = require("https");
+const modelConfig = require("./model-config");
 
 class ModelsService {
   constructor() {
@@ -288,106 +289,9 @@ class ModelsService {
    * 过滤和清理模型名称
    */
   filterModels(models) {
-    // 白名单前缀（不区分大小写）
-    const allowedPrefixes = [
-      // OpenAI
-      "gpt-",
-      "chatgpt-",
-      // Google
-      "gemini-2.5-", // 仅支持 2.5 及以上版本
-      "gemma-",
-      // Anthropic
-      "claude-opus",
-      "claude-sonnet",
-      "claude-3",
-      "claude-4",
-      // DeepSeek
-      "deepseek-",
-      // Qwen (Alibaba)
-      "qwen-",
-      "qwen3-",
-      // Llama (Meta)
-      "llama-",
-      // Mistral
-      "mixtral-",
-      "mistral-",
-      // 01.ai
-      // "yi-",
-      // Moonshot
-      "kimi-k2",
-      // Doubao (ByteDance)
-      "doubao-1-6-",
-      "doubao-seed-",
-      // Zhipu AI (智谱)
-      "glm-",
-      // xAI
-      "grok-3",
-      "grok-4",
-      // Flux
-      "flux-",
-      // Misc / Provider Specific
-      "o1",
-      "o3",
-      "o4",
-      // vercel v0
-      "v0-",
-      // MiniMax
-      "minimax-",
-    ];
-
-    // 黑名单关键词（不区分大小写），包含这些词的模型将被过滤
-    const blacklistedKeywords = [
-      "vision",
-      "image",
-      "audio",
-      "rag",
-      "json",
-      "rerank",
-      "tts",
-      "dall-e",
-      "whisper",
-      "embedding",
-      "embed",
-      "generation",
-      "sora",
-    ];
-
-    const filtered = models.filter((model) => {
-      const name = model.toLowerCase();
-
-      // 黑名单检查：如果模型名称包含任何黑名单关键词，则过滤掉
-      const isBlacklisted = blacklistedKeywords.some((keyword) =>
-        name.includes(keyword)
-      );
-      if (isBlacklisted) {
-        console.log(`🚫 过滤掉模型（在黑名单中）: ${model}`);
-        return false;
-      }
-
-      // 白名单检查（不区分大小写）
-      let isAllowed = allowedPrefixes.some((prefix) => {
-        // 首先尝试匹配完整名称（例如 "deepseek-ai/..."）
-        return name.startsWith(prefix.toLowerCase());
-      });
-
-      // 如果完整名称不匹配，并且包含斜杠，则尝试匹配斜杠后的部分
-      // 例如：检查 "Qwen/Qwen3..." 中的 "Qwen3..." 是否以 "qwen-" 开头
-      if (!isAllowed && name.includes("/")) {
-        const parts = name.split("/");
-        const modelPart = parts[parts.length - 1];
-        isAllowed = allowedPrefixes.some((prefix) => {
-          return modelPart.startsWith(prefix.toLowerCase());
-        });
-      }
-
-      if (!isAllowed) {
-        console.log(`🚫 过滤掉模型（不在白名单）: ${model}`);
-        return false;
-      }
-
-      return true;
-    });
-
+    // 使用统一的模型配置进行过滤
+    const filtered = modelConfig.filterModels(models);
+    
     // 去重并排序
     const uniqueModels = [...new Set(filtered)];
 
