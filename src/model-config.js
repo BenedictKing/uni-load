@@ -98,6 +98,37 @@ class ModelConfig {
       "wan2", // 万达模型
     ];
 
+    // 优先使用的小模型列表（按优先级排序，用于验证和测试）
+    this.preferredTestModels = [
+      // OpenAI 小模型
+      "gpt-4o-mini",
+      "gpt-4.1-mini",
+      "gpt-4.1-nano",
+      "gpt-3.5-turbo",
+
+      // DeepSeek 小模型
+      "deepseek-v3",
+      "deepseek-chat",
+
+      // Google 小模型
+      "gemini-2.5-flash-lite",
+      "gemini-2.5-flash",
+      "gemini-1.5-flash",
+
+      // Anthropic 小模型
+      "claude-3-haiku",
+      "claude-3-5-haiku",
+
+      // Qwen 小模型
+      "qwen-2.5-turbo",
+      "qwen-turbo",
+
+      // 其他小模型
+      "llama-3.2-3b",
+      "mistral-7b",
+      "yi-lightning",
+    ];
+
     // gptload 配置
     this.gptloadConfig = {
       // 站点分组（渠道分组）配置
@@ -207,6 +238,73 @@ class ModelConfig {
   }
 
   /**
+   * 获取优先使用的测试模型列表
+   * @return {string[]} 按优先级排序的测试模型列表
+   */
+  getPreferredTestModels() {
+    return this.preferredTestModels;
+  }
+
+  /**
+   * 从可用模型中选择最佳的测试模型
+   * @param {string[]} availableModels 可用模型列表
+   * @param {string} channelType 渠道类型（可选，用于后续扩展）
+   * @return {string} 选中的测试模型
+   */
+  selectTestModel(availableModels, channelType = 'openai') {
+    if (!availableModels || availableModels.length === 0) {
+      // 如果没有可用模型，根据渠道类型返回默认模型
+      const defaultModels = {
+        openai: 'gpt-4o-mini',
+        anthropic: 'claude-3-haiku',
+        gemini: 'gemini-2.5-flash'
+      };
+      
+      const defaultModel = defaultModels[channelType] || 'gpt-4o-mini';
+      console.log(`⚠️ 未提供可用模型列表，使用默认测试模型: ${defaultModel}`);
+      return defaultModel;
+    }
+
+    // 将可用模型转换为小写以便比较
+    const availableModelsLower = availableModels.map(model => model.toLowerCase());
+
+    // 优先从小模型列表中选择
+    for (const preferredModel of this.preferredTestModels) {
+      const preferredLower = preferredModel.toLowerCase();
+
+      // 精确匹配
+      const exactMatch = availableModels.find(
+        model => model.toLowerCase() === preferredLower
+      );
+      if (exactMatch) {
+        console.log(`✅ 选择优先小模型作为测试模型: ${exactMatch}`);
+        return exactMatch;
+      }
+
+      // 模糊匹配（包含关系）
+      const fuzzyMatch = availableModels.find(model => {
+        const modelLower = model.toLowerCase();
+        // 检查是否包含小模型的关键部分
+        const preferredParts = preferredLower.split('-');
+        return preferredParts.every(part => modelLower.includes(part));
+      });
+      if (fuzzyMatch) {
+        console.log(
+          `✅ 选择匹配的小模型作为测试模型: ${fuzzyMatch} (匹配 ${preferredModel})`
+        );
+        return fuzzyMatch;
+      }
+    }
+
+    // 如果小模型列表中没有匹配的，选择第一个可用模型
+    const fallbackModel = availableModels[0];
+    console.log(
+      `⚠️ 小模型列表中无匹配模型，使用第一个可用模型作为测试模型: ${fallbackModel}`
+    );
+    return fallbackModel;
+  }
+
+  /**
    * 获取所有配置信息（用于调试）
    * @return {Object} 完整配置
    */
@@ -215,6 +313,7 @@ class ModelConfig {
       allowedPrefixes: this.allowedPrefixes,
       blacklistedKeywords: this.blacklistedKeywords,
       highCostModelPatterns: this.highCostModelPatterns,
+      preferredTestModels: this.preferredTestModels,
       gptloadConfig: this.gptloadConfig,
     };
   }

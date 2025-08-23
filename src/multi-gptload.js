@@ -2,37 +2,6 @@ const axios = require("axios");
 const https = require("https");
 const modelConfig = require("./model-config");
 
-// 优先使用的小模型列表（按优先级排序）
-const PREFERRED_TEST_MODELS = [
-  // OpenAI 小模型
-  "gpt-4o-mini",
-  "gpt-4.1-mini",
-  "gpt-4.1-nano",
-  "gpt-3.5-turbo",
-
-  // DeepSeek 小模型
-  "deepseek-v3",
-  "deepseek-chat",
-
-  // Google 小模型
-  "gemini-2.5-flash-lite",
-  "gemini-2.5-flash",
-  "gemini-1.5-flash",
-
-  // Anthropic 小模型
-  "claude-3-haiku",
-  "claude-3-5-haiku",
-
-  // Qwen 小模型
-  "qwen-2.5-turbo",
-  "qwen-turbo",
-
-  // 其他小模型
-  "llama-3.2-3b",
-  "mistral-7b",
-  "yi-lightning",
-];
-
 class MultiGptloadManager {
   constructor() {
     this.instances = new Map(); // gptload实例配置
@@ -653,55 +622,8 @@ class MultiGptloadManager {
    * 从可用模型中选择最佳的验证模型
    */
   selectTestModel(availableModels, channelType) {
-    const channelConfig = this.getChannelConfig(channelType);
-
-    if (!availableModels || availableModels.length === 0) {
-      // 如果没有可用模型，使用默认配置
-      console.log(
-        `⚠️ 未提供可用模型列表，使用默认验证模型: ${channelConfig.test_model}`
-      );
-      return channelConfig.test_model;
-    }
-
-    // 将可用模型转换为小写以便比较
-    const availableModelsLower = availableModels.map((model) =>
-      model.toLowerCase()
-    );
-
-    // 优先从小模型列表中选择
-    for (const preferredModel of PREFERRED_TEST_MODELS) {
-      const preferredLower = preferredModel.toLowerCase();
-
-      // 精确匹配
-      const exactMatch = availableModels.find(
-        (model) => model.toLowerCase() === preferredLower
-      );
-      if (exactMatch) {
-        console.log(`✅ 选择优先小模型作为验证模型: ${exactMatch}`);
-        return exactMatch;
-      }
-
-      // 模糊匹配（包含关系）
-      const fuzzyMatch = availableModels.find((model) => {
-        const modelLower = model.toLowerCase();
-        // 检查是否包含小模型的关键部分
-        const preferredParts = preferredLower.split("-");
-        return preferredParts.every((part) => modelLower.includes(part));
-      });
-      if (fuzzyMatch) {
-        console.log(
-          `✅ 选择匹配的小模型作为验证模型: ${fuzzyMatch} (匹配 ${preferredModel})`
-        );
-        return fuzzyMatch;
-      }
-    }
-
-    // 如果小模型列表中没有匹配的，选择第一个可用模型
-    const fallbackModel = availableModels[0];
-    console.log(
-      `⚠️ 小模型列表中无匹配模型，使用第一个可用模型作为验证模型: ${fallbackModel}`
-    );
-    return fallbackModel;
+    // 使用统一的模型配置管理
+    return modelConfig.selectTestModel(availableModels, channelType);
   }
 
   /**
