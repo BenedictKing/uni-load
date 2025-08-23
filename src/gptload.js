@@ -113,20 +113,32 @@ class GptloadService {
       // 根据不同 channel_type 设置默认参数
       const channelConfig = this.getChannelConfig(channelType);
 
+      // 选择验证模型：优先使用小模型列表中的模型
+      const testModel = this.manager.selectTestModel(availableModels, channelType);
+
+      // 确定要使用的验证端点
+      const validationEndpoint =
+        customValidationEndpoints[channelType] ||
+        channelConfig.validation_endpoint;
+
       // 更新分组配置
       const updateData = {
         upstreams: [{ url: baseUrl, weight: 1 }],
         channel_type: channelType,
-        test_model: channelConfig.test_model,
-        validation_endpoint: channelConfig.validation_endpoint,
+        test_model: testModel, // 使用选择的验证模型
+        validation_endpoint: validationEndpoint, // 使用自定义端点或默认值
         sort: 20, // 渠道分组的排序号为20
+        param_overrides: {},
+        config: {
+          blacklist_threshold: require('./model-config').getSiteGroupConfig().blacklist_threshold,
+        },
       };
 
       await instance.apiClient.put(`/groups/${existingGroup.id}`, updateData);
 
-      // 添加新的 API 密钥（如果有）
+      // 添加新的 API 密钥（如果有）- 修复：使用正确的方法调用
       if (apiKeys && apiKeys.length > 0) {
-        await this.addApiKeysToGroup(existingGroup.id, apiKeys, instance);
+        await this.manager.addApiKeysToGroup(instance, existingGroup.id, apiKeys);
       }
 
       console.log(
@@ -135,6 +147,7 @@ class GptloadService {
 
       return {
         ...existingGroup,
+        ...updateData,
         _instance: {
           id: instance.id,
           name: instance.name,
