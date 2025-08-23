@@ -2,10 +2,16 @@
   "name": "uni-load",
   "version": "1.0.0",
   "description": "中间桥梁项目，连接 uni-api 和 gptload，实现第三方AI站点的自动配置",
-  "main": "server.js",
+  "main": "dist/server.js",
   "scripts": {
-    "start": "bun run server.js",
-    "dev": "bun --watch server.js"
+    "build": "tsc",
+    "start": "bun run dist/server.js",
+    "start:ts": "ts-node server.ts",
+    "dev": "ts-node --transpile-only server.ts",
+    "dev:build": "tsc && bun --watch dist/server.js",
+    "dev:clean": "pkill -f server; ts-node --transpile-only server.ts",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist"
   },
   "dependencies": {
     "express": "^4.18.2",
@@ -14,7 +20,14 @@
     "cors": "^2.8.5",
     "dotenv": "^16.3.1"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "@types/axios": "^0.14.4",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.3.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2"
+  },
   "packageManager": "bun@1.0.0",
   "keywords": [
     "ai",

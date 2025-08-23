@@ -1,8 +1,22 @@
-const axios = require("axios");
-const https = require("https");
+import axios, { AxiosResponse, AxiosError } from 'axios';
+import https from 'https';
+import { Model } from './types';
+
 const modelConfig = require("./model-config");
 
+interface ModelApiResponse {
+  data: Model[];
+  object?: string;
+}
+
+interface AxiosErrorWithRetry extends AxiosError {
+  code?: string;
+}
+
 class ModelsService {
+  private timeout: number;
+  private httpsAgent: https.Agent;
+
   constructor() {
     this.timeout = 30000; // 30秒超时
 
@@ -15,7 +29,7 @@ class ModelsService {
   /**
    * 判断错误是否可重试
    */
-  isRetryableError(error) {
+  private isRetryableError(error: AxiosErrorWithRetry): boolean {
     // 网络连接错误
     if (error.code === 'ECONNRESET' || 
         error.code === 'ECONNREFUSED' || 
@@ -50,15 +64,15 @@ class ModelsService {
   /**
    * 等待指定时间
    */
-  sleep(ms) {
+  private sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   /**
    * 从AI站点获取支持的模型列表（带重试机制）
    */
-  async getModels(baseUrl, apiKey, maxRetries = 3) {
-    let lastError;
+  async getModels(baseUrl: string, apiKey: string, maxRetries: number = 3): Promise<Model[]> {
+    let lastError: Error;
     
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
@@ -82,7 +96,8 @@ class ModelsService {
         const models = this.parseModelsResponse(response.data);
 
         if (!models || models.length === 0) {
-          throw new Error("未找到任何可用模型");
+          console.log("⚠️ 站点返回空模型列表，但API正常响应");
+          return []; // 返回空数组而不是抛出异常
         }
 
         console.log(
@@ -288,7 +303,7 @@ class ModelsService {
   /**
    * 过滤和清理模型名称
    */
-  filterModels(models) {
+  filterModels(models: Model[]): string[] {
     // 使用统一的模型配置进行过滤
     const filtered = modelConfig.filterModels(models);
     

@@ -1,10 +1,12 @@
-const express = require("express");
-const cors = require("cors");
-const path = require("path");
+import express, { Request, Response } from 'express';
+import cors from 'cors';
+import path from 'path';
+import dotenv from 'dotenv';
+import { ProcessAiSiteRequest, ApiResponse, CleanupOptions, ApiErrorResponse } from './src/types';
 
 // 按优先级加载环境变量：.env.local > .env
-require("dotenv").config({ path: ".env.local" });
-require("dotenv").config({ path: ".env" });
+dotenv.config({ path: ".env.local" });
+dotenv.config({ path: ".env" });
 
 const gptloadService = require("./src/gptload");
 const modelsService = require("./src/models");
@@ -12,10 +14,10 @@ const yamlManager = require("./src/yaml-manager");
 const modelSyncService = require("./src/model-sync");
 const channelHealthMonitor = require("./src/channel-health");
 const channelCleanupService = require("./src/channel-cleanup");
-const modelChannelOptimizer = require("./src/model-channel-optimizer");
+const threeLayerArchitecture = require("./src/three-layer-architecture");
 
 const app = express();
-const PORT = process.env.PORT || 3002;
+const PORT: number = parseInt(process.env.PORT || '3002', 10);
 
 // 中间件
 app.use(cors());
@@ -23,7 +25,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
 // 自动生成站点名称的函数
-function generateSiteNameFromUrl(baseUrl) {
+function generateSiteNameFromUrl(baseUrl: string): string {
   try {
     // 确保URL有协议前缀
     let url = baseUrl;
@@ -99,7 +101,7 @@ function generateSiteNameFromUrl(baseUrl) {
 }
 
 // 预览站点名称的API端点
-app.post("/api/preview-site-name", (req, res) => {
+app.post("/api/preview-site-name", (req: Request, res: Response) => {
   try {
     const { baseUrl } = req.body;
 
@@ -115,7 +117,7 @@ app.post("/api/preview-site-name", (req, res) => {
 });
 
 // API 路由
-app.post("/api/process-ai-site", async (req, res) => {
+app.post("/api/process-ai-site", async (req: Request<{}, any, ProcessAiSiteRequest>, res: Response<ApiResponse | ApiErrorResponse>) => {
   try {
     const { baseUrl, apiKeys, channelTypes, customValidationEndpoints } =
       req.body;
@@ -295,9 +297,32 @@ app.post("/api/process-ai-site", async (req, res) => {
 
     // 检查是否成功获取模型
     if (!allModels || allModels.length === 0) {
-      return res
-        .status(400)
-        .json({ error: "无法获取模型列表或模型列表为空" });
+      // 处理空模型列表的情况：清理上层分组但保留渠道分组
+      console.log("⚠️ 站点返回空模型列表，开始清理上层分组引用...");
+      const channelName = `${siteName}-${selectedChannelTypes[0]}`;
+      
+      try {
+        const cleanupResult = await gptloadService.handleEmptyModelList(channelName);
+        console.log("🧹 清理结果:", cleanupResult);
+        
+        return res.json({
+          success: true,
+          message: `站点 ${siteName} 返回空模型列表，已保留渠道分组但清理了上层引用`,
+          data: {
+            siteName,
+            baseUrl,
+            channelTypes: selectedChannelTypes,
+            emptyModelListHandling: true,
+            cleanupResult
+          },
+        });
+      } catch (cleanupError) {
+        console.error("清理上层分组失败:", cleanupError);
+        return res.status(400).json({ 
+          error: "站点返回空模型列表且清理失败", 
+          details: cleanupError.message
+        });
+      }
     }
 
     // 应用白名单过滤
@@ -547,55 +572,41 @@ app.post("/api/reset-channel-failures", (req, res) => {
   }
 });
 
-// 获取模型健康报告
-app.get("/api/model-health/:model?", async (req, res) => {
+// 初始化三层架构
+app.post("/api/initialize-architecture", async (req, res) => {
   try {
-    const { model } = req.params;
-    
-    if (model) {
-      // 获取特定模型的健康报告
-      const report = await modelChannelOptimizer.getModelHealthReport(model);
-      res.json(report);
-    } else {
-      // 获取所有模型的优化报告
-      const report = await modelChannelOptimizer.generateOptimizationReport();
-      res.json(report);
-    }
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// 触发模型验证
-app.post("/api/model-validation/:model", async (req, res) => {
-  try {
-    const { model } = req.params;
-    await modelChannelOptimizer.triggerModelValidation(model);
+    const result = await threeLayerArchitecture.initialize();
     
     res.json({
       success: true,
-      message: `已触发模型 ${model} 的验证任务`
+      message: "三层架构初始化成功",
+      result
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// 优化模型分组
-app.post("/api/optimize-model/:model", async (req, res) => {
+// 获取架构状态
+app.get("/api/architecture-status", async (req, res) => {
   try {
-    const { model } = req.params;
-    const groups = modelChannelOptimizer.modelGroupMapping.get(model);
-    
-    if (!groups) {
-      return res.status(404).json({ error: `模型 ${model} 没有配置分组` });
-    }
-    
-    await modelChannelOptimizer.optimizeModelGroups(model, groups);
+    const status = await threeLayerArchitecture.getArchitectureStatus();
+    res.json(status);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 手动触发架构恢复
+app.post("/api/manual-recovery/:model/:channel", async (req, res) => {
+  try {
+    const { model, channel } = req.params;
+    const result = await threeLayerArchitecture.manualRecovery(model, channel);
     
     res.json({
       success: true,
-      message: `已优化模型 ${model} 的分组配置`
+      message: `已触发 ${model}:${channel} 的手动恢复`,
+      result
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -820,6 +831,36 @@ app.delete("/api/channels/:channelName", async (req, res) => {
   }
 });
 
+// 优雅退出处理
+const gracefulShutdown = () => {
+  console.log('\n🔄 正在优雅关闭服务器...');
+  
+  // 停止所有服务
+  try {
+    if (process.env.ENABLE_MODEL_SYNC !== "false") {
+      console.log('🛑 停止模型同步服务...');
+      modelSyncService.stop();
+    }
+    
+    if (process.env.ENABLE_CHANNEL_HEALTH !== "false") {
+      console.log('🛑 停止渠道健康监控...');
+      channelHealthMonitor.stop();
+    }
+    
+    console.log('✅ 所有服务已停止');
+  } catch (error) {
+    console.error('❌ 停止服务时出错:', error);
+  }
+  
+  console.log('👋 服务器已关闭');
+  process.exit(0);
+};
+
+// 监听进程退出信号
+process.on('SIGINT', gracefulShutdown);  // Ctrl+C
+process.on('SIGTERM', gracefulShutdown); // 终止信号
+process.on('SIGQUIT', gracefulShutdown); // 退出信号
+
 app.listen(PORT, () => {
   console.log(`🚀 uni-load 服务器启动成功`);
   console.log(`📍 访问地址: http://localhost:${PORT}`);
@@ -844,13 +885,15 @@ app.listen(PORT, () => {
     console.log(`⚠️ 渠道健康监控已禁用 (ENABLE_CHANNEL_HEALTH=false)`);
   }
   
-  // 启动模型渠道优化器
+  // 启动三层架构管理器
   if (process.env.ENABLE_MODEL_OPTIMIZER !== "false") {
-    console.log(`🎯 启动模型渠道优化器...`);
-    modelChannelOptimizer.initialize().catch(error => {
-      console.error('模型渠道优化器初始化失败:', error);
+    console.log(`🏗️  启动三层架构管理器...`);
+    threeLayerArchitecture.initialize().then(result => {
+      console.log(`✅ 三层架构初始化成功: ${JSON.stringify(result)}`);
+    }).catch(error => {
+      console.error('三层架构初始化失败:', error);
     });
   } else {
-    console.log(`⚠️ 模型渠道优化器已禁用 (ENABLE_MODEL_OPTIMIZER=false)`);
+    console.log(`⚠️ 三层架构管理器已禁用 (ENABLE_MODEL_OPTIMIZER=false)`);
   }
 });
