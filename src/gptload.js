@@ -136,9 +136,9 @@ class GptloadService {
 
       await instance.apiClient.put(`/groups/${existingGroup.id}`, updateData);
 
-      // 添加新的 API 密钥（如果有）- 修复：使用正确的方法调用
+      // 添加新的 API 密钥（如果有）- 修复：使用正确的方法调用和参数顺序
       if (apiKeys && apiKeys.length > 0) {
-        await this.manager.addApiKeysToGroup(instance, existingGroup.id, apiKeys);
+        await this.addApiKeysToGroup(existingGroup.id, apiKeys, instance);
       }
 
       console.log(
