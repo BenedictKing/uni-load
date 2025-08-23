@@ -181,6 +181,15 @@ class ThreeLayerArchitecture {
             continue;
           }
           
+          // 选择合适的实例
+          const instance = await gptloadService.manager.selectBestInstance(
+            site.upstreams[0]?.url || ''
+          );
+        
+          if (!instance) {
+            throw new Error('没有可用的 gptload 实例');
+          }
+        
           // 创建分组数据
           const groupData = {
             name: groupName,
@@ -193,7 +202,7 @@ class ThreeLayerArchitecture {
             test_model: model,
             channel_type: site.channel_type || 'openai',
             validation_endpoint: site.validation_endpoint,
-            sort: config.sort,
+            sort: config.sort, // 确保使用正确的 sort 值：15
             param_overrides: {},
             config: {
               blacklist_threshold: config.blacklist_threshold,
@@ -201,28 +210,40 @@ class ThreeLayerArchitecture {
             },
             tags: ['layer-2', 'model-channel', model, site.name]
           };
-          
-          // 创建分组
-          const created = await gptloadService.createSiteGroup(
-            groupName,
-            groupData.upstreams[0].url,
-            [], // 暂时不添加密钥
-            site.channel_type,
-            {},
-            [model]
-          );
+        
+          // 直接调用实例 API 创建分组，避免 createSiteGroup 的 sort=20 覆盖
+          const response = await instance.apiClient.post('/groups', groupData);
+        
+          // 处理响应
+          let created;
+          if (response.data && typeof response.data.code === 'number') {
+            if (response.data.code === 0) {
+              created = response.data.data;
+            } else {
+              throw new Error(`创建失败: ${response.data.message}`);
+            }
+          } else {
+            created = response.data;
+          }
+        
+          // 添加实例信息
+          created._instance = {
+            id: instance.id,
+            name: instance.name,
+            url: instance.url
+          };
           
           if (created) {
             // 添加标识密钥
             const identityKey = this.generateIdentityKey(model, site.name);
-            await gptloadService.addApiKeysToGroup(
+            await gptloadService.manager.addApiKeysToGroup(
+              instance,
               created.id,
-              created._instance.id,
               [identityKey]
             );
-            
+          
             groups.push(created);
-            console.log(`✅ 创建: ${groupName}`);
+            console.log(`✅ 创建第2层分组: ${groupName} (sort=${config.sort})`);
           }
           
         } catch (error) {
