@@ -956,6 +956,82 @@ class GptloadService {
   }
 
   /**
+   * 处理空模型列表的情况：清理上层分组中的相关模型，但保留渠道分组
+   */
+  async handleEmptyModelList(channelName) {
+    console.log(`🧹 处理渠道 ${channelName} 的空模型列表：清理上层分组引用但保留渠道分组`);
+    
+    const results = {
+      channelGroupPreserved: channelName,
+      updatedModelGroups: [],
+      deletedModelGroups: [],
+      errors: [],
+    };
+
+    try {
+      const allGroups = await this.getAllGroups();
+      
+      // 1. 确认渠道分组存在
+      const channelGroup = allGroups.find((g) => g.name === channelName);
+      if (!channelGroup) {
+        const errorMsg = `未找到渠道分组: ${channelName}`;
+        console.error(errorMsg);
+        results.errors.push(errorMsg);
+        return results;
+      }
+      
+      console.log(`✅ 确认渠道分组存在: ${channelName} (保留不删除)`);
+      
+      // 2. 找到所有引用了该渠道的模型分组 (sort=15 和 sort=10) 并处理它们
+      const upstreamToRemove = `/proxy/${channelName}`;
+      const modelGroupsToUpdate = allGroups.filter((g) => 
+        (g.sort === 15 || g.sort === 10) && 
+        g.upstreams?.some((u) => u.url.includes(upstreamToRemove))
+      );
+      
+      console.log(`🔍 找到 ${modelGroupsToUpdate.length} 个引用该渠道的模型分组`);
+      
+      // 3. 处理每个模型分组
+      for (const modelGroup of modelGroupsToUpdate) {
+        try {
+          // 移除指向该渠道的上游
+          const updatedUpstreams = modelGroup.upstreams.filter(
+            (upstream) => !upstream.url.includes(upstreamToRemove)
+          );
+          
+          if (updatedUpstreams.length > 0) {
+            // 还有其他上游，更新分组的上游配置
+            const updateData = {
+              upstreams: updatedUpstreams
+            };
+            await this.updateGroup(modelGroup.id, modelGroup._instance.id, updateData);
+            results.updatedModelGroups.push(modelGroup.name);
+            console.log(`🔄 已从模型分组 ${modelGroup.name} 中移除渠道 ${channelName} 的引用`);
+          } else {
+            // 没有其他上游了，删除整个模型分组
+            await this.deleteGroupById(modelGroup.id, modelGroup._instance.id);
+            results.deletedModelGroups.push(modelGroup.name);
+            console.log(`🗑️ 模型分组 ${modelGroup.name} 因无可用上游而被删除`);
+          }
+        } catch (error) {
+          const errorMsg = `处理模型分组 ${modelGroup.name} 失败: ${error.message}`;
+          console.error(errorMsg);
+          results.errors.push(errorMsg);
+        }
+      }
+      
+      console.log(`🏁 空模型列表处理完成: 保留渠道分组 ${channelName}，更新了 ${results.updatedModelGroups.length} 个分组，删除了 ${results.deletedModelGroups.length} 个分组`);
+      
+    } catch (error) {
+      const errorMsg = `处理空模型列表失败: ${error.message}`;
+      console.error(errorMsg);
+      results.errors.push(errorMsg);
+    }
+    
+    return results;
+  }
+
+  /**
    * 彻底删除一个渠道及其所有引用
    */
   async deleteChannelCompletely(channelName) {

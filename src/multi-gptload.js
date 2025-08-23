@@ -465,7 +465,14 @@ class MultiGptloadManager {
       baseUrl,
       async (instance) => {
         // 为不同格式创建不同的分组名
-        const groupName = `${siteName.toLowerCase()}-${channelType}`;
+        let groupName = `${siteName.toLowerCase()}-${channelType}`;
+        
+        // 应用分组名称长度限制和智能截断
+        groupName = this.generateSafeGroupName(groupName);
+        
+        if (!groupName) {
+          throw new Error(`站点名称过长无法生成有效分组名: ${siteName}`);
+        }
 
         // 检查分组是否已存在
         const existingGroup = await this.checkGroupExists(instance, groupName);
@@ -720,7 +727,29 @@ class MultiGptloadManager {
    */
   async addApiKeysToGroup(instance, groupId, apiKeys) {
     try {
-      const keysText = apiKeys.join("\n");
+      // 确保 apiKeys 是数组
+      if (!apiKeys) {
+        console.log("没有API密钥需要添加");
+        return;
+      }
+      
+      let keysArray;
+      if (Array.isArray(apiKeys)) {
+        keysArray = apiKeys;
+      } else if (typeof apiKeys === 'string') {
+        // 如果是字符串，按换行符分割
+        keysArray = apiKeys.split('\n').filter(key => key.trim());
+      } else {
+        console.warn("API密钥格式不正确:", typeof apiKeys, apiKeys);
+        return;
+      }
+      
+      if (keysArray.length === 0) {
+        console.log("没有有效的API密钥需要添加");
+        return;
+      }
+      
+      const keysText = keysArray.join("\n");
 
       const response = await instance.apiClient.post("/keys/add-multiple", {
         group_id: groupId,
@@ -728,7 +757,7 @@ class MultiGptloadManager {
       });
 
       console.log(
-        `✅ 成功添加 ${apiKeys.length} 个API密钥到分组 ${groupId} (实例: ${instance.name})`
+        `✅ 成功添加 ${keysArray.length} 个API密钥到分组 ${groupId} (实例: ${instance.name})`
       );
       return response.data;
     } catch (error) {
@@ -1196,6 +1225,117 @@ class MultiGptloadManager {
     }
 
     return allGroups;
+  }
+
+  /**
+   * 生成安全的分组名称（符合gpt-load规范：3-30字符）
+   */
+  generateSafeGroupName(name) {
+    // 处理URL不安全字符
+    const urlSafe = this.sanitizeNameForUrl(name);
+    
+    // 转为小写，只保留字母、数字、中划线、下划线
+    let groupName = urlSafe.toLowerCase().replace(/[^a-z0-9-_]/g, "-");
+    
+    // 移除开头和结尾的连字符/下划线
+    groupName = groupName.replace(/^[-_]+|[-_]+$/g, "");
+    
+    // 合并多个连续的连字符/下划线
+    groupName = groupName.replace(/[-_]+/g, "-");
+    
+    // gpt-load要求：长度3-30位
+    if (groupName.length < 3) {
+      // 如果太短，添加前缀
+      groupName = "ch-" + groupName;
+    }
+    
+    if (groupName.length > 30) {
+      // 如果太长，智能截断保留重要部分
+      const truncated = this.intelligentTruncate(groupName, 30);
+      if (truncated.length > 30) {
+        console.log(`❌ 分组名称过长无法处理: ${name}`);
+        return null;
+      }
+      groupName = truncated;
+      console.log(`📏 分组名过长，智能截断为: ${groupName}`);
+    }
+    
+    // 确保符合规范
+    if (!groupName || groupName.length < 3 || groupName.length > 30) {
+      console.log(`❌ 分组名不符合规范: ${name}`);
+      return null;
+    }
+    
+    return groupName;
+  }
+
+  /**
+   * 智能截断分组名，保留重要部分
+   */
+  intelligentTruncate(name, maxLength) {
+    if (name.length <= maxLength) return name;
+    
+    let truncated = name;
+    
+    // 第一步：删除所有连字符，直接连接
+    truncated = truncated.replace(/-/g, "");
+    if (truncated.length <= maxLength) return truncated;
+    
+    // 第二步：常见词语缩写
+    const abbreviations = {
+      deepseek: "ds",
+      gemini: "gm", 
+      anthropic: "ant",
+      claude: "cl",
+      openai: "oai",
+      chatgpt: "cgpt",
+      gpt: "g",
+      flash: "f",
+      lite: "l",
+      pro: "p",
+      plus: "p",
+      turbo: "t",
+      mini: "m",
+      preview: "pre",
+      instruct: "ins", 
+      chat: "c",
+      text: "txt",
+      large: "lg",
+      small: "sm",
+      medium: "md",
+      model: "mdl",
+      vision: "v",
+      code: "cd",
+      reasoning: "rs",
+      thinking: "th",
+      latest: "lat",
+      beta: "b",
+      alpha: "a",
+      experimental: "exp"
+    };
+    
+    for (const [full, abbr] of Object.entries(abbreviations)) {
+      truncated = truncated.replace(new RegExp(full, 'gi'), abbr);
+      if (truncated.length <= maxLength) return truncated;
+    }
+    
+    // 第三步：移除数字和版本号
+    truncated = truncated.replace(/[0-9]+[a-z]*[-_]*[0-9]*[-_]*/g, "");
+    if (truncated.length <= maxLength) return truncated;
+    
+    // 第四步：简单截断
+    return truncated.substring(0, maxLength);
+  }
+
+  /**
+   * 处理URL不安全字符
+   */
+  sanitizeNameForUrl(name) {
+    return name
+      .replace(/[\/\\:*?"<>|]/g, "-") // 替换文件系统不安全字符
+      .replace(/[@#$%&()+=[\]{}';,]/g, "-") // 替换URL不安全字符
+      .replace(/\s+/g, "-") // 替换空格为连字符
+      .replace(/[^a-zA-Z0-9\-_.]/g, "-"); // 其他字符替换为连字符
   }
 }
 
