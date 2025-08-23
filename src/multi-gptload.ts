@@ -1191,7 +1191,7 @@ class MultiGptloadManager {
   }
 
   /**
-   * 生成安全的分组名称（符合gpt-load规范：3-30字符）
+   * 生成安全的分组名称（符合gpt-load规范：3-100字符）
    */
   generateSafeGroupName(name) {
     // 处理URL不安全字符
@@ -1206,16 +1206,16 @@ class MultiGptloadManager {
     // 合并多个连续的连字符/下划线
     groupName = groupName.replace(/[-_]+/g, "-");
     
-    // gpt-load要求：长度3-30位
+    // gpt-load要求：长度3-100位
     if (groupName.length < 3) {
       // 如果太短，添加前缀
       groupName = "ch-" + groupName;
     }
     
-    if (groupName.length > 30) {
+    if (groupName.length > 100) {
       // 如果太长，智能截断保留重要部分
-      const truncated = this.intelligentTruncate(groupName, 30);
-      if (truncated.length > 30) {
+      const truncated = this.intelligentTruncate(groupName, 100);
+      if (truncated.length > 100) {
         console.log(`❌ 分组名称过长无法处理: ${name}`);
         return null;
       }
@@ -1224,7 +1224,7 @@ class MultiGptloadManager {
     }
     
     // 确保符合规范
-    if (!groupName || groupName.length < 3 || groupName.length > 30) {
+    if (!groupName || groupName.length < 3 || groupName.length > 100) {
       console.log(`❌ 分组名不符合规范: ${name}`);
       return null;
     }
@@ -1235,7 +1235,7 @@ class MultiGptloadManager {
   /**
    * 智能截断分组名，保留重要部分
    */
-  intelligentTruncate(name, maxLength) {
+  intelligentTruncate(name, maxLength = 100) {
     if (name.length <= maxLength) return name;
     
     let truncated = name;
