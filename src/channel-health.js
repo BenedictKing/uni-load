@@ -90,6 +90,8 @@ class ChannelHealthMonitor {
 
   /**
    * 通过API检查渠道状态
+   * 
+   * 优化：充分利用 gptload 的统计 API，减少不必要的验证
    */
   async checkChannelsByAPI() {
     try {
@@ -100,8 +102,33 @@ class ChannelHealthMonitor {
 
       let skippedCount = 0;
       let checkedCount = 0;
+      let statsBasedCount = 0;
 
       for (const siteGroup of siteGroups) {
+        // 首先尝试使用统计 API 判断健康状态
+        const statsResult = await this.checkGroupHealthByStats(siteGroup);
+        
+        if (statsResult.conclusive) {
+          // 统计数据足够判断健康状态
+          statsBasedCount++;
+          
+          if (!statsResult.healthy) {
+            await this.recordChannelFailure(
+              siteGroup.name,
+              `统计显示不健康: 失败率 ${(statsResult.failureRate * 100).toFixed(1)}%`,
+              { validationResult: statsResult }
+            );
+          } else {
+            // 健康状态良好，重置失败计数
+            if (this.channelFailures.has(siteGroup.name)) {
+              console.log(`✅ ${siteGroup.name}: 统计显示健康，重置失败计数`);
+              this.channelFailures.delete(siteGroup.name);
+            }
+          }
+          continue;
+        }
+        
+        // 统计数据不足，执行实际验证
         const result = await this.testSiteGroupHealth(siteGroup);
         if (result && result.skipped) {
           skippedCount++;
@@ -110,13 +137,58 @@ class ChannelHealthMonitor {
         }
       }
 
-      if (skippedCount > 0) {
-        console.log(
-          `📊 健康检查完成：检查了 ${checkedCount} 个分组，跳过了 ${skippedCount} 个高消耗模型分组`
-        );
-      }
+      console.log(
+        `📊 健康检查完成：验证 ${checkedCount} 个，统计判断 ${statsBasedCount} 个，跳过 ${skippedCount} 个`
+      );
     } catch (error) {
       console.error("API健康检查失败:", error.message);
+    }
+  }
+  
+  /**
+   * 通过统计 API 检查分组健康状态
+   * 
+   * 利用 gptload 的 /groups/{id}/stats 接口
+   */
+  async checkGroupHealthByStats(group) {
+    try {
+      const instance = gptloadService.manager.getInstance(group._instance.id);
+      if (!instance) {
+        return { conclusive: false };
+      }
+      
+      const response = await instance.apiClient.get(`/groups/${group.id}/stats`);
+      
+      let stats;
+      if (response.data && typeof response.data.code === 'number') {
+        stats = response.data.data;
+      } else {
+        stats = response.data;
+      }
+      
+      // 如果没有足够的数据，返回不确定
+      if (!stats || !stats.hourly_stats || stats.hourly_stats.total_requests < 10) {
+        return { conclusive: false, reason: 'insufficient_data' };
+      }
+      
+      // 基于统计数据判断健康状态
+      const failureRate = stats.hourly_stats.failure_rate || 0;
+      const hasActiveKeys = stats.key_stats && stats.key_stats.active_keys > 0;
+      
+      // 如果失败率超过阈值或没有活跃密钥，认为不健康
+      const healthy = failureRate < 0.1 && hasActiveKeys;
+      
+      return {
+        conclusive: true,
+        healthy,
+        failureRate,
+        activeKeys: stats.key_stats?.active_keys || 0,
+        totalRequests: stats.hourly_stats.total_requests,
+        stats
+      };
+    } catch (error) {
+      console.error(`获取分组 ${group.name} 统计失败:`, error.message);
+      return { conclusive: false, error: error.message };
     }
   }
 

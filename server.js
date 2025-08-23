@@ -12,6 +12,7 @@ const yamlManager = require("./src/yaml-manager");
 const modelSyncService = require("./src/model-sync");
 const channelHealthMonitor = require("./src/channel-health");
 const channelCleanupService = require("./src/channel-cleanup");
+const modelChannelOptimizer = require("./src/model-channel-optimizer");
 
 const app = express();
 const PORT = process.env.PORT || 3002;
@@ -546,6 +547,61 @@ app.post("/api/reset-channel-failures", (req, res) => {
   }
 });
 
+// 获取模型健康报告
+app.get("/api/model-health/:model?", async (req, res) => {
+  try {
+    const { model } = req.params;
+    
+    if (model) {
+      // 获取特定模型的健康报告
+      const report = await modelChannelOptimizer.getModelHealthReport(model);
+      res.json(report);
+    } else {
+      // 获取所有模型的优化报告
+      const report = await modelChannelOptimizer.generateOptimizationReport();
+      res.json(report);
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 触发模型验证
+app.post("/api/model-validation/:model", async (req, res) => {
+  try {
+    const { model } = req.params;
+    await modelChannelOptimizer.triggerModelValidation(model);
+    
+    res.json({
+      success: true,
+      message: `已触发模型 ${model} 的验证任务`
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 优化模型分组
+app.post("/api/optimize-model/:model", async (req, res) => {
+  try {
+    const { model } = req.params;
+    const groups = modelChannelOptimizer.modelGroupMapping.get(model);
+    
+    if (!groups) {
+      return res.status(404).json({ error: `模型 ${model} 没有配置分组` });
+    }
+    
+    await modelChannelOptimizer.optimizeModelGroups(model, groups);
+    
+    res.json({
+      success: true,
+      message: `已优化模型 ${model} 的分组配置`
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // 获取多实例状态
 app.get("/api/multi-instances", (req, res) => {
   try {
@@ -786,5 +842,15 @@ app.listen(PORT, () => {
     channelHealthMonitor.start();
   } else {
     console.log(`⚠️ 渠道健康监控已禁用 (ENABLE_CHANNEL_HEALTH=false)`);
+  }
+  
+  // 启动模型渠道优化器
+  if (process.env.ENABLE_MODEL_OPTIMIZER !== "false") {
+    console.log(`🎯 启动模型渠道优化器...`);
+    modelChannelOptimizer.initialize().catch(error => {
+      console.error('模型渠道优化器初始化失败:', error);
+    });
+  } else {
+    console.log(`⚠️ 模型渠道优化器已禁用 (ENABLE_MODEL_OPTIMIZER=false)`);
   }
 });
