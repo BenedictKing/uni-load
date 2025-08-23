@@ -234,14 +234,18 @@ class ThreeLayerArchitecture {
           };
           
           if (created) {
-            // 添加标识密钥
-            const identityKey = this.generateIdentityKey(model, site.name);
-            await gptloadService.manager.addApiKeysToGroup(
-              instance,
-              created.id,
-              [identityKey]
-            );
-          
+            // 🔑 修复：第2层使用gptload实例的认证token，而不是站点的真实密钥
+            if (instance.token) {
+              await gptloadService.manager.addApiKeysToGroup(
+                instance,
+                created.id,
+                [instance.token]
+              );
+              console.log(`🔑 已为第二层分组 ${groupName} 添加实例认证token`);
+            } else {
+              console.warn(`⚠️ 实例 ${instance.name} 没有token，第二层分组可能无法验证`);
+            }
+        
             groups.push(created);
             console.log(`✅ 创建第2层分组: ${groupName} (sort=${config.sort})`);
           }
