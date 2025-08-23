@@ -373,13 +373,13 @@ class GptloadService {
       const truncated = this.intelligentTruncate(groupName, 30);
 
       // 如果截断后仍然太长，说明这个模型名无法处理
-      if (truncated.length > 30) {
+      if (truncated && truncated.length <= 30) {
+        groupName = truncated;
+        console.log(`📏 分组名过长，智能截断为: ${groupName}`);
+      } else {
         console.log(`❌ 模型名称过长无法处理，跳过: ${modelName}`);
         return null; // 返回null表示跳过这个模型
       }
-
-      groupName = truncated;
-      console.log(`📏 分组名过长，智能截断为: ${groupName}`);
     }
 
     // 确保符合规范
@@ -403,7 +403,6 @@ class GptloadService {
 
     // 第一步：删除所有连字符，直接连接
     truncated = truncated.replace(/-/g, "");
-
     if (truncated.length <= maxLength) return truncated;
 
     // 第二步：常见词语缩写
@@ -426,28 +425,39 @@ class GptloadService {
       large: "lg",
       medium: "md",
       small: "sm",
+      model: "mdl",
+      chat: "c"
     };
 
     for (const [full, abbr] of Object.entries(abbreviations)) {
-      const regex = new RegExp(full, "g");
+      const regex = new RegExp(full, "gi");
       truncated = truncated.replace(regex, abbr);
       if (truncated.length <= maxLength) return truncated;
     }
 
     // 第三步：移除常见的版本号和日期模式
     truncated = truncated
-      .replace(/p\d{4}$/, "") // preview0617 -> p0617 -> 空
-      .replace(/\d{4}\d{2}\d{2}$/, "") // 20241201
-      .replace(/\d{8}$/, "") // 20241201
-      .replace(/\d{3}$/, "") // 001
-      .replace(/latest$/, "") // latest
-      .replace(/v?\d+(\.\d+)*$/, ""); // v3, 2.5
+      .replace(/\d{4}\d{2}\d{2}/g, "") // 20241201
+      .replace(/\d{8}/g, "") // 20241201
+      .replace(/\d{6}/g, "") // 240617
+      .replace(/v\d+(\.\d+)*/g, "") // v3, v2.5
+      .replace(/\d{3}/g, "") // 001
+      .replace(/latest/gi, "") // latest
+      .replace(/beta/gi, "b") // beta -> b
+      .replace(/alpha/gi, "a"); // alpha -> a
 
     if (truncated.length <= maxLength) return truncated;
 
-    // 第四步：如果还是太长，从末尾截断
+    // 第四步：如果还是太长，从末尾截断并确保不以连字符结尾
     if (truncated.length > maxLength) {
       truncated = truncated.substring(0, maxLength);
+      // 移除末尾的连字符
+      truncated = truncated.replace(/-+$/, "");
+    }
+
+    // 最后检查：如果截断后太短，返回null
+    if (truncated.length < 3) {
+      return null;
     }
 
     return truncated;

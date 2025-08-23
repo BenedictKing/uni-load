@@ -328,7 +328,9 @@ class ModelChannelOptimizer {
       console.log(`🔍 触发分组 ${groupId} 验证任务`);
     } catch (error) {
       // 409 表示验证任务已在运行，这是正常的
-      if (error.response?.status !== 409) {
+      if (error.response?.status === 409) {
+        console.log(`ℹ️ 分组 ${groupId} 验证任务已在运行中`);
+      } else {
         console.error(`触发分组 ${groupId} 验证失败:`, error.message);
       }
     }
