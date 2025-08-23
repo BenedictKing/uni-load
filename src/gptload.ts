@@ -362,18 +362,18 @@ class GptloadService {
     // 合并多个连续的连字符/下划线
     groupName = groupName.replace(/[-_]+/g, "-");
 
-    // gpt-load要求：长度3-30位
+    // gpt-load要求：长度3-100位
     if (groupName.length < 3) {
       // 如果太短，添加前缀
       groupName = "mdl-" + groupName;
     }
 
-    if (groupName.length > 30) {
+    if (groupName.length > 100) {
       // 如果太长，智能截断保留重要部分
-      const truncated = this.intelligentTruncate(groupName, 30);
+      const truncated = this.intelligentTruncate(groupName, 100);
 
       // 如果截断后仍然太长，说明这个模型名无法处理
-      if (truncated && truncated.length <= 30) {
+      if (truncated && truncated.length <= 100) {
         groupName = truncated;
         console.log(`📏 分组名过长，智能截断为: ${groupName}`);
       } else {
@@ -383,7 +383,7 @@ class GptloadService {
     }
 
     // 确保符合规范
-    if (!groupName || groupName.length < 3 || groupName.length > 30) {
+    if (!groupName || groupName.length < 3 || groupName.length > 100) {
       console.log(
         `❌ 分组名不符合规范，跳过模型: ${modelName} (格式: ${channelType})`
       );
