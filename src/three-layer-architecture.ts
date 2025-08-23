@@ -164,20 +164,100 @@ class ThreeLayerArchitecture {
    */
   async createModelChannelGroups(models, siteGroups) {
     console.log('🔧 创建模型-渠道分组（第2层）...');
+    
+    // 🔧 添加参数验证
+    if (!models || !Array.isArray(models)) {
+      console.error('❌ models 参数无效:', models);
+      return [];
+    }
+    
+    if (!siteGroups || !Array.isArray(siteGroups)) {
+      console.error('❌ siteGroups 参数无效:', siteGroups);
+      return [];
+    }
+    
+    if (models.length === 0) {
+      console.log('⚠️ 没有模型需要处理');
+      return [];
+    }
+    
+    if (siteGroups.length === 0) {
+      console.log('⚠️ 没有站点分组需要处理');
+      return [];
+    }
+    
     const groups = [];
     const config = this.layerConfigs.modelChannelGroup;
     
-    for (const model of models) {
-      for (const site of siteGroups) {
+    // 计算总任务数
+    const totalTasks = models.length * siteGroups.length;
+    console.log(`📊 准备处理 ${models.length} 个模型 × ${siteGroups.length} 个站点 = ${totalTasks} 个任务`);
+    
+    // 一次性获取所有分组信息，避免重复查询
+    console.log('📊 获取现有分组信息...');
+    let allExistingGroups;
+    
+    try {
+      allExistingGroups = await gptloadService.getAllGroups();
+      
+      // 🔧 添加返回值验证
+      if (!allExistingGroups || !Array.isArray(allExistingGroups)) {
+        console.error('❌ getAllGroups 返回值无效:', allExistingGroups);
+        allExistingGroups = [];
+      }
+      
+      console.log(`✅ 获取到 ${allExistingGroups.length} 个现有分组`);
+    } catch (error) {
+      console.error('❌ 获取现有分组失败:', error.message);
+      allExistingGroups = [];
+      console.log('⚠️ 使用空数组继续处理');
+    }
+    
+    let createdCount = 0;
+    let skippedCount = 0;
+    let failedCount = 0;
+    let processedTasks = 0;
+    
+    for (let modelIndex = 0; modelIndex < models.length; modelIndex++) {
+      const model = models[modelIndex];
+      
+      // 🔧 添加模型名称验证
+      if (!model || typeof model !== 'string') {
+        console.error(`❌ 模型名称无效 (索引 ${modelIndex}):`, model);
+        failedCount += siteGroups.length;
+        processedTasks += siteGroups.length;
+        continue;
+      }
+      
+      console.log(`🎯 处理模型 ${modelIndex + 1}/${models.length}: ${model}`);
+      
+      let modelCreatedCount = 0;
+      let modelSkippedCount = 0;
+      let modelFailedCount = 0;
+      
+      for (let siteIndex = 0; siteIndex < siteGroups.length; siteIndex++) {
+        const site = siteGroups[siteIndex];
+        processedTasks++;
+        
+        // 🔧 添加站点分组验证
+        if (!site || !site.name) {
+          console.error(`❌ 站点分组无效 (索引 ${siteIndex}):`, site);
+          failedCount++;
+          modelFailedCount++;
+          continue;
+        }
+
         try {
           // 生成分组名称
           const groupName = this.generateModelChannelGroupName(model, site.name);
           
-          // 检查是否已存在
-          const existing = await gptloadService.checkGroupExists(groupName);
+          // 从缓存的分组列表中检查是否已存在
+          const existing = allExistingGroups.find(g => g.name === groupName);
           if (existing) {
-            console.log(`ℹ️ 分组已存在: ${groupName}`);
+            console.log(`ℹ️ [${processedTasks}/${totalTasks}] 分组已存在: ${groupName}`);
             groups.push(existing);
+            skippedCount++;
+            modelSkippedCount++;
             continue;
           }
           
@@ -234,31 +314,50 @@ class ThreeLayerArchitecture {
           };
           
           if (created) {
-            // 🔑 修复：第2层使用gptload实例的认证token，而不是站点的真实密钥
             if (instance.token) {
               await gptloadService.manager.addApiKeysToGroup(
                 instance,
                 created.id,
                 [instance.token]
               );
-              console.log(`🔑 已为第二层分组 ${groupName} 添加实例认证token`);
-            } else {
-              console.warn(`⚠️ 实例 ${instance.name} 没有token，第二层分组可能无法验证`);
+              console.log(`🔑 [${processedTasks}/${totalTasks}] 已为第二层分组添加实例认证token`);
             }
         
             groups.push(created);
-            console.log(`✅ 创建第2层分组: ${groupName} (sort=${config.sort})`);
+            createdCount++;
+            modelCreatedCount++;
+            console.log(`✅ [${processedTasks}/${totalTasks}] 创建第2层分组: ${groupName} (sort=${config.sort})`);
+            
+            // 将新创建的分组添加到缓存中，避免重复创建
+            allExistingGroups.push(created);
           }
           
         } catch (error) {
           const groupName = this.generateModelChannelGroupName(model, site.name);
-          console.log(`⚠️ 创建失败: ${groupName} - ${error.message}`);
-          
-          // 记录不兼容的组合，避免后续重试
+          console.log(`⚠️ [${processedTasks}/${totalTasks}] 创建失败: ${groupName} - ${error.message}`);
+          failedCount++;
+          modelFailedCount++;
           this.recordIncompatibleCombination(model, site.name);
         }
+        
+        // 每处理10个任务显示一次进度
+        if (processedTasks % 10 === 0 || processedTasks === totalTasks) {
+          const progress = ((processedTasks / totalTasks) * 100).toFixed(1);
+          console.log(`📈 总进度: ${processedTasks}/${totalTasks} (${progress}%) - 已创建: ${createdCount}, 跳过: ${skippedCount}, 失败: ${failedCount}`);
+        }
       }
+      
+      // 每个模型处理完成后的统计
+      console.log(`📊 模型 ${model} 处理完成: 创建 ${modelCreatedCount}, 跳过 ${modelSkippedCount}, 失败 ${modelFailedCount}`);
     }
+    
+    // 最终统计
+    console.log(`✅ 第2层分组创建完成：`);
+    console.log(`   - 新建: ${createdCount} 个`);
+    console.log(`   - 跳过: ${skippedCount} 个`);
+    console.log(`   - 失败: ${failedCount} 个`);
+    console.log(`   - 总计: ${groups.length} 个分组`);
+    console.log(`   - 成功率: ${((createdCount + skippedCount) / totalTasks * 100).toFixed(1)}%`);
     
     return groups;
   }
@@ -268,34 +367,102 @@ class ThreeLayerArchitecture {
    */
   async createAggregateGroups(models, modelChannelGroups) {
     console.log('🔧 创建模型聚合分组（第3层）...');
+    
+    // 🔧 添加参数验证
+    if (!models || !Array.isArray(models)) {
+      console.error('❌ models 参数无效:', models);
+      return [];
+    }
+    
+    if (!modelChannelGroups || !Array.isArray(modelChannelGroups)) {
+      console.error('❌ modelChannelGroups 参数无效:', modelChannelGroups);
+      return [];
+    }
+    
+    if (models.length === 0) {
+      console.log('⚠️ 没有模型需要处理');
+      return [];
+    }
+    
+    if (modelChannelGroups.length === 0) {
+      console.log('⚠️ 没有模型渠道分组需要处理');
+      return [];
+    }
+    
     const groups = [];
     const config = this.layerConfigs.aggregateGroup;
     
     // 按模型分组
     const groupedByModel = this.groupModelChannelsByModel(modelChannelGroups);
     
+    // 🔧 添加分组结果验证
+    if (!groupedByModel || groupedByModel.size === 0) {
+      console.log('⚠️ 按模型分组后没有结果');
+      return [];
+    }
+    
+    const totalModels = groupedByModel.size;
+    console.log(`📊 准备为 ${totalModels} 个模型创建聚合分组`);
+    
+    // 一次性获取现有分组信息
+    let allExistingGroups;
+    
+    try {
+      allExistingGroups = await gptloadService.getAllGroups();
+      
+      // 🔧 添加返回值验证
+      if (!allExistingGroups || !Array.isArray(allExistingGroups)) {
+        console.error('❌ getAllGroups 返回值无效:', allExistingGroups);
+        allExistingGroups = [];
+      }
+      
+      console.log(`✅ 获取到 ${allExistingGroups.length} 个现有分组`);
+    } catch (error) {
+      console.error('❌ 获取现有分组失败:', error.message);
+      allExistingGroups = [];
+      console.log('⚠️ 使用空数组继续处理');
+    }
+    
+    let createdCount = 0;
+    let updatedCount = 0;
+    let failedCount = 0;
+    let processedModels = 0;
+    
     for (const [model, channelGroups] of groupedByModel) {
+      processedModels++;
       try {
         const groupName = this.sanitizeModelName(model);
         
-        // 检查是否已存在
-        const existing = await gptloadService.checkGroupExists(groupName);
+        console.log(`🎯 [${processedModels}/${totalModels}] 处理模型: ${model} (${channelGroups.length} 个渠道)`);
+        
+        // 从缓存中检查是否已存在
+        const existing = allExistingGroups.find(g => g.name === groupName);
         if (existing) {
-          console.log(`ℹ️ 聚合分组已存在: ${groupName}`);
-          // 更新上游列表
+          console.log(`ℹ️ [${processedModels}/${totalModels}] 聚合分组已存在: ${groupName}，更新配置...`);
           await this.updateAggregateUpstreams(existing, channelGroups);
           groups.push(existing);
+          updatedCount++;
+          continue;
+        }
+        
+        // 🔧 添加渠道分组验证
+        if (!channelGroups || !Array.isArray(channelGroups) || channelGroups.length === 0) {
+          console.log(`⚠️ [${processedModels}/${totalModels}] 模型 ${model} 没有有效的渠道分组`);
+          failedCount++;
           continue;
         }
         
         // 创建上游列表
-        const upstreams = channelGroups.map(cg => ({
-          url: `${cg._instance?.url || process.env.GPTLOAD_URL || 'http://localhost:3001'}/proxy/${cg.name}`,
-          weight: 1
-        }));
+        const upstreams = channelGroups
+          .filter(cg => cg && cg.name) // 🔧 过滤无效的渠道分组
+          .map(cg => ({
+            url: `${cg._instance?.url || process.env.GPTLOAD_URL || 'http://localhost:3001'}/proxy/${cg.name}`,
+            weight: 1
+          }));
         
         if (upstreams.length === 0) {
-          console.log(`⚠️ 模型 ${model} 没有可用的渠道分组`);
+          console.log(`⚠️ [${processedModels}/${totalModels}] 模型 ${model} 没有可用的渠道分组`);
+          failedCount++;
           continue;
         }
         
@@ -334,26 +501,46 @@ class ThreeLayerArchitecture {
             created._instance.id,
             {
               upstreams: upstreams,
-              config: groupData.config
+              config: groupData.config,
+              sort: config.sort
             }
           );
           
-          // 添加聚合密钥
-          const aggregateKey = this.generateAggregateKey(model);
-          await gptloadService.addApiKeysToGroup(
-            created.id,
-            created._instance.id,
-            [aggregateKey]
-          );
+          // 获取实例并添加认证密钥
+          const instance = gptloadService.manager.getInstance(created._instance.id);
+          if (instance && instance.token) {
+            await gptloadService.manager.addApiKeysToGroup(
+              instance,
+              created.id,
+              [instance.token]
+            );
+            console.log(`🔑 [${processedModels}/${totalModels}] 已为第三层分组添加认证密钥`);
+          }
           
           groups.push(created);
-          console.log(`✅ 创建聚合分组: ${groupName} (${upstreams.length}个上游)`);
+          createdCount++;
+          console.log(`✅ [${processedModels}/${totalModels}] 创建聚合分组: ${groupName} (${upstreams.length}个上游)`);
         }
         
       } catch (error) {
-        console.error(`创建模型 ${model} 的聚合分组失败:`, error.message);
+        console.error(`❌ [${processedModels}/${totalModels}] 创建模型 ${model} 的聚合分组失败:`, error.message);
+        failedCount++;
+      }
+      
+      // 显示进度
+      const progress = ((processedModels / totalModels) * 100).toFixed(1);
+      if (processedModels % 5 === 0 || processedModels === totalModels) {
+        console.log(`📈 第3层进度: ${processedModels}/${totalModels} (${progress}%) - 创建: ${createdCount}, 更新: ${updatedCount}, 失败: ${failedCount}`);
       }
     }
+    
+    // 最终统计
+    console.log(`✅ 第3层分组处理完成：`);
+    console.log(`   - 新建: ${createdCount} 个`);
+    console.log(`   - 更新: ${updatedCount} 个`);
+    console.log(`   - 失败: ${failedCount} 个`);
+    console.log(`   - 总计: ${groups.length} 个聚合分组`);
+    console.log(`   - 成功率: ${((createdCount + updatedCount) / totalModels * 100).toFixed(1)}%`);
     
     return groups;
   }
