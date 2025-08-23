@@ -271,6 +271,38 @@ class ChannelCleanupService {
   }
 
   /**
+   * 选择合适的 gptload 实例
+   */
+  selectInstanceForChannel(channel) {
+    const gptloadService = require('./gptload');
+    const instances = Array.from(gptloadService.manager.instances.values());
+    
+    if (!instances || instances.length === 0) {
+      throw new Error('没有可用的 gptload 实例');
+    }
+    
+    // 简单策略：选择健康的实例，优先本地实例
+    let bestInstance = instances.find(instance => 
+      instance.name && instance.name.includes('本地') && 
+      gptloadService.manager.healthStatus.get(instance.id)?.healthy
+    );
+    
+    if (!bestInstance) {
+      // 选择第一个健康的实例
+      bestInstance = instances.find(instance => 
+        gptloadService.manager.healthStatus.get(instance.id)?.healthy
+      );
+    }
+    
+    if (!bestInstance) {
+      // 如果没有健康的实例，选择第一个
+      bestInstance = instances[0];
+    }
+    
+    return bestInstance;
+  }
+
+  /**
    * 从模型分组中清理上游
    */
   async cleanupUpstreamsFromModelGroups(modelGroups, disconnectedChannels, dryRun) {
@@ -376,8 +408,9 @@ class ChannelCleanupService {
       throw new Error(`无法确定模型分组 ${modelGroup.name} 所在的实例`);
     }
 
-    const multiGptloadManager = require('./multi-gptload');
-    const instance = multiGptloadManager.getInstance(instanceId);
+    // 使用 gptloadService 来获取实例，避免循环引用
+    const gptloadService = require('./gptload');
+    const instance = gptloadService.manager.getInstance(instanceId);
     
     if (!instance) {
       throw new Error(`实例 ${instanceId} 不存在`);

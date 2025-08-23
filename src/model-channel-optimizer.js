@@ -23,6 +23,9 @@ class ModelChannelOptimizer {
     
     // 优化间隔
     this.optimizationInterval = 5 * 60 * 1000; // 5分钟
+    
+    // 添加缺失的属性
+    this._previousScores = new Map();
   }
 
   /**
@@ -556,43 +559,6 @@ class ModelChannelOptimizer {
     return null;
   }
 
-  /**
-   * 获取分组统计信息
-   * 
-   * 使用 gptload 的原生统计 API
-   */
-  async getGroupStats(groupId, instanceId) {
-    // 检查缓存
-    const cacheKey = `${instanceId}:${groupId}`;
-    const cached = this.groupMetricsCache.get(cacheKey);
-    
-    if (cached && cached.expiry > Date.now()) {
-      return cached.data;
-    }
-    
-    // 调用 gptload 统计 API
-    const instance = gptloadService.manager.getInstance(instanceId);
-    if (!instance) {
-      throw new Error(`实例 ${instanceId} 不存在`);
-    }
-    
-    const response = await instance.apiClient.get(`/groups/${groupId}/stats`);
-    
-    let stats;
-    if (response.data && typeof response.data.code === 'number') {
-      stats = response.data.data;
-    } else {
-      stats = response.data;
-    }
-    
-    // 缓存结果（1分钟）
-    this.groupMetricsCache.set(cacheKey, {
-      data: stats,
-      expiry: Date.now() + 60000
-    });
-    
-    return stats;
-  }
 
   /**
    * 计算分组得分

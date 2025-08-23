@@ -1071,55 +1071,6 @@ class MultiGptloadManager {
     };
   }
 
-  /**
-   * 获取分组密钥统计信息
-   */
-  async getGroupKeyStats(instance, groupId) {
-    try {
-      console.log(`📊 获取分组 ${groupId} 的密钥统计信息...`);
-      const response = await instance.apiClient.get(`/groups/${groupId}/stats`);
-      
-      console.log(`📝 统计响应状态: ${response.status}`);
-      console.log(`📝 统计响应数据: ${JSON.stringify(response.data)}`);
-      
-      // 处理 gptload 特定格式的响应
-      let statsData;
-      if (response.data && typeof response.data.code === 'number') {
-        // gptload 格式: { code: 0, message: "Success", data: {...} }
-        console.log(`📝 检测到gptload统计格式，code: ${response.data.code}`);
-        if (response.data.code !== 0) {
-          console.log(`⚠️ 获取统计信息返回错误: ${response.data.message}`);
-          return null;
-        }
-        statsData = response.data.data;
-        console.log(`📝 解析后的统计数据: ${JSON.stringify(statsData)}`);
-      } else {
-        // 直接返回数据格式
-        statsData = response.data;
-      }
-
-      const keyStats = statsData?.key_stats;
-      
-      if (!keyStats) {
-        console.log(`⚠️ 未找到分组 ${groupId} 的密钥统计信息`);
-        console.log(`📝 statsData结构: ${JSON.stringify(statsData)}`);
-        return null;
-      }
-
-      console.log(`📊 分组 ${groupId} 密钥统计: ${JSON.stringify(keyStats)}`);
-      return keyStats;
-    } catch (error) {
-      console.error(`获取分组 ${groupId} 统计信息失败: ${error.message}`);
-      console.log(`📝 统计获取错误详情:`);
-      console.log(`  - 错误类型: ${error.name || 'Unknown'}`);
-      console.log(`  - 错误代码: ${error.code || 'N/A'}`);
-      if (error.response) {
-        console.log(`  - 响应状态: ${error.response.status}`);
-        console.log(`  - 响应数据: ${JSON.stringify(error.response.data)}`);
-      }
-      return null;
-    }
-  }
 
   /**
    * 获取分组详细信息（用于调试）
