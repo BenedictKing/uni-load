@@ -727,6 +727,16 @@ class MultiGptloadManager {
    */
   async addApiKeysToGroup(instance, groupId, apiKeys) {
     try {
+      // 验证实例对象
+      if (!instance) {
+        throw new Error('实例对象不能为空');
+      }
+      
+      // 验证 API 客户端
+      if (!instance.apiClient) {
+        throw new Error(`实例 ${instance.name || 'unknown'} 的 API 客户端未初始化`);
+      }
+      
       // 确保 apiKeys 是数组
       if (!apiKeys) {
         console.log("没有API密钥需要添加");
@@ -762,6 +772,8 @@ class MultiGptloadManager {
       return response.data;
     } catch (error) {
       console.error(`添加API密钥失败: ${error.message}`);
+      // 添加更详细的错误信息
+      console.error(`错误详情: 实例=${instance?.name}, 分组=${groupId}, 密钥数量=${Array.isArray(apiKeys) ? apiKeys.length : typeof apiKeys}`);
       console.warn("警告: API密钥添加失败，但分组已创建，可手动添加密钥");
     }
   }

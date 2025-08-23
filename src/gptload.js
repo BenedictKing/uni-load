@@ -162,6 +162,10 @@ class GptloadService {
 
       const instanceId = group._instance.id;
       instance = this.manager.getInstance(instanceId);
+      
+      if (!instance) {
+        throw new Error(`实例 ${instanceId} 不存在`);
+      }
     }
 
     return await this.manager.addApiKeysToGroup(instance, groupId, apiKeys);
