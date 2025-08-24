@@ -14,5 +14,11 @@ dev = true
 # 启用热重载
 watch = true
 
+# 监听文件变化时忽略的路径
+watchIgnore = ["node_modules", "dist", ".git", "*.log", "logs", "backup"]
+
+# 监听的文件扩展名
+watchExtensions = ["ts", "js", "json", "yaml", "toml"]
+
 # 环境变量文件 (按优先级加载)
 env = [".env.local", ".env"]

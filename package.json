@@ -7,9 +7,9 @@
     "build": "tsc",
     "start": "bun run dist/server.js",
     "start:ts": "ts-node server.ts",
-    "dev": "ts-node --transpile-only server.ts",
+    "dev": "bun --hot server.ts",
     "dev:build": "tsc && bun --watch dist/server.js",
-    "dev:clean": "pkill -f server; ts-node --transpile-only server.ts",
+    "dev:clean": "pkill -f server; bun --hot server.ts",
     "type-check": "tsc --noEmit",
     "clean": "rm -rf dist"
   },
