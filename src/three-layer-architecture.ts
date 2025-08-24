@@ -897,6 +897,62 @@ class ThreeLayerArchitecture {
   }
 }
 
+  /**
+   * 从分组名称中提取模型名
+   */
+  extractModelFromGroupName(groupName) {
+    // 处理 "model-via-channel" 格式
+    const viaMatch = groupName.match(/^(.+)-via-(.+)$/);
+    if (viaMatch) {
+      return viaMatch[1];
+    }
+    
+    // 处理其他格式
+    const parts = groupName.split('-');
+    if (parts.length >= 2) {
+      // 假设模型名是前几个部分
+      return parts.slice(0, -1).join('-');
+    }
+    
+    return groupName;
+  }
+
+  /**
+   * 从第2层分组中提取渠道名
+   */
+  extractChannelFromLayer2Group(group) {
+    // 方法1: 从分组名称提取
+    const viaMatch = group.name.match(/^(.+)-via-(.+)$/);
+    if (viaMatch) {
+      return viaMatch[2];
+    }
+    
+    // 方法2: 从上游URL提取
+    if (group.upstreams && group.upstreams.length > 0) {
+      const upstream = group.upstreams[0];
+      const proxyMatch = upstream.url.match(/\/proxy\/([^\/\?]+)/);
+      if (proxyMatch) {
+        return proxyMatch[1];
+      }
+    }
+    
+    // 方法3: 从标签提取
+    if (group.tags) {
+      // 寻找可能是渠道名的标签
+      const possibleChannels = group.tags.filter(tag => 
+        !['layer-2', 'model-channel'].includes(tag) &&
+        tag.length > 2
+      );
+      
+      if (possibleChannels.length > 0) {
+        return possibleChannels[possibleChannels.length - 1]; // 取最后一个，通常是渠道名
+      }
+    }
+    
+    return 'unknown';
+  }
+}
+
 // 导出单例
 const threeLayerArchitecture = new ThreeLayerArchitecture();
 

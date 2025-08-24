@@ -746,6 +746,24 @@ app.get("/api/cleanup-history", (req, res) => {
   }
 });
 
+// 获取三层架构详细统计
+app.get("/api/architecture-stats", async (req, res) => {
+  try {
+    const stats = await threeLayerArchitecture.getDetailedArchitectureStats();
+    
+    res.json({
+      success: true,
+      message: "架构统计分析完成",
+      data: stats
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      error: "获取架构统计失败", 
+      details: error.message 
+    });
+  }
+});
+
 // 维护脚本：删除所有模型分组 (sort=10)
 app.post("/api/maintenance/delete-model-groups", async (req, res) => {
   console.log("🚨 开始执行维护任务：删除所有模型分组 (sort=10)");
