@@ -245,6 +245,8 @@ class YamlManager {
       .replace(/-preview$/g, "") // 移除 -preview 后缀
       .replace(/-beta$/g, "") // 移除 -beta 后缀
       .replace(/-alpha$/g, "") // 移除 -alpha 后缀
+      .replace(/-instruct$/g, "") // 移除 -instruct 后缀
+      .replace(/-chat$/g, "") // 移除 -chat 后缀
       // 替换连续的多个连字符为单个连字符
       .replace(/-+/g, "-")
       // 移除字符串开头和结尾的连字符
