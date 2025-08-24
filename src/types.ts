@@ -43,6 +43,7 @@ export interface ProcessAiSiteRequest {
   apiKeys?: string[];
   channelTypes?: string[];
   customValidationEndpoints?: any;
+  models?: string[];
 }
 
 export interface CleanupOptions {

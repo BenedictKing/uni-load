@@ -124,7 +124,7 @@ app.post("/api/preview-site-name", (req: Request, res: Response) => {
 // API 路由
 app.post("/api/process-ai-site", async (req: Request<{}, any, ProcessAiSiteRequest>, res: Response<ApiResponse | ApiErrorResponse>) => {
   try {
-    let { baseUrl, apiKeys, channelTypes, customValidationEndpoints } =
+    let { baseUrl, apiKeys, channelTypes, customValidationEndpoints, models: manualModels } =
       req.body;
 
     if (!baseUrl) {
@@ -410,6 +410,7 @@ app.post("/api/process-ai-site", async (req: Request<{}, any, ProcessAiSiteReque
         models: models,
         siteGroups: siteGroups,
         modelGroups: modelGroups.length,
+        usingManualModels: !!(manualModels && manualModels.length > 0),
       },
     });
   } catch (error) {
@@ -629,6 +630,31 @@ app.get("/api/multi-instances", (req, res) => {
     res.json(status);
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// API探测功能
+app.post("/api/probe-api", async (req, res) => {
+  try {
+    const { baseUrl, apiKey } = req.body;
+    
+    if (!baseUrl) {
+      return res.status(400).json({ error: "需要提供 baseUrl" });
+    }
+    
+    const modelsService = require("./src/models");
+    const result = await modelsService.probeApiStructure(baseUrl, apiKey);
+    
+    res.json({
+      success: true,
+      baseUrl,
+      probeResult: result
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: "API探测失败",
+      details: error.message
+    });
   }
 });
 

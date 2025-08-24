@@ -627,6 +627,19 @@
             ></textarea>
           </div>
 
+          <div class="form-group">
+            <label for="manualModels">手动指定模型 (可选)</label>
+            <textarea
+              id="manualModels"
+              name="manualModels"
+              placeholder="如果站点无法自动获取模型列表，可以手动指定：&#10;gpt-3.5-turbo&#10;gpt-4&#10;claude-3-sonnet&#10;deepseek-chat&#10;&#10;每行一个模型名称"
+              rows="4"
+            ></textarea>
+            <div class="help-text">
+              仅当自动获取模型失败时使用。每行一个模型名称。
+            </div>
+          </div>
+
           <!-- 新的动态验证端点输入区域 -->
           <div id="validationEndpointsContainer">
             <div
@@ -920,6 +933,21 @@
         return keys;
       }
 
+      // 解析手动模型列表
+      function parseManualModels(text) {
+        if (!text || !text.trim()) {
+          return [];
+        }
+
+        const models = text
+          .split(/[\n\r]+/) // 按换行分割
+          .map((model) => model.trim()) // 去除首尾空格
+          .filter((model) => model.length > 0) // 过滤空字符串
+          .filter((model, index, arr) => arr.indexOf(model) === index); // 去重
+
+        return models;
+      }
+
       document
         .getElementById("aiSiteForm")
         .addEventListener("submit", async function (e) {
@@ -973,6 +1001,10 @@
           const apiKeysText = document.getElementById("apiKeys").value;
           const apiKeys = parseApiKeys(apiKeysText);
 
+          // 解析手动模型列表
+          const manualModelsText = document.getElementById("manualModels").value;
+          const manualModels = parseManualModels(manualModelsText);
+
           // 收集自定义验证端点
           const customValidationEndpoints = {};
           channelTypes.forEach((type) => {
@@ -1004,6 +1036,7 @@
                 apiKeys,
                 channelTypes,
                 customValidationEndpoints, // 使用新的对象
+                models: manualModels.length > 0 ? manualModels : undefined, // 只有在有手动模型时才发送
               }),
             });
 
@@ -1022,7 +1055,7 @@
                         } 个</p>
                         <p><strong>发现模型:</strong> ${
                           data.data.modelsCount
-                        } 个</p>
+                        } 个 ${data.data.usingManualModels ? '(手动指定)' : '(自动获取)'}</p>
                         <p><strong>模型列表:</strong></p>
                         <ul style="margin-left: 20px; margin-top: 10px;">
                             ${data.data.models
