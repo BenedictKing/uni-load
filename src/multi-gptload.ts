@@ -525,7 +525,7 @@ class MultiGptloadManager {
           sort: 20, // 渠道分组的排序号为20
           param_overrides: {},
           config: {
-            blacklist_threshold: modelConfig.getSiteGroupConfig().blacklist_threshold,
+            blacklist_threshold: require('./three-layer-architecture').layerConfigs.siteGroup.blacklist_threshold,
           },
         };
 
@@ -714,7 +714,7 @@ class MultiGptloadManager {
         sort: 20, // 渠道分组的排序号为20
         param_overrides: {},
         config: {
-          blacklist_threshold: modelConfig.getSiteGroupConfig().blacklist_threshold,
+          blacklist_threshold: require('./three-layer-architecture').layerConfigs.siteGroup.blacklist_threshold,
         },
       };
 

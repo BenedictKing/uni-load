@@ -134,20 +134,6 @@ class ModelConfig {
       "yi-lightning",
     ];
 
-    // gptload 配置
-    this.gptloadConfig = {
-      // 站点分组（渠道分组）配置
-      siteGroup: {
-        blacklist_threshold: 99, // 站点分组黑名单阈值
-        sort: 20, // 站点分组排序号
-      },
-
-      // 模型分组配置
-      modelGroup: {
-        blacklist_threshold: 0, // 模型分组黑名单阈值（立即加入黑名单）
-        sort: 10, // 模型分组排序号（默认）
-      },
-    };
   }
 
   /**
@@ -226,21 +212,6 @@ class ModelConfig {
     });
   }
 
-  /**
-   * 获取站点分组的 gptload 配置
-   * @return {Object} 站点分组配置
-   */
-  getSiteGroupConfig() {
-    return this.gptloadConfig.siteGroup;
-  }
-
-  /**
-   * 获取模型分组的 gptload 配置
-   * @return {Object} 模型分组配置
-   */
-  getModelGroupConfig() {
-    return this.gptloadConfig.modelGroup;
-  }
 
   /**
    * 获取优先使用的测试模型列表
@@ -321,7 +292,6 @@ class ModelConfig {
       blacklistedKeywords: this.blacklistedKeywords,
       highCostModelPatterns: this.highCostModelPatterns,
       preferredTestModels: this.preferredTestModels,
-      gptloadConfig: this.gptloadConfig,
     };
   }
 
