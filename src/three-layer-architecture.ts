@@ -141,6 +141,22 @@ class ThreeLayerArchitecture {
 
       console.log("✅ 三层架构初始化完成");
 
+      // 新增：更新uni-api配置
+      console.log("🔧 更新uni-api配置...");
+      try {
+        const yamlManager = require("./yaml-manager");
+        
+        // 获取所有聚合分组（第3层）用于uni-api配置
+        const allGroups = await gptloadService.getAllGroups();
+        const aggregateGroups = allGroups.filter((g) => g.tags?.includes("layer-3"));
+        
+        await yamlManager.updateUniApiConfig(aggregateGroups);
+        console.log(`✅ 已将 ${aggregateGroups.length} 个聚合分组同步到uni-api配置`);
+      } catch (error) {
+        console.error("❌ 更新uni-api配置失败:", error.message);
+        // 不抛出错误，让三层架构继续工作
+      }
+
       return {
         siteGroups: siteGroups.length,
         modelChannelGroups: modelChannelGroups.length,
