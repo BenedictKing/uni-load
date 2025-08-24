@@ -350,39 +350,38 @@ class GptloadService {
    * 生成安全的分组名称（符合gpt-load规范）
    */
   generateSafeGroupName(modelName, channelType) {
-    // 将模型名称和渠道类型结合，确保唯一性
+    // 保持原始模型名称和渠道类型的组合
     const combinedName = `${modelName}-${channelType}`;
 
-    // 处理URL不安全字符
+    // 只做必要的URL安全处理
     const urlSafe = this.sanitizeModelNameForUrl(combinedName);
 
-    // 转为小写，只保留字母、数字、中划线、下划线
-    let groupName = urlSafe.toLowerCase().replace(/[^a-z0-9-_]/g, "-");
+    // 基本的规范化，但保留更多信息
+    let groupName = urlSafe.toLowerCase()
+      .replace(/[^a-z0-9-_]/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .replace(/-{2,}/g, "-");
 
-    // 移除开头和结尾的连字符/下划线
-    groupName = groupName.replace(/^[-_]+|[-_]+$/g, "");
-
-    // 合并多个连续的连字符/下划线
-    groupName = groupName.replace(/[-_]+/g, "-");
-
-    // gpt-load要求：长度3-100位
+    // 长度限制处理
     if (groupName.length < 3) {
-      // 如果太短，添加前缀
       groupName = "mdl-" + groupName;
     }
 
     if (groupName.length > 100) {
-      // 如果太长，智能截断保留重要部分
-      const truncated = this.intelligentTruncate(groupName, 100);
+      // 优先保留模型名称部分
+      const modelPart = modelName.toLowerCase().replace(/[^a-z0-9-]/g, "-");
+      const channelPart = channelType;
 
-      // 如果截断后仍然太长，说明这个模型名无法处理
-      if (truncated && truncated.length <= 100) {
-        groupName = truncated;
-        console.log(`📏 分组名过长，智能截断为: ${groupName}`);
+      if (modelPart.length + channelPart.length + 1 <= 100) {
+        groupName = `${modelPart}-${channelPart}`;
       } else {
-        console.log(`❌ 模型名称过长无法处理，跳过: ${modelName}`);
-        return null; // 返回null表示跳过这个模型
+        // 如果模型名本身就很长，优先保留模型名
+        const maxModelLength = 100 - channelPart.length - 1;
+        const truncatedModel = modelPart.substring(0, Math.max(maxModelLength, 20));
+        groupName = `${truncatedModel}-${channelPart}`;
       }
+
+      console.log(`📏 分组名过长，调整为: ${groupName}`);
     }
 
     // 确保符合规范
@@ -404,56 +403,29 @@ class GptloadService {
 
     let truncated = name;
 
-    // 第一步：删除所有连字符，直接连接
-    truncated = truncated.replace(/-/g, "");
-    if (truncated.length <= maxLength) return truncated;
+    // 只保留基本的清理：移除连续的连字符
+    truncated = truncated.replace(/-+/g, "-");
 
-    // 第二步：常见词语缩写
-    const abbreviations = {
-      deepseek: "ds",
-      gemini: "gm",
-      anthropic: "ant",
-      claude: "cl",
-      openai: "oai",
-      chatgpt: "cgpt",
-      gpt: "g",
-      flash: "f",
-      lite: "l",
-      preview: "p",
-      turbo: "t",
-      instruct: "i",
-      vision: "v",
-      pro: "p",
-      mini: "m",
-      large: "lg",
-      medium: "md",
-      small: "sm",
-      model: "mdl",
-      chat: "c"
-    };
-
-    for (const [full, abbr] of Object.entries(abbreviations)) {
-      const regex = new RegExp(full, "gi");
-      truncated = truncated.replace(regex, abbr);
-      if (truncated.length <= maxLength) return truncated;
-    }
-
-    // 第三步：移除常见的版本号和日期模式
+    // 移除常见的版本号和日期模式，但保留主要名称
     truncated = truncated
-      .replace(/\d{4}\d{2}\d{2}/g, "") // 20241201
       .replace(/\d{8}/g, "") // 20241201
-      .replace(/\d{6}/g, "") // 240617
       .replace(/v\d+(\.\d+)*/g, "") // v3, v2.5
-      .replace(/\d{3}/g, "") // 001
       .replace(/latest/gi, "") // latest
-      .replace(/beta/gi, "b") // beta -> b
-      .replace(/alpha/gi, "a"); // alpha -> a
+      .replace(/beta/gi, "beta") // 保持 beta
+      .replace(/alpha/gi, "alpha"); // 保持 alpha
 
     if (truncated.length <= maxLength) return truncated;
 
-    // 第四步：如果还是太长，从末尾截断并确保不以连字符结尾
+    // 如果仍然太长，从末尾截断但保持完整性
     if (truncated.length > maxLength) {
-      truncated = truncated.substring(0, maxLength);
+      // 找到最后一个连字符的位置，避免截断单词中间
+      const lastDashIndex = truncated.lastIndexOf('-', maxLength - 1);
+      if (lastDashIndex > maxLength * 0.7) { // 如果连字符位置合理
+        truncated = truncated.substring(0, lastDashIndex);
+      } else {
+        truncated = truncated.substring(0, maxLength);
+      }
+      
       // 移除末尾的连字符
       truncated = truncated.replace(/-+$/, "");
     }
