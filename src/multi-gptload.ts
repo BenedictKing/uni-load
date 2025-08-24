@@ -971,6 +971,62 @@ class MultiGptloadManager {
   }
 
   /**
+   * 获取分组的密钥统计信息
+   */
+  async getGroupKeyStats(instance, groupId) {
+    try {
+      console.log(`📊 获取分组 ${groupId} 的密钥统计信息...`);
+      
+      // 方法1：尝试获取分组详细信息中的统计数据
+      const groupDetails = await this.getGroupDetails(instance, groupId);
+      if (groupDetails && groupDetails.key_stats) {
+        console.log(`✅ 从分组详情获取密钥统计: ${JSON.stringify(groupDetails.key_stats)}`);
+        return groupDetails.key_stats;
+      }
+      
+      // 方法2：通过密钥接口获取统计信息
+      const params = {
+        group_id: groupId,
+        page: 1,
+        page_size: 1000
+      };
+      
+      const response = await instance.apiClient.get('/keys', { params });
+      console.log(`📊 密钥查询响应: ${JSON.stringify(response.data)}`);
+      
+      // 处理不同格式的响应
+      let keyData;
+      if (response.data && typeof response.data.code === 'number') {
+        keyData = response.data.data;
+      } else {
+        keyData = response.data;
+      }
+      
+      if (keyData && keyData.items) {
+        const allKeys = keyData.items;
+        const activeKeys = allKeys.filter(key => key.status === 'active' || key.is_valid).length;
+        const invalidKeys = allKeys.filter(key => key.status === 'invalid' || !key.is_valid).length;
+        
+        const stats = {
+          active_keys: activeKeys,
+          invalid_keys: invalidKeys,
+          total_keys: allKeys.length
+        };
+        
+        console.log(`✅ 通过密钥接口计算统计: ${JSON.stringify(stats)}`);
+        return stats;
+      }
+      
+      console.warn(`⚠️ 无法获取分组 ${groupId} 的密钥统计`);
+      return null;
+      
+    } catch (error) {
+      console.error(`获取分组 ${groupId} 密钥统计失败: ${error.message}`);
+      return null;
+    }
+  }
+
+  /**
    * 等待验证任务完成
    */
   async waitForValidationTask(instance, groupId) {
@@ -1020,7 +1076,6 @@ class MultiGptloadManager {
           let validationSuccess = false;
           if (keyStats) {
             // 根据实际的字段名获取可用密钥数量
-            // 从日志看到字段名是 active_keys 而不是 available
             const availableKeys = keyStats.active_keys || keyStats.available || 0;
             const totalKeys = keyStats.total_keys || keyStats.total || 0;
             
@@ -1035,17 +1090,23 @@ class MultiGptloadManager {
             }
           } else {
             // 如果无法获取统计信息，尝试从任务结果中获取
-            if (taskStatus.result && taskStatus.result.valid_keys > 0) {
-              validationSuccess = true;
+            if (taskStatus.result && taskStatus.result.valid_keys !== undefined) {
+              validationSuccess = taskStatus.result.valid_keys > 0;
               const validKeys = taskStatus.result.valid_keys;
               const totalKeys = taskStatus.result.total_keys || taskStatus.total;
-              console.log(`✅ 分组 ${groupId} 验证成功，从任务结果获得 ${validKeys}/${totalKeys} 个有效密钥`);
+              
+              if (validationSuccess) {
+                console.log(`✅ 分组 ${groupId} 验证成功，从任务结果获得 ${validKeys}/${totalKeys} 个有效密钥`);
+              } else {
+                console.log(`❌ 分组 ${groupId} 验证失败，从任务结果显示 ${validKeys}/${totalKeys} 个有效密钥`);
+              }
             } else if (taskStatus.task_type === 'KEY_VALIDATION' && taskStatus.processed > 0) {
               // 备用逻辑：如果处理了密钥但无统计信息
               validationSuccess = true;
               console.log(`✅ 分组 ${groupId} 验证任务处理了 ${taskStatus.processed} 个密钥，假设成功`);
             } else {
               console.log(`⚠️ 分组 ${groupId} 无法确定验证结果，假设失败`);
+              validationSuccess = false;
             }
           }
           
