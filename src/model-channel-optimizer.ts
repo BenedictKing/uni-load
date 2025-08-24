@@ -422,24 +422,60 @@ class ModelChannelOptimizer {
    * 检查站点分组是否支持特定模型
    */
   async siteGroupSupportsModel(siteGroup, model) {
-    // 方法1：检查分组名称是否包含模型信息
+    // 方法1：检查分组的已验证模型列表（最精确）
+    if (siteGroup.validated_models && Array.isArray(siteGroup.validated_models)) {
+      const isValidated = siteGroup.validated_models.some(validatedModel => 
+        validatedModel.toLowerCase() === model.toLowerCase()
+      );
+      if (isValidated) {
+        console.log(`✅ 模型 ${model} 在站点 ${siteGroup.name} 的已验证列表中`);
+        return true;
+      }
+    }
+    
+    // 方法2：检查分组名称是否包含模型信息
     if (siteGroup.name.toLowerCase().includes(model.toLowerCase())) {
       return true;
     }
     
-    // 方法2：检查测试模型
+    // 方法3：检查测试模型
     if (siteGroup.test_model && siteGroup.test_model.toLowerCase() === model.toLowerCase()) {
       return true;
     }
     
-    // 方法3：通过实际测试（可选，开销较大）
-    // 这里可以添加实际的模型可用性测试
-    
-    // 方法4：基于模型提供商匹配
+    // 方法4：基于模型提供商匹配（增强版）
     const modelProvider = this.getModelProvider(model);
     const channelProvider = this.getChannelProvider(siteGroup.name);
     
-    return modelProvider === channelProvider;
+    if (modelProvider === channelProvider) {
+      // 进一步检查模型格式兼容性
+      const isCompatible = this.checkModelChannelCompatibility(model, siteGroup.channel_type);
+      if (isCompatible) {
+        console.log(`✅ 模型 ${model} 与站点 ${siteGroup.name} 提供商和格式兼容`);
+        return true;
+      }
+    }
+    
+    console.log(`❌ 模型 ${model} 与站点 ${siteGroup.name} 不兼容`);
+    return false;
+  }
+
+  /**
+   * 检查模型与渠道格式的兼容性
+   */
+  checkModelChannelCompatibility(model, channelType) {
+    const modelLower = model.toLowerCase();
+    
+    switch (channelType) {
+      case 'anthropic':
+        return modelLower.includes('claude');
+      case 'gemini':
+        return modelLower.includes('gemini');
+      case 'openai':
+      default:
+        // OpenAI格式支持大多数模型
+        return !modelLower.includes('claude') && !modelLower.includes('gemini');
+    }
   }
 
   /**

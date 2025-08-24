@@ -834,9 +834,84 @@ class ThreeLayerArchitecture {
    */
   startWeightOptimization() {
     // 每24小时优化一次权重，避免过于频繁的缓存重载
-    setInterval(async () => {
+    this.weightOptimizationTimer = setInterval(async () => {
       await this.optimizeAggregateWeights();
     }, 24 * 60 * 60 * 1000);
+    
+    // 每2小时检查是否需要紧急权重调整
+    this.emergencyOptimizationTimer = setInterval(async () => {
+      await this.checkEmergencyOptimization();
+    }, 2 * 60 * 60 * 1000);
+  }
+
+  /**
+   * 检查是否需要紧急权重优化
+   */
+  async checkEmergencyOptimization() {
+    try {
+      const allGroups = await gptloadService.getAllGroups();
+      const aggregateGroups = allGroups.filter((g) => g.tags?.includes("layer-3"));
+      
+      let criticalGroupsCount = 0;
+      
+      // 检查是否有权重为0或失败率过高的分组
+      for (const group of aggregateGroups.slice(0, 5)) { // 只检查前5个以控制负载
+        try {
+          const stats = await this.getGroupStats(group.id);
+          if (stats && stats.hourly_stats) {
+            const failureRate = stats.hourly_stats.failure_rate || 0;
+            const zeroWeightUpstreams = group.upstreams?.filter(u => u.weight === 0).length || 0;
+            
+            // 如果失败率超过50%或有零权重上游，认为需要紧急处理
+            if (failureRate > 0.5 || zeroWeightUpstreams > 0) {
+              criticalGroupsCount++;
+            }
+          }
+        } catch (error) {
+          // 忽略单个分组的检查错误
+        }
+      }
+      
+      // 如果超过20%的检查分组有问题，触发紧急优化
+      if (criticalGroupsCount > Math.max(1, Math.floor(aggregateGroups.length * 0.2))) {
+        console.log(`🚨 发现 ${criticalGroupsCount} 个分组需要紧急权重调整`);
+        
+        const systemLoad = await this.getSystemLoad();
+        if (systemLoad < 0.7) { // 系统负载不高时才执行
+          await this.optimizeAggregateWeights();
+        } else {
+          console.log(`⚠️ 系统负载过高 (${(systemLoad * 100).toFixed(1)}%)，推迟紧急优化`);
+        }
+      }
+      
+    } catch (error) {
+      console.error('紧急优化检查失败:', error.message);
+    }
+  }
+
+  /**
+   * 获取系统负载状态
+   */
+  async getSystemLoad() {
+    try {
+      // 检查当前正在运行的优化任务数量
+      const runningTasks = [
+        this.isRunning,
+        // 可以添加其他服务的运行状态检查
+      ].filter(Boolean).length;
+      
+      // 简单的负载计算：基于运行任务数和实例健康状况
+      const healthyInstances = Object.values(gptloadService.getMultiInstanceStatus().instances)
+        .filter(inst => inst.healthy).length;
+      
+      // 负载 = 运行任务数 / (健康实例数 + 1)，范围 0-1
+      const load = runningTasks / Math.max(healthyInstances, 1);
+      
+      return Math.min(load, 1.0);
+    } catch (error) {
+      console.warn('获取系统负载失败:', error.message);
+      return 0.5; // 默认中等负载
+    }
   }
 
   /**
@@ -846,6 +921,15 @@ class ThreeLayerArchitecture {
     console.log("⚖️ 开始聚合分组权重优化...");
 
     try {
+      // 检查系统负载
+      const systemLoad = await this.getSystemLoad();
+      if (systemLoad > 0.8) {
+        console.log(`⚠️ 系统负载过高 (${(systemLoad * 100).toFixed(1)}%)，跳过本次权重优化`);
+        return;
+      }
+      
+      console.log(`📊 系统负载: ${(systemLoad * 100).toFixed(1)}%，继续权重优化`);
+
       const allGroups = await gptloadService.getAllGroups();
       const aggregateGroups = allGroups.filter((g) =>
         g.tags?.includes("layer-3")
@@ -913,22 +997,36 @@ class ThreeLayerArchitecture {
 
           // 更新权重
           if (upstreamStats.length > 0) {
-            await gptloadService.updateGroup(group.id, group._instance.id, {
-              upstreams: upstreamStats,
-            });
-            
-            // 更新缓存
-            this.updateWeightCache(group.id, upstreamStats);
-            updatedCount++;
-            
-            // 记录权重变化详情
-            const weightChanges = upstreamStats.filter(us => us.weight !== 1).length;
-            if (weightChanges > 0) {
-              console.log(`📊 分组 ${group.name}: ${weightChanges}/${upstreamStats.length} 个上游权重被调整`);
+            try {
+              await gptloadService.updateGroup(group.id, group._instance.id, {
+                upstreams: upstreamStats,
+              });
+              
+              // 更新缓存
+              this.updateWeightCache(group.id, upstreamStats);
+              updatedCount++;
+              
+              // 记录权重变化详情
+              const weightChanges = upstreamStats.filter(us => us.weight !== 1).length;
+              if (weightChanges > 0) {
+                console.log(`📊 分组 ${group.name}: ${weightChanges}/${upstreamStats.length} 个上游权重被调整`);
+              }
+              
+              // 动态调整延迟：根据系统负载决定等待时间
+              const currentLoad = await this.getSystemLoad();
+              const delayMs = Math.min(50 + (currentLoad * 200), 500); // 50-500ms动态延迟
+              await new Promise(resolve => setTimeout(resolve, delayMs));
+              
+            } catch (updateError) {
+              console.error(`更新分组 ${group.name} 权重失败: ${updateError.message}`);
+              errorCount++;
+              
+              // 如果是网络错误，增加更长的等待时间
+              if (updateError.code === 'ECONNRESET' || updateError.message.includes('timeout')) {
+                console.log(`⏳ 网络错误，等待2秒后继续...`);
+                await new Promise(resolve => setTimeout(resolve, 2000));
+              }
             }
-            
-            // 添加延迟避免瞬时高负载
-            await new Promise(resolve => setTimeout(resolve, 100));
           }
         } catch (groupError) {
           console.error(`优化分组 ${group.name} 权重失败: ${groupError.message}`);
@@ -1243,8 +1341,15 @@ class ThreeLayerArchitecture {
     const sortedCached = [...cachedWeights].sort((a, b) => a.url.localeCompare(b.url));
     
     for (let i = 0; i < sortedNew.length; i++) {
-      if (sortedNew[i].url !== sortedCached[i].url || 
-          sortedNew[i].weight !== sortedCached[i].weight) {
+      if (sortedNew[i].url !== sortedCached[i].url) {
+        return false;
+      }
+      
+      // 权重变化容忍度：如果变化小于5%，认为相同
+      const weightDiff = Math.abs(sortedNew[i].weight - sortedCached[i].weight);
+      const tolerance = Math.max(sortedCached[i].weight * 0.05, 1); // 5%容忍度，最小1
+      
+      if (weightDiff > tolerance) {
         return false;
       }
     }
@@ -1256,10 +1361,25 @@ class ThreeLayerArchitecture {
    * 停止服务
    */
   stop() {
-    // 清理定时器等资源
+    // 清理所有定时器
+    const timers = [
+      'weightOptimizationTimer',
+      'emergencyOptimizationTimer'
+    ];
+    
+    timers.forEach(timerName => {
+      if (this[timerName]) {
+        clearInterval(this[timerName]);
+        this[timerName] = null;
+        console.log(`🛑 已清理定时器: ${timerName}`);
+      }
+    });
+    
+    // 清理缓存等资源
     if (this.weightCache) {
       this.weightCache.clear();
     }
+    
     console.log("🛑 三层架构管理器已停止");
   }
 
