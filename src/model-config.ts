@@ -23,7 +23,8 @@ class ModelConfig {
       // Anthropic
       "claude-opus",
       "claude-sonnet",
-      "claude-3",
+      "claude-3-5",
+      "claude-3-7",
       "claude-4",
 
       // DeepSeek
@@ -133,7 +134,6 @@ class ModelConfig {
       "mistral-7b",
       "yi-lightning",
     ];
-
   }
 
   /**
@@ -211,7 +211,6 @@ class ModelConfig {
       return true;
     });
   }
-
 
   /**
    * 获取优先使用的测试模型列表
