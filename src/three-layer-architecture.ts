@@ -555,7 +555,7 @@ class ThreeLayerArchitecture {
     const totalModels = groupedByModel.size;
     console.log(`📊 准备为 ${totalModels} 个模型创建聚合分组`);
 
-    // 一次性获取现有分组信息
+    // 一次性获取现有分组信息 - 关键优化点：只调用一次
     let allExistingGroups;
 
     try {
@@ -567,7 +567,7 @@ class ThreeLayerArchitecture {
         allExistingGroups = [];
       }
 
-      console.log(`✅ 获取到 ${allExistingGroups.length} 个现有分组`);
+      console.log(`✅ 获取到 ${allExistingGroups.length} 个现有分组，开始批量处理`);
     } catch (error) {
       console.error("❌ 获取现有分组失败:", error.message);
       allExistingGroups = [];
@@ -588,7 +588,7 @@ class ThreeLayerArchitecture {
           `🎯 [${processedModels}/${totalModels}] 处理模型: ${model} (${channelGroups.length} 个渠道)`
         );
 
-        // 从缓存中检查是否已存在
+        // 从缓存中检查是否已存在 - 避免重复API调用
         const existing = allExistingGroups.find((g) => g.name === groupName);
         if (existing) {
           console.log(
@@ -600,97 +600,19 @@ class ThreeLayerArchitecture {
           continue;
         }
 
-        // 🔧 添加渠道分组验证
-        if (
-          !channelGroups ||
-          !Array.isArray(channelGroups) ||
-          channelGroups.length === 0
-        ) {
-          console.log(
-            `⚠️ [${processedModels}/${totalModels}] 模型 ${model} 没有有效的渠道分组`
-          );
-          failedCount++;
-          continue;
-        }
-
-        // 创建上游列表
-        const upstreams = channelGroups
-          .filter((cg) => cg && cg.name) // 🔧 过滤无效的渠道分组
-          .map((cg) => ({
-            url: `${
-              cg._instance?.url ||
-              process.env.GPTLOAD_URL ||
-              "http://localhost:3001"
-            }/proxy/${cg.name}`,
-            weight: 1,
-          }));
-
-        if (upstreams.length === 0) {
-          console.log(
-            `⚠️ [${processedModels}/${totalModels}] 模型 ${model} 没有可用的渠道分组`
-          );
-          failedCount++;
-          continue;
-        }
-
-        // 创建聚合分组数据
-        const groupData = {
-          name: groupName,
-          display_name: `${model} (聚合)`,
-          description: `${model} 模型的聚合入口，包含 ${upstreams.length} 个渠道`,
-          upstreams: upstreams,
-          test_model: model,
-          channel_type: channelGroups[0]?.channel_type || "openai",
-          validation_endpoint: channelGroups[0]?.validation_endpoint,
-          sort: config.sort,
-          param_overrides: {},
-          config: {
-            blacklist_threshold: config.blacklist_threshold,
-            key_validation_interval_minutes:
-              config.key_validation_interval_minutes,
-          },
-          tags: ["layer-3", "model-aggregate", model],
-        };
-
-        // 创建分组
-        const created = await gptloadService.createSiteGroup(
-          groupName,
-          upstreams[0].url,
-          [],
-          groupData.channel_type,
-          {},
-          [model],
-          true // 标记为模型分组，直接使用指定模型
-        );
-
+        // 创建新的聚合分组
+        const created = await this.createSingleAggregateGroup(model, channelGroups, config);
         if (created) {
-          // 更新为聚合配置
-          await gptloadService.updateGroup(created.id, created._instance.id, {
-            upstreams: upstreams,
-            config: groupData.config,
-            sort: config.sort,
-          });
-
-          // 获取实例并添加认证密钥
-          const instance = gptloadService.manager.getInstance(
-            created._instance.id
-          );
-          if (instance && instance.token) {
-            await gptloadService.manager.addApiKeysToGroup(
-              instance,
-              created.id,
-              [instance.token]
-            );
-            console.log(
-              `🔑 [${processedModels}/${totalModels}] 已为第三层分组添加实例认证token`
-            );
-          }
-
           groups.push(created);
           createdCount++;
           console.log(
-            `✅ [${processedModels}/${totalModels}] 创建聚合分组: ${groupName} (${upstreams.length}个上游)`
+            `✅ [${processedModels}/${totalModels}] 创建聚合分组: ${created.name} (${created.upstreams?.length || 0}个上游)`
           );
+          
+          // 将新创建的分组添加到缓存中，避免后续重复检查
+          allExistingGroups.push(created);
+        } else {
+          failedCount++;
         }
       } catch (error) {
         console.error(
@@ -1164,32 +1086,20 @@ class ThreeLayerArchitecture {
   }
 
   /**
-   * 创建单个模型的聚合分组
+   * 创建单个聚合分组（从原 createAggregateGroupForModel 方法提取优化）
    */
-  async createAggregateGroupForModel(model, supportingChannels) {
-    const config = this.layerConfigs.aggregateGroup;
+  async createSingleAggregateGroup(model, channelGroups, config) {
     const groupName = this.sanitizeModelName(model);
 
     try {
-      console.log(`🔧 为模型 ${model} 创建聚合分组: ${groupName}...`);
-
-      // 检查是否已存在
-      const allGroups = await gptloadService.getAllGroups();
-      const existing = allGroups.find((g) => g.name === groupName);
-      if (existing) {
-        console.log(`ℹ️ 聚合分组 ${groupName} 已存在，更新配置...`);
-        await this.updateAggregateUpstreams(existing, supportingChannels);
-        return existing;
-      }
-
       // 🔧 添加渠道分组验证
-      if (!supportingChannels || !Array.isArray(supportingChannels) || supportingChannels.length === 0) {
+      if (!channelGroups || !Array.isArray(channelGroups) || channelGroups.length === 0) {
         console.log(`⚠️ 模型 ${model} 没有有效的支持渠道分组`);
         return null;
       }
 
       // 创建上游列表
-      const upstreams = supportingChannels
+      const upstreams = channelGroups
         .filter((cg) => cg && cg.name) // 🔧 过滤无效的渠道分组
         .map((cg) => ({
           url: `${
@@ -1205,40 +1115,25 @@ class ThreeLayerArchitecture {
         return null;
       }
 
-      // 创建聚合分组数据
-      const groupData = {
-        name: groupName,
-        display_name: `${model} (聚合)`,
-        description: `${model} 模型的聚合入口，包含 ${upstreams.length} 个渠道`,
-        upstreams: upstreams,
-        test_model: model,
-        channel_type: supportingChannels[0]?.channel_type || "openai",
-        validation_endpoint: supportingChannels[0]?.validation_endpoint,
-        sort: config.sort,
-        param_overrides: {},
-        config: {
-          blacklist_threshold: config.blacklist_threshold,
-          key_validation_interval_minutes:
-            config.key_validation_interval_minutes,
-        },
-        tags: ["layer-3", "model-aggregate", model],
-      };
-
       // 创建分组
       const created = await gptloadService.createSiteGroup(
         groupName,
         upstreams[0].url,
         [],
-        groupData.channel_type,
+        channelGroups[0]?.channel_type || "openai",
         {},
-        [model]
+        [model],
+        true // 标记为模型分组
       );
 
       if (created) {
         // 更新为聚合配置
         await gptloadService.updateGroup(created.id, created._instance.id, {
           upstreams: upstreams,
-          config: groupData.config,
+          config: {
+            blacklist_threshold: config.blacklist_threshold,
+            key_validation_interval_minutes: config.key_validation_interval_minutes,
+          },
           sort: config.sort,
         });
 
@@ -1252,12 +1147,8 @@ class ThreeLayerArchitecture {
             created.id,
             [instance.token]
           );
-          console.log(`🔑 已为聚合分组添加实例认证token`);
         }
 
-        console.log(
-          `✅ 创建聚合分组: ${groupName} (${upstreams.length}个上游)`
-        );
         return created;
       }
 
@@ -1266,6 +1157,20 @@ class ThreeLayerArchitecture {
       console.error(`❌ 创建模型 ${model} 的聚合分组失败:`, error.message);
       return null;
     }
+  }
+
+  /**
+   * 创建单个模型的聚合分组（兼容性方法，现在使用缓存优化版本）
+   */
+  async createAggregateGroupForModel(model, supportingChannels) {
+    console.log(`🔧 为模型 ${model} 创建单个聚合分组...`);
+    
+    // 现在使用优化后的方法，避免重复调用 getAllGroups
+    return await this.createSingleAggregateGroup(
+      model, 
+      supportingChannels, 
+      this.layerConfigs.aggregateGroup
+    );
   }
 
   /**
