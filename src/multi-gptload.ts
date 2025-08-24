@@ -417,6 +417,62 @@ class MultiGptloadManager {
   }
 
   /**
+   * 通过多实例尝试获取站点模型
+   */
+  async getModelsViaMultiInstance(baseUrl, apiKey) {
+    const healthyInstances = Array.from(this.instances.values())
+      .filter((instance) => this.healthStatus.get(instance.id)?.healthy)
+      .sort((a, b) => a.priority - b.priority);
+
+    if (healthyInstances.length === 0) {
+      throw new Error("没有健康的gptload实例可用");
+    }
+
+    let lastError = null;
+    const attemptedInstances = [];
+    
+    for (const instance of healthyInstances) {
+      try {
+        console.log(`🔄 尝试通过实例 ${instance.name} 访问 ${baseUrl}...`);
+        attemptedInstances.push(instance.name);
+        
+        // 直接使用该实例的网络环境访问站点
+        const modelsService = require("./models");
+        const models = await modelsService.getModels(baseUrl, apiKey, 2);
+        
+        if (models && models.length > 0) {
+          // 记录成功的实例
+          this.siteAssignments.set(baseUrl, instance.id);
+          console.log(`✅ 实例 ${instance.name} 成功获取 ${models.length} 个模型`);
+          return { models, instanceId: instance.id, instanceName: instance.name };
+        } else {
+          console.log(`⚠️ 实例 ${instance.name} 返回空模型列表`);
+        }
+      } catch (error) {
+        lastError = error;
+        console.log(`❌ 实例 ${instance.name} 访问失败: ${error.message}`);
+        
+        // 如果是网络连接问题，标记实例为不健康
+        if (this.isNetworkError(error)) {
+          this.healthStatus.set(instance.id, {
+            ...this.healthStatus.get(instance.id),
+            healthy: false,
+            error: error.message,
+          });
+          console.log(`⚠️ 实例 ${instance.name} 因网络错误被标记为不健康`);
+        }
+        
+        continue; // 尝试下一个实例
+      }
+    }
+    
+    // 所有实例都失败了
+    const errorMsg = `所有 ${attemptedInstances.length} 个实例都无法访问站点 ${baseUrl}`;
+    console.error(`${errorMsg}: ${lastError?.message}`);
+    throw new Error(`${errorMsg}。最后错误: ${lastError?.message}`);
+  }
+
+  /**
    * 重新分配站点到实例
    */
   async reassignSite(siteUrl, instanceId = null) {

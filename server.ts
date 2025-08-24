@@ -189,13 +189,38 @@ app.post("/api/process-ai-site", async (req: Request<{}, any, ProcessAiSiteReque
     );
     console.log(`自动生成的站点名称：${siteName}`);
 
-    // 步骤1：获取AI站点支持的模型
+    // 步骤1：获取AI站点支持的模型（使用多实例重试机制）
     console.log("获取模型列表...");
 
     let allModels;
+    let successfulInstance = null;
+
     if (hasNewApiKeys) {
-      // 有新密钥，使用新密钥获取模型
-      allModels = await modelsService.getModels(baseUrl, apiKeys[0], 3);
+      // 有新密钥，尝试使用多实例获取模型
+      console.log("尝试通过多个gptload实例获取模型...");
+      
+      try {
+        const result = await gptloadService.manager.getModelsViaMultiInstance(baseUrl, apiKeys[0]);
+        allModels = result.models;
+        successfulInstance = result.instanceId;
+        console.log(`✅ 实例 ${result.instanceName} 成功获取 ${allModels.length} 个模型`);
+      } catch (error) {
+        console.error("多实例获取模型失败:", error.message);
+        
+        // 回退到直接调用（兼容性）
+        console.log("回退到直接调用模型接口...");
+        try {
+          allModels = await modelsService.getModels(baseUrl, apiKeys[0], 3);
+        } catch (fallbackError) {
+          return res.status(400).json({
+            error: "所有方式都无法获取模型列表",
+            details: {
+              multiInstanceError: error.message,
+              directCallError: fallbackError.message
+            }
+          });
+        }
+      }
     } else {
       // 没有新密钥，需要从现有渠道分组中获取密钥来获取模型
       console.log("尝试从现有渠道配置中获取API密钥...");
@@ -287,11 +312,21 @@ app.post("/api/process-ai-site", async (req: Request<{}, any, ProcessAiSiteReque
 
       if (existingKeys.length > 0) {
         console.log(`✅ 使用现有渠道的API密钥 (${existingKeys.length} 个)`);
-        allModels = await modelsService.getModels(
-          baseUrl,
-          existingKeys[0],
-          3
-        );
+        
+        // 对于现有渠道，也尝试多实例获取模型
+        try {
+          const result = await gptloadService.manager.getModelsViaMultiInstance(baseUrl, existingKeys[0]);
+          allModels = result.models;
+          successfulInstance = result.instanceId;
+          console.log(`✅ 实例 ${result.instanceName} 成功获取现有渠道的 ${allModels.length} 个模型`);
+        } catch (error) {
+          console.log("多实例获取失败，回退到直接调用:", error.message);
+          allModels = await modelsService.getModels(
+            baseUrl,
+            existingKeys[0],
+            3
+          );
+        }
       } else {
         return res.status(400).json({
           error: `现有渠道 ${existingChannel.name} 没有可用的API密钥，且未提供新的API密钥`,
@@ -354,6 +389,15 @@ app.post("/api/process-ai-site", async (req: Request<{}, any, ProcessAiSiteReque
     const siteGroups = [];
     let groupsCreated = 0;
 
+    // 如果有成功的实例，预先分配站点到该实例
+    if (successfulInstance) {
+      const instance = gptloadService.manager.getInstance(successfulInstance);
+      if (instance) {
+        console.log(`🎯 预分配站点 ${baseUrl} 到成功实例 ${instance.name}`);
+        gptloadService.manager.siteAssignments.set(baseUrl, successfulInstance);
+      }
+    }
+
     for (const channelType of selectedChannelTypes) {
       try {
         const siteGroup = await gptloadService.createSiteGroup(
@@ -367,7 +411,7 @@ app.post("/api/process-ai-site", async (req: Request<{}, any, ProcessAiSiteReque
         if (siteGroup && siteGroup.name) {
           siteGroups.push(siteGroup);
           groupsCreated++;
-          console.log(`✅ ${channelType} 格式站点分组创建成功`);
+          console.log(`✅ ${channelType} 格式站点分组创建成功 (实例: ${siteGroup._instance?.name})`);
         } else {
           console.error(
             `❌ ${channelType} 格式站点分组创建返回无效数据:`,
@@ -411,6 +455,10 @@ app.post("/api/process-ai-site", async (req: Request<{}, any, ProcessAiSiteReque
         siteGroups: siteGroups,
         modelGroups: modelGroups.length,
         usingManualModels: !!(manualModels && manualModels.length > 0),
+        successfulInstance: successfulInstance ? {
+          id: successfulInstance,
+          name: gptloadService.manager.getInstance(successfulInstance)?.name
+        } : null,
       },
     });
   } catch (error) {
