@@ -1,16 +1,20 @@
-import axios, { AxiosResponse, AxiosError } from 'axios';
-import https from 'https';
-import { Model } from './types';
+const axios = require('axios');
+const https = require('https');
 
 const modelConfig = require("./model-config");
+
+// 定义需要的类型
+type Model = string;
 
 interface ModelApiResponse {
   data: Model[];
   object?: string;
 }
 
-interface AxiosErrorWithRetry extends AxiosError {
+interface AxiosErrorWithRetry extends Error {
   code?: string;
+  response?: any;
+  message: string;
 }
 
 class ModelsService {
