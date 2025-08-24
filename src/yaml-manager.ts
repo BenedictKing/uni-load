@@ -236,9 +236,11 @@ class YamlManager {
       .replace(/-?\d{4}-\d{2}-\d{2}/g, "")
       // 移除 YYYYMMDD 格式的日期 (如 20250219, -20250324)
       .replace(/-?\d{8}/g, "")
+      // 移除 MMDD 格式的日期 (如 -0711, -0324)
+      .replace(/-\d{4}(?=-|$)/g, "")
       // 移除其他常见的版本号和日期模式
       .replace(/-\d{2}-\d{2}$/g, "") // 移除 -05-20 格式（月-日）
-      .replace(/-\d{3,4}$/g, "") // 移除 -001, -0324 等格式
+      .replace(/-\d{3}$/g, "") // 移除 -001 等3位数字格式
       .replace(/-latest$/g, "") // 移除 -latest 后缀
       .replace(/-preview$/g, "") // 移除 -preview 后缀
       .replace(/-beta$/g, "") // 移除 -beta 后缀
