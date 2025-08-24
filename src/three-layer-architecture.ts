@@ -855,68 +855,93 @@ class ThreeLayerArchitecture {
       
       let updatedCount = 0;
       let skippedCount = 0;
+      let errorCount = 0;
 
       for (const group of aggregateGroups) {
-        const upstreamStats = [];
+        try {
+          const upstreamStats = [];
 
-        // 收集每个上游的统计
-        for (const upstream of group.upstreams || []) {
-          const upstreamGroupName = this.extractGroupNameFromUrl(upstream.url);
+          // 收集每个上游的统计
+          for (const upstream of group.upstreams || []) {
+            const upstreamGroupName = this.extractGroupNameFromUrl(upstream.url);
 
-          // 根据分组名查找分组ID
-          const upstreamGroup = allGroups.find(
-            (g) => g.name === upstreamGroupName
-          );
-          if (!upstreamGroup) {
-            console.warn(`未找到上游分组: ${upstreamGroupName}`);
-            upstreamStats.push({
-              url: upstream.url,
-              weight: 1,
+            // 根据分组名查找分组ID
+            const upstreamGroup = allGroups.find(
+              (g) => g.name === upstreamGroupName
+            );
+            if (!upstreamGroup) {
+              console.warn(`未找到上游分组: ${upstreamGroupName}，使用默认权重`);
+              upstreamStats.push({
+                url: upstream.url,
+                weight: 1,
+              });
+              continue;
+            }
+
+            try {
+              const stats = await this.getGroupStats(upstreamGroup.id);
+
+              let weight = 1;
+              if (stats && stats.hourly_stats) {
+                const successRate = 1 - (stats.hourly_stats.failure_rate || 0);
+                const avgTime = stats.hourly_stats.avg_response_time || 3000;
+
+                // 权重算法：成功率 * 响应时间因子
+                const timeFactor = Math.max(0.1, 1 - avgTime / 10000);
+                weight = Math.max(1, Math.round(successRate * timeFactor * 100));
+              }
+
+              upstreamStats.push({
+                url: upstream.url,
+                weight: weight,
+              });
+            } catch (statsError) {
+              console.warn(`获取分组 ${upstreamGroup.name} 统计失败: ${statsError.message}，使用默认权重`);
+              upstreamStats.push({
+                url: upstream.url,
+                weight: 1,
+              });
+            }
+          }
+
+          // 检查缓存，避免重复更新相同权重
+          const cachedWeights = this.getCachedWeights(group.id);
+          if (cachedWeights && this.compareWeights(upstreamStats, cachedWeights)) {
+            skippedCount++;
+            continue; // 权重未变化，跳过更新
+          }
+
+          // 更新权重
+          if (upstreamStats.length > 0) {
+            await gptloadService.updateGroup(group.id, group._instance.id, {
+              upstreams: upstreamStats,
             });
-            continue;
+            
+            // 更新缓存
+            this.updateWeightCache(group.id, upstreamStats);
+            updatedCount++;
+            
+            // 记录权重变化详情
+            const weightChanges = upstreamStats.filter(us => us.weight !== 1).length;
+            if (weightChanges > 0) {
+              console.log(`📊 分组 ${group.name}: ${weightChanges}/${upstreamStats.length} 个上游权重被调整`);
+            }
+            
+            // 添加延迟避免瞬时高负载
+            await new Promise(resolve => setTimeout(resolve, 100));
           }
-
-          const stats = await this.getGroupStats(upstreamGroup.id);
-
-          let weight = 1;
-          if (stats && stats.hourly_stats) {
-            const successRate = 1 - (stats.hourly_stats.failure_rate || 0);
-            const avgTime = stats.hourly_stats.avg_response_time || 3000;
-
-            // 权重算法：成功率 * 响应时间因子
-            const timeFactor = Math.max(0.1, 1 - avgTime / 10000);
-            weight = Math.max(1, Math.round(successRate * timeFactor * 100));
-          }
-
-          upstreamStats.push({
-            url: upstream.url,
-            weight: weight,
-          });
-        }
-
-        // 检查缓存，避免重复更新相同权重
-        const cachedWeights = this.getCachedWeights(group.id);
-        if (cachedWeights && this.compareWeights(upstreamStats, cachedWeights)) {
-          skippedCount++;
-          continue; // 权重未变化，跳过更新
-        }
-
-        // 更新权重
-        if (upstreamStats.length > 0) {
-          await gptloadService.updateGroup(group.id, group._instance.id, {
-            upstreams: upstreamStats,
-          });
-          
-          // 更新缓存
-          this.updateWeightCache(group.id, upstreamStats);
-          updatedCount++;
-          
-          // 添加延迟避免瞬时高负载
-          await new Promise(resolve => setTimeout(resolve, 100));
+        } catch (groupError) {
+          console.error(`优化分组 ${group.name} 权重失败: ${groupError.message}`);
+          errorCount++;
         }
       }
       
-      console.log(`✅ 权重优化完成: 更新了 ${updatedCount} 个分组，跳过了 ${skippedCount} 个分组（权重未变化）`);
+      console.log(`✅ 权重优化完成: 更新了 ${updatedCount} 个分组，跳过了 ${skippedCount} 个分组（权重未变化），${errorCount} 个分组出错`);
+      
+      // 如果有大量错误，记录警告
+      if (errorCount > aggregateGroups.length * 0.3) {
+        console.warn(`⚠️ 权重优化中有 ${errorCount} 个分组出错，可能需要检查系统状态`);
+      }
       
     } catch (error) {
       console.error("权重优化失败:", error.message);
