@@ -764,25 +764,27 @@ app.get("/api/architecture-stats", async (req, res) => {
   }
 });
 
-// 维护脚本：删除所有模型分组 (sort=10)
+// 维护脚本：删除所有二三层分组 (sort=10/sort=15)
 app.post("/api/maintenance/delete-model-groups", async (req, res) => {
-  console.log("🚨 开始执行维护任务：删除所有模型分组 (sort=10)");
+  console.log("🚨 开始执行维护任务：删除所有二三层分组 (sort=10/sort=15)");
 
   try {
     const allGroups = await gptloadService.getAllGroups();
 
-    // 筛选出所有 sort=10 的分组
-    const modelGroupsToDelete = allGroups.filter((group) => group.sort === 10);
+    // 筛选出二层(sort=15)和三层(sort=10)分组
+    const modelGroupsToDelete = allGroups.filter(
+      (group) => group.sort === 10 || group.sort === 15
+    );
 
     if (modelGroupsToDelete.length === 0) {
-      console.log("✅ 没有找到需要删除的模型分组");
+      console.log("✅ 没有找到需要删除的二三层分组");
       return res.json({
         success: true,
-        message: "没有找到 sort=10 的模型分组，无需操作。",
+        message: "没有找到 sort=10 或 sort=15 的分组，无需操作。",
       });
     }
 
-    console.log(`🗑️ 发现 ${modelGroupsToDelete.length} 个模型分组需要删除...`);
+    console.log(`🗑️ 发现 ${modelGroupsToDelete.length} 个二三层分组需要删除...`);
 
     const results = {
       deleted: [],
@@ -796,12 +798,20 @@ app.post("/api/maintenance/delete-model-groups", async (req, res) => {
           group._instance.id
         );
         if (success) {
-          results.deleted.push(group.name);
+          results.deleted.push(`${group.name} (sort=${group.sort})`);
         } else {
-          results.failed.push({ name: group.name, reason: "删除失败" });
+          results.failed.push({ 
+            name: group.name, 
+            reason: "删除失败",
+            sort: group.sort
+          });
         }
       } catch (error) {
-        results.failed.push({ name: group.name, reason: error.message });
+        results.failed.push({ 
+          name: group.name, 
+          reason: error.message,
+          sort: group.sort
+        });
       }
     }
 
@@ -811,11 +821,11 @@ app.post("/api/maintenance/delete-model-groups", async (req, res) => {
 
     res.json({
       success: true,
-      message: `操作完成。成功删除 ${results.deleted.length} 个分组，失败 ${results.failed.length} 个。`,
+      message: `操作完成。成功删除 ${results.deleted.length} 个二三层分组，失败 ${results.failed.length} 个。`,
       results,
     });
   } catch (error) {
-    console.error("💥 删除模型分组时发生严重错误:", error);
+    console.error("💥 删除二三层分组时发生严重错误:", error);
     res.status(500).json({ error: "服务器内部错误", details: error.message });
   }
 });
