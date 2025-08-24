@@ -232,6 +232,11 @@ class YamlManager {
 
     // 使用正则表达式移除日期格式和版本号
     const furtherSimplified = normalizedModel
+      .replace(/-latest$/g, "") // 移除 -latest 后缀
+      .replace(/-preview$/g, "") // 移除 -preview 后缀
+      .replace(/-beta$/g, "") // 移除 -beta 后缀
+      .replace(/-alpha$/g, "") // 移除 -alpha 后缀
+      .replace(/-instruct$/g, "") // 移除 -instruct 后缀
       // 移除 YYYY-MM-DD 格式的日期 (如 2025-08-07, -2025-03-24)
       .replace(/-?\d{4}-\d{2}-\d{2}/g, "")
       // 移除 YYYYMMDD 格式的日期 (如 20250219, -20250324)
@@ -241,12 +246,6 @@ class YamlManager {
       // 移除其他常见的版本号和日期模式
       .replace(/-\d{2}-\d{2}$/g, "") // 移除 -05-20 格式（月-日）
       .replace(/-\d{3}$/g, "") // 移除 -001 等3位数字格式
-      .replace(/-latest$/g, "") // 移除 -latest 后缀
-      .replace(/-preview$/g, "") // 移除 -preview 后缀
-      .replace(/-beta$/g, "") // 移除 -beta 后缀
-      .replace(/-alpha$/g, "") // 移除 -alpha 后缀
-      .replace(/-instruct$/g, "") // 移除 -instruct 后缀
-      .replace(/-chat$/g, "") // 移除 -chat 后缀
       // 替换连续的多个连字符为单个连字符
       .replace(/-+/g, "-")
       // 移除字符串开头和结尾的连字符
@@ -333,7 +332,7 @@ class YamlManager {
 
     // 检查是否需要添加重命名映射
     const needsWithoutOrgMapping = originalModelName !== withoutOrgName;
-    const needsSimplifiedMapping = 
+    const needsSimplifiedMapping =
       withoutOrgName !== simplifiedName && originalModelName !== simplifiedName;
 
     let mappingsAdded = 0;
@@ -344,7 +343,9 @@ class YamlManager {
       renameMapping[originalModelName] = withoutOrgName;
       modelMappings.push(renameMapping);
       mappingsAdded++;
-      console.log(`📝 添加重命名映射 #1: ${originalModelName} -> ${withoutOrgName}`);
+      console.log(
+        `📝 添加重命名映射 #1: ${originalModelName} -> ${withoutOrgName}`
+      );
     }
 
     // 添加简化名称的重命名映射
@@ -353,7 +354,9 @@ class YamlManager {
       renameMapping[originalModelName] = simplifiedName;
       modelMappings.push(renameMapping);
       mappingsAdded++;
-      console.log(`📝 添加重命名映射 #2: ${originalModelName} -> ${simplifiedName}`);
+      console.log(
+        `📝 添加重命名映射 #2: ${originalModelName} -> ${simplifiedName}`
+      );
     }
 
     providerConfig.model = modelMappings;
@@ -363,7 +366,11 @@ class YamlManager {
       const aliases = [];
       if (needsWithoutOrgMapping) aliases.push(`"${withoutOrgName}"`);
       if (needsSimplifiedMapping) aliases.push(`"${simplifiedName}"`);
-      console.log(`✅ 模型 "${originalModelName}" 添加 ${mappingsAdded} 个别名: ${aliases.join(', ')}`);
+      console.log(
+        `✅ 模型 "${originalModelName}" 添加 ${mappingsAdded} 个别名: ${aliases.join(
+          ", "
+        )}`
+      );
     } else {
       console.log(`📝 模型 "${originalModelName}" 无需别名`);
     }
