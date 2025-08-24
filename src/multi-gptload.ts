@@ -343,11 +343,18 @@ class MultiGptloadManager {
         }
         
         // 5. 通过实例代理测试站点连通性（测试models端点）
-        const proxyUrl = `/proxy/${tempGroupName}/v1/models`;
+        const proxyUrl = `${instance.url}/proxy/${tempGroupName}/v1/models`;
         console.log(`🔗 通过代理测试连通性: ${proxyUrl}`);
         
-        const testResponse = await instance.apiClient.get(proxyUrl, {
+        // 使用 axios 直接请求完整URL
+        const axios = require('axios');
+        const testResponse = await axios.get(proxyUrl, {
           timeout: 10000, // 10秒超时
+          httpsAgent: this.httpsAgent,
+          headers: {
+            'Authorization': `Bearer ${options.testApiKey || 'dummy-key'}`,
+            'User-Agent': 'uni-load/1.0.0',
+          },
           validateStatus: (status) => status < 500, // 4xx可接受，5xx表示服务器问题
         });
         
@@ -558,15 +565,20 @@ class MultiGptloadManager {
         }
         
         // 3. 通过代理获取模型列表
-        const proxyUrl = `/proxy/${tempGroupName}/v1/models`;
+        const proxyUrl = `${instance.url}/proxy/${tempGroupName}/v1/models`;
         console.log(`🔗 通过代理获取模型: ${proxyUrl}`);
         
-        const modelsResponse = await instance.apiClient.get(proxyUrl, {
+        // 使用 axios 直接请求完整URL
+        const axios = require('axios');
+        const modelsResponse = await axios.get(proxyUrl, {
           timeout: 30000, // 30秒超时
+          httpsAgent: this.httpsAgent,
           headers: {
             'Authorization': `Bearer ${apiKey}`,
             'Content-Type': 'application/json',
+            'User-Agent': 'uni-load/1.0.0',
           },
+          validateStatus: (status) => status < 500, // 允许4xx响应
         });
         
         console.log(`📡 代理模型响应: ${modelsResponse.status}`);
