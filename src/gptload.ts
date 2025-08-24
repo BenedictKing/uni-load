@@ -60,7 +60,8 @@ class GptloadService {
     apiKeys,
     channelType = "openai",
     customValidationEndpoints = {},
-    availableModels = null
+    availableModels = null,
+    isModelGroup = false
   ) {
     console.log(
       `🔄 开始创建站点分组: ${siteName}, 基础URL: ${baseUrl}, 格式: ${channelType}`
@@ -71,7 +72,8 @@ class GptloadService {
       apiKeys,
       channelType,
       customValidationEndpoints,
-      availableModels
+      availableModels,
+      isModelGroup
     );
   }
 
@@ -91,7 +93,8 @@ class GptloadService {
     apiKeys,
     channelType = "openai",
     customValidationEndpoints = {},
-    availableModels = null
+    availableModels = null,
+    isModelGroup = false
   ) {
     // 使用分组所在的实例进行更新
     const instanceId = existingGroup._instance?.id;

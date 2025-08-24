@@ -459,7 +459,8 @@ class MultiGptloadManager {
     apiKeys,
     channelType = "openai",
     customValidationEndpoints = {},
-    availableModels = null
+    availableModels = null,
+    isModelGroup = false
   ) {
     return await this.executeOnBestInstance(
       baseUrl,
@@ -485,7 +486,8 @@ class MultiGptloadManager {
             apiKeys,
             channelType,
             customValidationEndpoints,
-            availableModels
+            availableModels,
+            isModelGroup
           );
         }
 
@@ -494,8 +496,17 @@ class MultiGptloadManager {
         // 根据不同 channel_type 设置默认参数
         const channelConfig = this.getChannelConfig(channelType);
 
-        // 选择验证模型：优先使用小模型列表中的模型
-        const testModel = this.selectTestModel(availableModels, channelType);
+        // 选择验证模型：分层处理
+        let testModel;
+        if (isModelGroup) {
+          // 第二/三层分组：直接使用指定模型
+          testModel = availableModels?.[0] || channelConfig.test_model;
+          console.log(`🎯 第二/三层分组使用指定模型: ${testModel}`);
+        } else {
+          // 第一层分组：从小模型列表选择，避免高消耗
+          testModel = this.selectTestModel(availableModels, channelType);
+          console.log(`🔍 第一层分组选择验证模型: ${testModel}`);
+        }
 
         // 确定要使用的验证端点
         const validationEndpoint =
@@ -574,7 +585,8 @@ class MultiGptloadManager {
                 apiKeys,
                 channelType,
                 customValidationEndpoints,
-                availableModels
+                availableModels,
+                isModelGroup
               );
             }
           }
@@ -665,7 +677,8 @@ class MultiGptloadManager {
     apiKeys,
     channelType,
     customValidationEndpoints = {},
-    availableModels = null
+    availableModels = null,
+    isModelGroup = false
   ) {
     try {
       console.log(
@@ -675,8 +688,17 @@ class MultiGptloadManager {
       // 根据不同 channel_type 设置默认参数
       const channelConfig = this.getChannelConfig(channelType);
 
-      // 选择验证模型：优先使用小模型列表中的模型
-      const testModel = this.selectTestModel(availableModels, channelType);
+      // 选择验证模型：分层处理
+      let testModel;
+      if (isModelGroup) {
+        // 第二/三层分组：直接使用指定模型
+        testModel = availableModels?.[0] || channelConfig.test_model;
+        console.log(`🎯 更新第二/三层分组使用指定模型: ${testModel}`);
+      } else {
+        // 第一层分组：从小模型列表选择，避免高消耗
+        testModel = this.selectTestModel(availableModels, channelType);
+        console.log(`🔍 更新第一层分组选择验证模型: ${testModel}`);
+      }
 
       // 确定要使用的验证端点
       const validationEndpoint =

@@ -643,7 +643,8 @@ class ThreeLayerArchitecture {
           [],
           groupData.channel_type,
           {},
-          [model]
+          [model],
+          true // 标记为模型分组，直接使用指定模型
         );
 
         if (created) {
