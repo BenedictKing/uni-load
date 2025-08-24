@@ -1212,7 +1212,7 @@
           btn.disabled = true;
           btn.textContent = "清理中...";
 
-          const response = await fetch("/api/sync-models/cleanup", {
+          const response = await fetch("/api/maintenance/delete-model-groups", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
           });
@@ -1221,8 +1221,13 @@
 
           if (data.success) {
             let successMsg = `✅ ${data.message}\n\n`;
-            successMsg += `删除的分组: ${data.data.deletedGroups}\n`;
-            successMsg += `清理的Provider: ${data.data.cleanedProviders}`;
+            successMsg += `删除的分组: ${data.results.deleted.length}\n`;
+            
+            // 如果有失败的分组，也显示出来
+            if (data.results.failed.length > 0) {
+              successMsg += `失败的分组: ${data.results.failed.length}`;
+            }
+            
             alert(successMsg);
 
             // 成功后刷新状态
