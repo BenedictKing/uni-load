@@ -61,24 +61,74 @@ class ThreeLayerArchitecture {
       const siteGroups = await this.getSiteGroups();
       console.log(`✅ 第1层: 发现 ${siteGroups.length} 个站点分组`);
 
-      // 2. 获取所有模型
-      const models = await this.getAllUniqueModels(siteGroups);
-      console.log(`📊 发现 ${models.length} 个独特模型`);
+      // 2. 创建模型到站点的精确映射
+      const modelSiteMap = new Map(); // 模型 -> 支持该模型的站点分组
+      
+      console.log("📊 分析每个站点分组支持的模型...");
+      for (const siteGroup of siteGroups) {
+        try {
+          // 获取站点支持的实际模型列表
+          const siteModels = await this.getValidatedModelsForSite(siteGroup);
+          console.log(`🔍 站点 ${siteGroup.name}: 支持 ${siteModels.length} 个模型`);
+          
+          for (const model of siteModels) {
+            if (!modelSiteMap.has(model)) {
+              modelSiteMap.set(model, []);
+            }
+            modelSiteMap.get(model).push(siteGroup);
+          }
+        } catch (error) {
+          console.error(`获取站点 ${siteGroup.name} 的模型失败:`, error.message);
+        }
+      }
+
+      // 提取所有已验证的模型
+      const models = Array.from(modelSiteMap.keys());
+      console.log(`📊 发现 ${models.length} 个已验证可用模型`);
+      console.log(`🎯 模型分布统计:`);
+      modelSiteMap.forEach((sites, model) => {
+        console.log(`  - ${model}: ${sites.length} 个站点支持`);
+      });
 
       // 3. 创建模型-渠道分组（第2层）
       const modelChannelGroups = await this.createModelChannelGroups(
         models,
-        siteGroups
+        siteGroups,
+        modelSiteMap
       );
       console.log(
         `✅ 第2层: 创建 ${modelChannelGroups.length} 个模型-渠道分组`
       );
 
-      // 4. 创建模型聚合分组（第3层）
-      const aggregateGroups = await this.createAggregateGroups(
-        models,
-        modelChannelGroups
-      );
+      // 4. 创建模型聚合分组（第3层）- 基于精确映射
+      const aggregateGroups = [];
+      console.log("🔧 为每个模型创建聚合分组...");
+      
+      for (const [model, supportingSites] of modelSiteMap) {
+        try {
+          // 仅选择支持该模型的模型-渠道分组
+          const supportingChannels = modelChannelGroups.filter(group => 
+            group.test_model === model && 
+            supportingSites.some(site => group.name.includes(site.name))
+          );
+          
+          if (supportingChannels.length > 0) {
+            console.log(`🎯 模型 ${model}: 找到 ${supportingChannels.length} 个支持的渠道分组`);
+            const aggregateGroup = await this.createAggregateGroupForModel(
+              model,
+              supportingChannels
+            );
+            if (aggregateGroup) {
+              aggregateGroups.push(aggregateGroup);
+            }
+          } else {
+            console.log(`⚠️ 模型 ${model}: 未找到支持的渠道分组，跳过聚合`);
+          }
+        } catch (error) {
+          console.error(`为模型 ${model} 创建聚合分组失败:`, error.message);
+        }
+      }
+      
       console.log(`✅ 第3层: 创建 ${aggregateGroups.length} 个模型聚合分组`);
 
       // 5. 设置被动恢复机制
@@ -142,33 +192,57 @@ class ThreeLayerArchitecture {
   }
 
   /**
-   * 从站点分组获取所有独特模型
+   * 从站点分组获取已验证的模型列表
+   */
+  async getValidatedModelsForSite(siteGroup) {
+    try {
+      // 优先使用 gptload 存储的已验证模型列表
+      if (siteGroup.validated_models && Array.isArray(siteGroup.validated_models)) {
+        console.log(`📋 使用站点 ${siteGroup.name} 的缓存模型列表 (${siteGroup.validated_models.length} 个)`);
+        return modelConfig.filterModels(siteGroup.validated_models);
+      }
+      
+      // 回退方案：从 API 重新获取
+      const apiKeys = await gptloadService.getGroupApiKeys(
+        siteGroup.id,
+        siteGroup._instance.id
+      );
+
+      if (apiKeys.length === 0) {
+        console.log(`⚠️ 站点 ${siteGroup.name} 没有可用的 API 密钥，跳过模型获取`);
+        return [];
+      }
+
+      const modelsService = require("./models");
+      const baseUrl = siteGroup.upstreams[0]?.url;
+
+      if (!baseUrl) {
+        console.log(`⚠️ 站点 ${siteGroup.name} 没有配置上游 URL，跳过模型获取`);
+        return [];
+      }
+
+      console.log(`🔄 从站点 ${siteGroup.name} API 获取模型列表...`);
+      const allModels = await modelsService.getModels(baseUrl, apiKeys[0]);
+      const filteredModels = modelConfig.filterModels(allModels);
+      
+      console.log(`✅ 站点 ${siteGroup.name}: 获取到 ${allModels.length} 个模型，过滤后 ${filteredModels.length} 个`);
+      
+      return filteredModels;
+    } catch (error) {
+      console.error(`获取站点 ${siteGroup.name} 的模型失败:`, error.message);
+      return [];
+    }
+  }
+
+  /**
+   * 从站点分组获取所有独特模型（保留兼容性）
    */
   async getAllUniqueModels(siteGroups) {
     const allModels = new Set();
 
     for (const siteGroup of siteGroups) {
-      try {
-        // 从站点获取模型列表
-        const apiKeys = await gptloadService.getGroupApiKeys(
-          siteGroup.id,
-          siteGroup._instance.id
-        );
-
-        if (apiKeys.length > 0) {
-          const modelsService = require("./models");
-          const baseUrl = siteGroup.upstreams[0]?.url;
-
-          if (baseUrl) {
-            const models = await modelsService.getModels(baseUrl, apiKeys[0]);
-            const filteredModels = modelConfig.filterModels(models);
-
-            filteredModels.forEach((model) => allModels.add(model));
-          }
-        }
-      } catch (error) {
-        console.error(`获取站点 ${siteGroup.name} 的模型失败:`, error.message);
-      }
+      const models = await this.getValidatedModelsForSite(siteGroup);
+      models.forEach((model) => allModels.add(model));
     }
 
     return Array.from(allModels);
@@ -177,7 +251,7 @@ class ThreeLayerArchitecture {
   /**
    * 创建模型-渠道分组（第2层）
    */
-  async createModelChannelGroups(models, siteGroups) {
+  async createModelChannelGroups(models, siteGroups, modelSiteMap = null) {
     console.log("🔧 创建模型-渠道分组（第2层）...");
 
     // 🔧 添加参数验证
@@ -204,11 +278,20 @@ class ThreeLayerArchitecture {
     const groups = [];
     const config = this.layerConfigs.modelChannelGroup;
 
-    // 计算总任务数
-    const totalTasks = models.length * siteGroups.length;
-    console.log(
-      `📊 准备处理 ${models.length} 个模型 × ${siteGroups.length} 个站点 = ${totalTasks} 个任务`
-    );
+    // 计算总任务数 - 如果有精确映射，使用实际的模型-站点组合数
+    let totalTasks;
+    if (modelSiteMap) {
+      totalTasks = 0;
+      modelSiteMap.forEach((sites, model) => {
+        totalTasks += sites.length;
+      });
+      console.log(`📊 基于精确映射处理 ${totalTasks} 个模型-站点组合`);
+    } else {
+      totalTasks = models.length * siteGroups.length;
+      console.log(
+        `📊 准备处理 ${models.length} 个模型 × ${siteGroups.length} 个站点 = ${totalTasks} 个任务`
+      );
+    }
 
     // 一次性获取所有分组信息，避免重复查询
     console.log("📊 获取现有分组信息...");
@@ -241,8 +324,10 @@ class ThreeLayerArchitecture {
       // 🔧 添加模型名称验证
       if (!model || typeof model !== "string") {
         console.error(`❌ 模型名称无效 (索引 ${modelIndex}):`, model);
-        failedCount += siteGroups.length;
-        processedTasks += siteGroups.length;
+        // 跳过计数调整
+        const skipCount = modelSiteMap ? modelSiteMap.get(model)?.length || 0 : siteGroups.length;
+        failedCount += skipCount;
+        processedTasks += skipCount;
         continue;
       }
 
@@ -252,8 +337,12 @@ class ThreeLayerArchitecture {
       let modelSkippedCount = 0;
       let modelFailedCount = 0;
 
-      for (let siteIndex = 0; siteIndex < siteGroups.length; siteIndex++) {
-        const site = siteGroups[siteIndex];
+      // 获取该模型支持的站点分组（精确匹配）
+      const supportingSites = modelSiteMap ? modelSiteMap.get(model) || [] : siteGroups;
+      console.log(`📋 模型 ${model}: 将处理 ${supportingSites.length} 个支持的站点`);
+
+      for (let siteIndex = 0; siteIndex < supportingSites.length; siteIndex++) {
+        const site = supportingSites[siteIndex];
         processedTasks++;
 
         // 🔧 添加站点分组验证
