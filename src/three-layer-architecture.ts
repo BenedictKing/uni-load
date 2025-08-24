@@ -45,6 +45,9 @@ class ThreeLayerArchitecture {
     // 恢复策略
     this.recoverySchedule = new Map(); // "model:channel" -> { nextRetry: Date, retryCount: number }
     this.failureHistory = new Map(); // "model:channel" -> { failures: number, lastFailure: Date }
+    
+    // 权重缓存，避免频繁的重复更新
+    this.weightCache = new Map(); // groupId -> cached weights
   }
 
   /**
@@ -740,23 +743,28 @@ class ThreeLayerArchitecture {
    * 启动权重优化
    */
   startWeightOptimization() {
-    // 每30分钟优化一次权重
+    // 每24小时优化一次权重，避免过于频繁的缓存重载
     setInterval(async () => {
       await this.optimizeAggregateWeights();
-    }, 30 * 60 * 1000);
+    }, 24 * 60 * 60 * 1000);
   }
 
   /**
    * 优化聚合分组的权重
    */
   async optimizeAggregateWeights() {
-    console.log("⚖️ 优化聚合分组权重...");
+    console.log("⚖️ 开始聚合分组权重优化...");
 
     try {
       const allGroups = await gptloadService.getAllGroups();
       const aggregateGroups = allGroups.filter((g) =>
         g.tags?.includes("layer-3")
       );
+
+      console.log(`📊 发现 ${aggregateGroups.length} 个聚合分组需要检查权重`);
+      
+      let updatedCount = 0;
+      let skippedCount = 0;
 
       for (const group of aggregateGroups) {
         const upstreamStats = [];
@@ -796,13 +804,30 @@ class ThreeLayerArchitecture {
           });
         }
 
+        // 检查缓存，避免重复更新相同权重
+        const cachedWeights = this.getCachedWeights(group.id);
+        if (cachedWeights && this.compareWeights(upstreamStats, cachedWeights)) {
+          skippedCount++;
+          continue; // 权重未变化，跳过更新
+        }
+
         // 更新权重
         if (upstreamStats.length > 0) {
           await gptloadService.updateGroup(group.id, group._instance.id, {
             upstreams: upstreamStats,
           });
+          
+          // 更新缓存
+          this.updateWeightCache(group.id, upstreamStats);
+          updatedCount++;
+          
+          // 添加延迟避免瞬时高负载
+          await new Promise(resolve => setTimeout(resolve, 100));
         }
       }
+      
+      console.log(`✅ 权重优化完成: 更新了 ${updatedCount} 个分组，跳过了 ${skippedCount} 个分组（权重未变化）`);
+      
     } catch (error) {
       console.error("权重优化失败:", error.message);
     }
@@ -973,10 +998,48 @@ class ThreeLayerArchitecture {
   }
 
   /**
+   * 获取缓存的权重
+   */
+  getCachedWeights(groupId) {
+    return this.weightCache.get(groupId);
+  }
+
+  /**
+   * 更新权重缓存
+   */
+  updateWeightCache(groupId, weights) {
+    this.weightCache.set(groupId, JSON.parse(JSON.stringify(weights)));
+  }
+
+  /**
+   * 比较两个权重配置是否相同
+   */
+  compareWeights(newWeights, cachedWeights) {
+    if (!newWeights || !cachedWeights) return false;
+    if (newWeights.length !== cachedWeights.length) return false;
+    
+    // 按URL排序后比较
+    const sortedNew = [...newWeights].sort((a, b) => a.url.localeCompare(b.url));
+    const sortedCached = [...cachedWeights].sort((a, b) => a.url.localeCompare(b.url));
+    
+    for (let i = 0; i < sortedNew.length; i++) {
+      if (sortedNew[i].url !== sortedCached[i].url || 
+          sortedNew[i].weight !== sortedCached[i].weight) {
+        return false;
+      }
+    }
+    
+    return true;
+  }
+
+  /**
    * 停止服务
    */
   stop() {
     // 清理定时器等资源
+    if (this.weightCache) {
+      this.weightCache.clear();
+    }
     console.log("🛑 三层架构管理器已停止");
   }
 
