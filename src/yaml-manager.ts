@@ -321,58 +321,37 @@ class YamlManager {
       tools: true,
     };
 
-    // 构建模型映射：提供原始名称和多个重命名版本
+    // 构建模型映射：原始名称 + 独立的重命名映射
     const modelMappings = [originalModelName]; // 始终包含原始名称
 
     // 检查是否需要添加重命名映射
     const needsWithoutOrgMapping = originalModelName !== withoutOrgName;
-    const needsSimplifiedMapping =
+    const needsSimplifiedMapping = 
       withoutOrgName !== simplifiedName && originalModelName !== simplifiedName;
 
-    if (needsWithoutOrgMapping || needsSimplifiedMapping) {
-      // 添加重命名映射对象
-      const renameMap = {};
+    // 添加去除组织名的重命名映射
+    if (needsWithoutOrgMapping) {
+      const renameMapping = {};
+      renameMapping[originalModelName] = withoutOrgName;
+      modelMappings.push(renameMapping);
+      console.log(`📝 添加重命名映射: ${originalModelName} -> ${withoutOrgName}`);
+    }
 
-      if (needsWithoutOrgMapping) {
-        renameMap[originalModelName] = withoutOrgName;
-        console.log(
-          `📝 添加重命名映射: ${originalModelName} -> ${withoutOrgName}`
-        );
-      }
-
-      if (needsSimplifiedMapping) {
-        // 注意：如果两个重命名不同，需要添加两个映射
-        if (needsWithoutOrgMapping) {
-          // 添加第二个重命名映射
-          modelMappings.push({ [originalModelName]: simplifiedName });
-          console.log(
-            `📝 添加重命名映射: ${originalModelName} -> ${simplifiedName}`
-          );
-        } else {
-          renameMap[originalModelName] = simplifiedName;
-          console.log(
-            `📝 添加重命名映射: ${originalModelName} -> ${simplifiedName}`
-          );
-        }
-      }
-
-      // 添加第一个重命名映射
-      if (Object.keys(renameMap).length > 0) {
-        modelMappings.push(renameMap);
-      }
+    // 添加简化名称的重命名映射
+    if (needsSimplifiedMapping) {
+      const renameMapping = {};
+      renameMapping[originalModelName] = simplifiedName;
+      modelMappings.push(renameMapping);
+      console.log(`📝 添加重命名映射: ${originalModelName} -> ${simplifiedName}`);
     }
 
     providerConfig.model = modelMappings;
 
     // 日志输出
-    if (needsWithoutOrgMapping || needsSimplifiedMapping) {
-      let logMsg = `📝 添加模型配置: ${originalModelName} (原始)`;
-      if (needsWithoutOrgMapping) logMsg += ` + -> ${withoutOrgName}`;
-      if (needsSimplifiedMapping) logMsg += ` + -> ${simplifiedName}`;
-      console.log(logMsg);
-    } else {
-      console.log(`📝 添加模型配置: ${originalModelName} (仅原始名称)`);
-    }
+    let logMsg = `📝 添加模型配置: ${originalModelName}`;
+    if (needsWithoutOrgMapping) logMsg += ` + ${originalModelName}→${withoutOrgName}`;
+    if (needsSimplifiedMapping) logMsg += ` + ${originalModelName}→${simplifiedName}`;
+    console.log(logMsg);
 
     if (existingProviderIndex >= 0) {
       // 更新现有 provider
