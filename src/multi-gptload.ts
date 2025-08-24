@@ -262,34 +262,53 @@ class MultiGptloadManager {
       console.log(`✅ 健康检查后发现 ${healthyInstances.length} 个健康实例`);
     }
 
-    // 测试每个实例是否能访问该站点
-    for (const instance of healthyInstances) {
-      const canAccess = await this.testSiteAccessibility(
-        instance,
-        siteUrl,
-        { ...options, testApiKey: options.apiKey }
-      );
+    console.log(`🔍 开始依次测试 ${healthyInstances.length} 个健康实例对 ${siteUrl} 的访问能力...`);
 
-      if (canAccess) {
-        console.log(`✅ 实例 ${instance.name} 可以通过代理访问 ${siteUrl}`);
-        return instance;
-      } else {
-        console.log(`❌ 实例 ${instance.name} 无法通过代理访问 ${siteUrl}`);
+    // 依次测试每个实例是否能访问该站点
+    for (let i = 0; i < healthyInstances.length; i++) {
+      const instance = healthyInstances[i];
+      
+      console.log(`🔄 [${i + 1}/${healthyInstances.length}] 测试实例 ${instance.name} 对 ${siteUrl} 的访问...`);
+      
+      try {
+        const canAccess = await this.testSiteAccessibility(
+          instance,
+          siteUrl,
+          { ...options, testApiKey: options.apiKey }
+        );
+
+        if (canAccess) {
+          console.log(`✅ 实例 ${instance.name} 可以访问 ${siteUrl}，选择此实例`);
+          return instance;
+        } else {
+          console.log(`❌ 实例 ${instance.name} 无法访问 ${siteUrl}`);
+          
+          // 如果不是最后一个实例，继续测试下一个
+          if (i < healthyInstances.length - 1) {
+            console.log(`🔄 继续测试下一个实例...`);
+          }
+        }
+      } catch (error) {
+        console.error(`❌ 测试实例 ${instance.name} 时发生错误: ${error.message}`);
+        
+        // 如果不是最后一个实例，继续测试下一个
+        if (i < healthyInstances.length - 1) {
+          console.log(`🔄 跳过出错的实例，继续测试下一个...`);
+        }
       }
     }
 
-    // 如果都无法访问，返回优先级最高的健康实例
-    const fallbackInstance = healthyInstances[0];
-    console.log(
-      `⚠️ 所有实例都无法访问 ${siteUrl}，使用回退实例 ${fallbackInstance.name}`
-    );
-    return fallbackInstance;
+    // 所有实例都测试失败，返回null而不是回退实例
+    console.log(`❌ 所有 ${healthyInstances.length} 个实例都无法访问 ${siteUrl}`);
+    return null;
   }
 
   /**
    * 测试实例是否可以访问指定站点（通过创建临时站点分组测试）
    */
   async testSiteAccessibility(instance, siteUrl, options) {
+    let tempGroupId = null;
+    
     try {
       console.log(`🔍 测试实例 ${instance.name} 是否可以访问 ${siteUrl}...`);
       
@@ -314,85 +333,70 @@ class MultiGptloadManager {
           blacklist_threshold: 1, // 快速失败
         },
       };
-
-      let tempGroupId = null;
       
-      try {
-        // 3. 创建临时分组
-        const createResponse = await instance.apiClient.post("/groups", tempGroupData);
-        
-        // 处理响应格式
-        let tempGroup;
-        if (createResponse.data && typeof createResponse.data.code === "number") {
-          tempGroup = createResponse.data.data;
-        } else {
-          tempGroup = createResponse.data;
+      // 3. 创建临时分组
+      const createResponse = await instance.apiClient.post("/groups", tempGroupData);
+      
+      // 处理响应格式
+      let tempGroup;
+      if (createResponse.data && typeof createResponse.data.code === "number") {
+        tempGroup = createResponse.data.data;
+      } else {
+        tempGroup = createResponse.data;
+      }
+      
+      tempGroupId = tempGroup.id;
+      console.log(`✅ 临时分组创建成功: ${tempGroupId}`);
+      
+      // 4. 添加一个临时API密钥（如果站点需要认证）
+      if (options.testApiKey) {
+        try {
+          await this.addApiKeysToGroup(instance, tempGroupId, [options.testApiKey]);
+          console.log(`🔑 已为临时分组添加测试密钥`);
+        } catch (keyError) {
+          console.warn(`⚠️ 添加测试密钥失败: ${keyError.message}`);
         }
-        
-        tempGroupId = tempGroup.id;
-        console.log(`✅ 临时分组创建成功: ${tempGroupId}`);
-        
-        // 4. 添加一个临时API密钥（如果站点需要认证）
-        if (options.testApiKey) {
-          try {
-            await this.addApiKeysToGroup(instance, tempGroupId, [options.testApiKey]);
-            console.log(`🔑 已为临时分组添加测试密钥`);
-          } catch (keyError) {
-            console.warn(`⚠️ 添加测试密钥失败: ${keyError.message}`);
-          }
-        }
-        
-        // 5. 通过实例代理测试站点连通性（测试models端点）
-        const proxyUrl = `${instance.url}/proxy/${tempGroupName}/v1/models`;
-        console.log(`🔗 通过代理测试连通性: ${proxyUrl}`);
-        
-        // 使用 axios 直接请求完整URL
-        const axios = require('axios');
-        const testResponse = await axios.get(proxyUrl, {
-          timeout: 10000, // 10秒超时
-          httpsAgent: this.httpsAgent,
-          headers: {
-            'Authorization': `Bearer ${options.testApiKey || 'dummy-key'}`,
-            'User-Agent': 'uni-load/1.0.0',
-          },
-          validateStatus: (status) => status < 500, // 4xx可接受，5xx表示服务器问题
-        });
-        
-        console.log(`📡 代理测试响应: ${testResponse.status} ${testResponse.statusText}`);
-        
-        // 6. 根据响应判断连通性
-        if (testResponse.status === 200 || testResponse.status === 401 || testResponse.status === 403) {
-          // 200: 成功访问
-          // 401/403: 站点可达但需要认证，说明连通性OK
-          console.log(`✅ 实例 ${instance.name} 可以通过代理访问 ${siteUrl}`);
-          return true;
-        } else {
-          console.log(`⚠️ 实例 ${instance.name} 代理访问 ${siteUrl} 返回状态: ${testResponse.status}`);
-          return false;
-        }
-        
-      } finally {
-        // 7. 清理临时分组
-        if (tempGroupId) {
-          try {
-            await instance.apiClient.delete(`/groups/${tempGroupId}`);
-            console.log(`🗑️ 已清理临时测试分组: ${tempGroupId}`);
-          } catch (cleanupError) {
-            console.warn(`⚠️ 清理临时分组失败: ${cleanupError.message}`);
-          }
-        }
+      }
+      
+      // 5. 通过实例代理测试站点连通性（测试models端点）
+      const proxyUrl = `${instance.url}/proxy/${tempGroupName}/v1/models`;
+      console.log(`🔗 通过代理测试连通性: ${proxyUrl}`);
+      
+      // 使用 axios 直接请求完整URL
+      const axios = require('axios');
+      const testResponse = await axios.get(proxyUrl, {
+        timeout: 10000, // 10秒超时
+        httpsAgent: this.httpsAgent,
+        headers: {
+          'Authorization': `Bearer ${options.testApiKey || 'dummy-key'}`,
+          'User-Agent': 'uni-load/1.0.0',
+        },
+        validateStatus: (status) => status < 500, // 4xx可接受，5xx表示服务器问题
+      });
+      
+      console.log(`📡 代理测试响应: ${testResponse.status} ${testResponse.statusText}`);
+      
+      // 6. 根据响应判断连通性
+      if (testResponse.status === 200 || testResponse.status === 401 || testResponse.status === 403) {
+        // 200: 成功访问
+        // 401/403: 站点可达但需要认证，说明连通性OK
+        console.log(`✅ 实例 ${instance.name} 可以通过代理访问 ${siteUrl}`);
+        return true;
+      } else {
+        console.log(`❌ 实例 ${instance.name} 代理访问 ${siteUrl} 返回状态: ${testResponse.status}`);
+        return false;
       }
       
     } catch (error) {
       console.log(`❌ 实例 ${instance.name} 连通性测试失败: ${error.message}`);
 
-      // 判断错误类型
+      // 判断错误类型并返回明确结果
       if (error.response) {
         const status = error.response.status;
         
-        // 5xx错误或连接超时可能表示实例或站点不可用
+        // 5xx错误表示站点或实例问题
         if (status >= 500) {
-          console.log(`📊 收到5xx错误，可能是站点问题: ${status}`);
+          console.log(`📊 收到5xx错误，站点或实例问题: ${status}`);
           return false;
         }
         
@@ -409,8 +413,19 @@ class MultiGptloadManager {
         return false;
       }
 
-      // 其他错误保守处理
+      // 其他错误返回false
       return false;
+      
+    } finally {
+      // 确保清理临时分组
+      if (tempGroupId) {
+        try {
+          await instance.apiClient.delete(`/groups/${tempGroupId}`);
+          console.log(`🗑️ 已清理临时测试分组: ${tempGroupId}`);
+        } catch (cleanupError) {
+          console.warn(`⚠️ 清理临时分组失败: ${cleanupError.message}`);
+        }
+      }
     }
   }
 
