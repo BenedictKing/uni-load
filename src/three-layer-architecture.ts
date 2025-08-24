@@ -506,7 +506,7 @@ class ThreeLayerArchitecture {
             }
           );
           
-          // 获取实例并添加认证密钥
+          // 获取实例并添加认证密钥  
           const instance = gptloadService.manager.getInstance(created._instance.id);
           if (instance && instance.token) {
             await gptloadService.manager.addApiKeysToGroup(
@@ -514,7 +514,7 @@ class ThreeLayerArchitecture {
               created.id,
               [instance.token]
             );
-            console.log(`🔑 [${processedModels}/${totalModels}] 已为第三层分组添加认证密钥`);
+            console.log(`🔑 [${processedModels}/${totalModels}] 已为第三层分组添加实例认证token`);
           }
           
           groups.push(created);
