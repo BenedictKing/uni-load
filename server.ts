@@ -27,8 +27,10 @@ app.use(express.static(path.join(__dirname, "public")));
 // 自动生成站点名称的函数
 function generateSiteNameFromUrl(baseUrl: string): string {
   try {
+    // 移除末尾的斜杠
+    let url = baseUrl.replace(/\/+$/, '');
+    
     // 确保URL有协议前缀
-    let url = baseUrl;
     if (!url.startsWith("http://") && !url.startsWith("https://")) {
       url = "https://" + url;
     }
@@ -103,11 +105,14 @@ function generateSiteNameFromUrl(baseUrl: string): string {
 // 预览站点名称的API端点
 app.post("/api/preview-site-name", (req: Request, res: Response) => {
   try {
-    const { baseUrl } = req.body;
+    let { baseUrl } = req.body;
 
     if (!baseUrl) {
       return res.status(400).json({ error: "需要提供 baseUrl" });
     }
+
+    // 规范化baseUrl：移除末尾的斜杠
+    baseUrl = baseUrl.replace(/\/+$/, '');
 
     const siteName = generateSiteNameFromUrl(baseUrl);
     res.json({ siteName });
@@ -119,7 +124,7 @@ app.post("/api/preview-site-name", (req: Request, res: Response) => {
 // API 路由
 app.post("/api/process-ai-site", async (req: Request<{}, any, ProcessAiSiteRequest>, res: Response<ApiResponse | ApiErrorResponse>) => {
   try {
-    const { baseUrl, apiKeys, channelTypes, customValidationEndpoints } =
+    let { baseUrl, apiKeys, channelTypes, customValidationEndpoints } =
       req.body;
 
     if (!baseUrl) {
@@ -127,6 +132,10 @@ app.post("/api/process-ai-site", async (req: Request<{}, any, ProcessAiSiteReque
         error: "参数不完整：需要 baseUrl",
       });
     }
+
+    // 规范化baseUrl：移除末尾的斜杠
+    baseUrl = baseUrl.replace(/\/+$/, '');
+    console.log(`📝 规范化后的baseUrl: ${baseUrl}`);
 
     // apiKeys 现在是可选的，如果为空或未提供，后续处理中会跳过密钥更新
     const hasNewApiKeys =
