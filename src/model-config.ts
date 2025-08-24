@@ -1,6 +1,6 @@
 /**
  * 模型配置管理
- * 
+ *
  * 统一管理所有模型相关的配置，包括：
  * - 白名单（允许的模型前缀）
  * - 黑名单（禁用的模型关键词）
@@ -15,65 +15,69 @@ class ModelConfig {
       // OpenAI
       "gpt-",
       "chatgpt-",
-      
+
       // Google
       "gemini-2.5-", // 仅支持 2.5 及以上版本
       "gemma-",
-      
+
       // Anthropic
       "claude-opus",
       "claude-sonnet",
       "claude-3",
       "claude-4",
-      
+
       // DeepSeek
       "deepseek-",
-      
+
       // Qwen (Alibaba)
-      "qwen-",
-      "qwen3-",
-      
+      // "qwen-",
+      // "qwen3-",
+
       // Llama (Meta)
-      "llama-",
-      
+      // "llama-",
+
       // Mistral
-      "mixtral-",
-      "mistral-",
-      
+      // "mixtral-",
+      // "mistral-",
+
       // 01.ai
       // "yi-",
-      
+
       // Moonshot
       "kimi-k2",
-      
+
       // Doubao (ByteDance)
       "doubao-1-6-",
       "doubao-seed-",
-      
+
       // Zhipu AI (智谱)
-      "glm-",
-      
+      "glm-4.5",
+
       // xAI
       "grok-3",
       "grok-4",
-      
+
       // Flux
-      "flux-",
-      
+      // "flux-",
+
       // Misc / Provider Specific
-      "o1",
-      "o3",
-      "o4",
-      
+      // "o1",
+      // "o3",
+      // "o4",
+
       // vercel v0
       "v0-",
-      
+
       // MiniMax
-      "minimax-",
+      // "minimax-",
     ];
 
     // 模型黑名单关键词（不区分大小写），包含这些词的模型将被过滤
     this.blacklistedKeywords = [
+      "gpt-3.5",
+      "test",
+      "bge",
+      "distill",
       "vision",
       "image",
       "audio",
@@ -101,6 +105,7 @@ class ModelConfig {
     // 优先使用的小模型列表（按优先级排序，用于验证和测试）
     this.preferredTestModels = [
       // OpenAI 小模型
+      "gpt-oss",
       "gpt-4o-mini",
       "gpt-4.1-mini",
       "gpt-4.1-nano",
@@ -136,7 +141,7 @@ class ModelConfig {
         blacklist_threshold: 99, // 站点分组黑名单阈值
         sort: 20, // 站点分组排序号
       },
-      
+
       // 模型分组配置
       modelGroup: {
         blacklist_threshold: 0, // 模型分组黑名单阈值（立即加入黑名单）
@@ -152,17 +157,17 @@ class ModelConfig {
    */
   isModelAllowed(modelName) {
     if (!modelName) return false;
-    
+
     const name = modelName.toLowerCase();
-    
+
     return this.allowedPrefixes.some((prefix) => {
       // 首先尝试匹配完整名称（例如 "deepseek-ai/..."）
       if (name.startsWith(prefix.toLowerCase())) {
         return true;
       }
-      
+
       // 然后尝试匹配去掉提供商前缀的名称
-      const withoutProvider = name.split('/').pop() || name;
+      const withoutProvider = name.split("/").pop() || name;
       return withoutProvider.startsWith(prefix.toLowerCase());
     });
   }
@@ -174,9 +179,9 @@ class ModelConfig {
    */
   isModelBlacklisted(modelName) {
     if (!modelName) return false;
-    
+
     const name = modelName.toLowerCase();
-    
+
     return this.blacklistedKeywords.some((keyword) =>
       name.includes(keyword.toLowerCase())
     );
@@ -251,22 +256,24 @@ class ModelConfig {
    * @param {string} channelType 渠道类型（可选，用于后续扩展）
    * @return {string} 选中的测试模型
    */
-  selectTestModel(availableModels, channelType = 'openai') {
+  selectTestModel(availableModels, channelType = "openai") {
     if (!availableModels || availableModels.length === 0) {
       // 如果没有可用模型，根据渠道类型返回默认模型
       const defaultModels = {
-        openai: 'gpt-4o-mini',
-        anthropic: 'claude-3-haiku',
-        gemini: 'gemini-2.5-flash'
+        openai: "gpt-4o-mini",
+        anthropic: "claude-3-haiku",
+        gemini: "gemini-2.5-flash",
       };
-      
-      const defaultModel = defaultModels[channelType] || 'gpt-4o-mini';
+
+      const defaultModel = defaultModels[channelType] || "gpt-4o-mini";
       console.log(`⚠️ 未提供可用模型列表，使用默认测试模型: ${defaultModel}`);
       return defaultModel;
     }
 
     // 将可用模型转换为小写以便比较
-    const availableModelsLower = availableModels.map(model => model.toLowerCase());
+    const availableModelsLower = availableModels.map((model) =>
+      model.toLowerCase()
+    );
 
     // 优先从小模型列表中选择
     for (const preferredModel of this.preferredTestModels) {
@@ -274,7 +281,7 @@ class ModelConfig {
 
       // 精确匹配
       const exactMatch = availableModels.find(
-        model => model.toLowerCase() === preferredLower
+        (model) => model.toLowerCase() === preferredLower
       );
       if (exactMatch) {
         console.log(`✅ 选择优先小模型作为测试模型: ${exactMatch}`);
@@ -282,11 +289,11 @@ class ModelConfig {
       }
 
       // 模糊匹配（包含关系）
-      const fuzzyMatch = availableModels.find(model => {
+      const fuzzyMatch = availableModels.find((model) => {
         const modelLower = model.toLowerCase();
         // 检查是否包含小模型的关键部分
-        const preferredParts = preferredLower.split('-');
-        return preferredParts.every(part => modelLower.includes(part));
+        const preferredParts = preferredLower.split("-");
+        return preferredParts.every((part) => modelLower.includes(part));
       });
       if (fuzzyMatch) {
         console.log(
