@@ -1,4 +1,5 @@
 import MultiGptloadManager from './multi-gptload'
+import modelConfig from './model-config'
 
 const multiGptloadManager = new MultiGptloadManager()
 
@@ -313,10 +314,11 @@ class GptloadService {
 
   /**
    * 处理模型名称中的URL不安全字符（仅处理斜杠）
+   * 现已迁移到 modelConfig.generateSafeGroupName()
    */
   sanitizeModelNameForUrl(modelName) {
-    // 只处理斜杠，替换为连字符，保持其他原样
-    const sanitized = modelName.replace(/\//g, '-')
+    // 使用统一的方法处理
+    const sanitized = modelConfig.generateSafeGroupName(modelName)
 
     if (modelName !== sanitized) {
       console.log(`🔧 处理URL不安全字符: ${modelName} -> ${sanitized}`)
@@ -327,47 +329,28 @@ class GptloadService {
 
   /**
    * 生成安全的分组名称（符合gpt-load规范）
+   * 现已迁移到 modelConfig.generateSafeGroupName()
    */
   generateSafeGroupName(modelName, channelType) {
     // 保持原始模型名称和渠道类型的组合
     const combinedName = `${modelName}-${channelType}`
+    
+    // 使用统一的安全名称生成方法
+    let groupName = modelConfig.generateSafeGroupName(combinedName)
 
-    // 只做必要的URL安全处理
-    const urlSafe = this.sanitizeModelNameForUrl(combinedName)
-
-    // 基本的规范化，但保留更多信息
-    let groupName = urlSafe
-      .toLowerCase()
-      .replace(/[^a-z0-9-_]/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .replace(/-{2,}/g, '-')
-
-    // 长度限制处理
+    // 保留原有的长度和规范检查逻辑
     if (groupName.length < 3) {
       groupName = 'mdl-' + groupName
-    }
-
-    if (groupName.length > 100) {
-      // 优先保留模型名称部分
-      const modelPart = modelName.toLowerCase().replace(/[^a-z0-9-]/g, '-')
-      const channelPart = channelType
-
-      if (modelPart.length + channelPart.length + 1 <= 100) {
-        groupName = `${modelPart}-${channelPart}`
-      } else {
-        // 如果模型名本身就很长，优先保留模型名
-        const maxModelLength = 100 - channelPart.length - 1
-        const truncatedModel = modelPart.substring(0, Math.max(maxModelLength, 20))
-        groupName = `${truncatedModel}-${channelPart}`
-      }
-
-      console.log(`📏 分组名过长，调整为: ${groupName}`)
     }
 
     // 确保符合规范
     if (!groupName || groupName.length < 3 || groupName.length > 100) {
       console.log(`❌ 分组名不符合规范，跳过模型: ${modelName} (格式: ${channelType})`)
       return null // 返回null表示跳过这个模型
+    }
+
+    if (combinedName !== groupName) {
+      console.log(`🔧 生成安全分组名称: ${combinedName} -> ${groupName}`)
     }
 
     return groupName

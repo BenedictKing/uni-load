@@ -352,6 +352,140 @@ class ModelConfig {
       console.log(`❌ 移除高消耗模型模式: ${pattern}`)
     }
   }
+
+  /**
+   * 统一的模型名称标准化方法
+   * 处理各种模型名称格式，生成一致的标准化名称
+   * @param {string} modelName 原始模型名称
+   * @return {string} 标准化后的模型名称
+   */
+  static normalizeModelName(modelName) {
+    if (!modelName) return ''
+
+    let normalized = modelName
+
+    // 1. 处理组织名前缀（如 deepseek-ai/DeepSeek-V3 -> DeepSeek-V3）
+    if (normalized.includes('/')) {
+      const parts = normalized.split('/')
+      normalized = parts[parts.length - 1] // 取最后一部分
+    }
+
+    // 2. 转换为小写
+    normalized = normalized.toLowerCase()
+
+    // 3. 移除版本和状态后缀
+    normalized = normalized
+      .replace(/-latest$/g, '')   // 移除 -latest 后缀
+      .replace(/-preview$/g, '')  // 移除 -preview 后缀
+      .replace(/-alpha$/g, '')    // 移除 -alpha 后缀
+      .replace(/-beta$/g, '')     // 移除 -beta 后缀
+      .replace(/-rc\d*$/g, '')    // 移除 -rc 后缀
+
+    return normalized
+  }
+
+  /**
+   * 为gpt-load生成安全的分组名称
+   * 处理URL不安全字符，符合gpt-load命名规范
+   * @param {string} modelName 模型名称
+   * @return {string} URL安全的分组名称
+   */
+  static generateSafeGroupName(modelName) {
+    if (!modelName) return ''
+
+    // 首先进行基本的标准化
+    let safeName = modelName
+
+    // 1. 处理斜杠（URL不安全字符）
+    safeName = safeName.replace(/\//g, '-')
+
+    // 2. 转换为小写
+    safeName = safeName.toLowerCase()
+
+    // 3. 移除或替换其他不安全字符
+    safeName = safeName
+      .replace(/[^a-z0-9-_.]/g, '-')  // 替换非字母数字和安全符号的字符
+      .replace(/-+/g, '-')            // 合并多个连字符
+      .replace(/^-+|-+$/g, '')        // 移除开头和结尾的连字符
+
+    // 4. 确保长度合理（gpt-load可能有长度限制）
+    if (safeName.length > 64) {
+      safeName = safeName.substring(0, 64).replace(/-+$/, '')
+    }
+
+    return safeName
+  }
+
+  /**
+   * 生成模型-渠道组合的分组名称
+   * @param {string} modelName 模型名称
+   * @param {string} channelName 渠道名称
+   * @return {string} 组合分组名称
+   */
+  static generateModelChannelGroupName(modelName, channelName) {
+    const safeModel = this.generateSafeGroupName(modelName)
+    const safeChannel = this.generateSafeGroupName(channelName)
+    return `${safeModel}-via-${safeChannel}`.toLowerCase()
+  }
+
+  /**
+   * 生成聚合分组的key
+   * @param {string} modelName 模型名称
+   * @return {string} 聚合分组key
+   */
+  static generateAggregateKey(modelName) {
+    const safeName = this.generateSafeGroupName(modelName)
+    return `key-aggregate-${safeName}`.replace(/[^a-zA-Z0-9-]/g, '-')
+  }
+
+  /**
+   * 处理uni-api配置中的模型名称
+   * 包含重定向处理和别名映射
+   * @param {string} originalModel 原始模型名称
+   * @return {{normalizedModel: string, originalModel: string}} 处理结果
+   */
+  static normalizeForUniApi(originalModel) {
+    if (!originalModel) return { normalizedModel: '', originalModel: '' }
+
+    // 使用基础标准化方法
+    const normalizedModel = this.normalizeModelName(originalModel)
+
+    return {
+      normalizedModel,
+      originalModel
+    }
+  }
+
+  /**
+   * 验证模型名称是否符合命名规范
+   * @param {string} modelName 模型名称
+   * @return {{valid: boolean, issues: string[]}} 验证结果
+   */
+  static validateModelName(modelName) {
+    const issues = []
+
+    if (!modelName) {
+      issues.push('模型名称不能为空')
+      return { valid: false, issues }
+    }
+
+    // 检查长度
+    if (modelName.length > 100) {
+      issues.push('模型名称过长（超过100字符）')
+    }
+
+    // 检查是否包含危险字符
+    if (/[<>:"\\|?*]/.test(modelName)) {
+      issues.push('模型名称包含危险字符')
+    }
+
+    // 检查是否全为特殊字符
+    if (!/[a-zA-Z0-9]/.test(modelName)) {
+      issues.push('模型名称必须包含字母或数字')
+    }
+
+    return { valid: issues.length === 0, issues }
+  }
 }
 
 // 导出单例实例

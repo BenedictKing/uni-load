@@ -16,6 +16,7 @@ import channelHealthMonitor from './src/channel-health'
 import channelCleanupService from './src/channel-cleanup'
 import threeLayerArchitecture from './src/three-layer-architecture'
 import siteConfigurationService from './src/services/site-configuration'
+import { initializeServices, validateServiceRegistration, cleanupServices, getService } from './src/services/service-factory'
 
 const app = express()
 const PORT: number = parseInt(process.env.PORT || '3002', 10)
@@ -867,6 +868,10 @@ const gracefulShutdown = () => {
       channelHealthMonitor.stop()
     }
 
+    // 清理依赖注入容器
+    console.log('🛑 清理依赖注入容器...')
+    cleanupServices()
+
     console.log('✅ 所有服务已停止')
   } catch (error) {
     console.error('❌ 停止服务时出错:', error)
@@ -886,6 +891,19 @@ app.listen(PORT, () => {
   console.log(`📍 访问地址: http://localhost:${PORT}`)
   console.log(`🔗 gptload: ${process.env.GPTLOAD_URL || 'http://localhost:3001'}`)
   console.log(`🔗 uni-api: ${process.env.UNI_API_PATH || '../uni-api'}`)
+
+  // 初始化依赖注入服务
+  try {
+    initializeServices()
+    if (validateServiceRegistration()) {
+      console.log('✅ 依赖注入系统初始化成功')
+    } else {
+      console.warn('⚠️ 依赖注入系统初始化不完整，某些服务可能无法正常工作')
+    }
+  } catch (error) {
+    console.error('❌ 依赖注入系统初始化失败:', error.message)
+    console.warn('⚠️ 继续使用传统服务实例化方式')
+  }
 
   // 启动模型同步服务
   if (process.env.ENABLE_MODEL_SYNC !== 'false') {

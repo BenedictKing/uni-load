@@ -12,7 +12,7 @@ import instanceHealthManager, { HealthResult, InstanceHealthStatus } from './ser
  */
 export class MultiGptloadManager {
   private instances = new Map<string, GptloadInstance>() // gptload实例配置
-  private siteAssignments = new Map<string, string>() // 站点到实例的分配
+  private _siteAssignments = new Map<string, string>() // 站点到实例的分配
   private httpsAgent: https.Agent
 
   constructor() {
@@ -115,7 +115,7 @@ export class MultiGptloadManager {
    */
   async selectBestInstance(siteUrl: string = ''): Promise<InstanceHealthStatus | null> {
     // 检查是否有预分配的实例
-    const assignedInstanceId = this.siteAssignments.get(siteUrl)
+    const assignedInstanceId = this._siteAssignments.get(siteUrl)
     if (assignedInstanceId) {
       const assignedInstance = this.instances.get(assignedInstanceId)
       if (assignedInstance && assignedInstance.health.healthy) {
@@ -123,7 +123,7 @@ export class MultiGptloadManager {
         return assignedInstance
       } else {
         console.warn(`⚠️ 预分配实例不健康，重新选择: ${assignedInstanceId}`)
-        this.siteAssignments.delete(siteUrl)
+        this._siteAssignments.delete(siteUrl)
       }
     }
 
@@ -142,7 +142,7 @@ export class MultiGptloadManager {
         if (connectivityResult.accessible) {
           console.log(`✅ 选择实例: ${instance.name} for ${siteUrl}`)
           // 记录分配
-          this.siteAssignments.set(siteUrl, instance.id)
+          this._siteAssignments.set(siteUrl, instance.id)
           return instance
         }
       }
@@ -155,7 +155,7 @@ export class MultiGptloadManager {
     console.log(`🔀 选择默认实例: ${selectedInstance.name}`)
 
     if (siteUrl) {
-      this.siteAssignments.set(siteUrl, selectedInstance.id)
+      this._siteAssignments.set(siteUrl, selectedInstance.id)
     }
 
     return selectedInstance
@@ -185,10 +185,10 @@ export class MultiGptloadManager {
         throw new Error(`实例不存在: ${instanceId}`)
       }
 
-      this.siteAssignments.set(siteUrl, instanceId)
+      this._siteAssignments.set(siteUrl, instanceId)
       console.log(`🔄 已将站点 ${siteUrl} 分配到实例 ${instance.name}`)
     } else {
-      this.siteAssignments.delete(siteUrl)
+      this._siteAssignments.delete(siteUrl)
       console.log(`🧹 已清除站点 ${siteUrl} 的分配`)
     }
   }
@@ -215,7 +215,7 @@ export class MultiGptloadManager {
         lastCheck: instance.health.lastCheck,
         error: instance.health.error,
       })),
-      siteAssignments: Array.from(this.siteAssignments.entries()).map(([site, instanceId]) => ({
+      siteAssignments: Array.from(this._siteAssignments.entries()).map(([site, instanceId]) => ({
         site,
         instanceId,
         instanceName: this.instances.get(instanceId)?.name,
@@ -284,7 +284,7 @@ export class MultiGptloadManager {
 
   // 公开访问器，保持向后兼容
   get siteAssignments() {
-    return this.siteAssignments
+    return this._siteAssignments
   }
 }
 

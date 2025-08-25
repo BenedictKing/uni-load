@@ -235,7 +235,7 @@ class ThreeLayerArchitecture {
     for (const [model, supportingSites] of availableModels) {
       // 检查第2层分组（模型-渠道分组）
       for (const site of supportingSites) {
-        const expectedGroupName = `${this.sanitizeModelName(model)}-via-${site.name}`
+        const expectedGroupName = `${modelConfig.generateModelChannelGroupName(model, site.name)}`
         const existingGroup = existingModelChannelGroups.find((g) => g.name === expectedGroupName)
 
         if (!existingGroup) {
@@ -263,7 +263,7 @@ class ThreeLayerArchitecture {
       }
 
       // 检查第3层分组（聚合分组）
-      const expectedAggregateGroupName = this.sanitizeModelName(model)
+      const expectedAggregateGroupName = modelConfig.generateSafeGroupName(model)
       const existingAggregateGroup = existingAggregateGroups.find((g) => g.name === expectedAggregateGroupName)
 
       if (!existingAggregateGroup) {
@@ -277,7 +277,7 @@ class ThreeLayerArchitecture {
         // 检查聚合分组的上游是否完整
         const expectedUpstreams = supportingSites.map(
           (site) =>
-            `${site._instance?.url || process.env.GPTLOAD_URL}/proxy/${this.sanitizeModelName(model)}-via-${site.name}`
+            `${site._instance?.url || process.env.GPTLOAD_URL}/proxy/${modelConfig.generateModelChannelGroupName(model, site.name)}`
         )
 
         const needsUpdate = expectedUpstreams.some(
@@ -352,7 +352,7 @@ class ThreeLayerArchitecture {
     for (const spec of specs) {
       try {
         const supportingChannels = spec.supportingSites.map((site) => ({
-          name: `${this.sanitizeModelName(spec.model)}-via-${site.name}`,
+          name: `${modelConfig.generateModelChannelGroupName(spec.model, site.name)}`,
           _instance: site._instance,
         }))
 
@@ -757,7 +757,7 @@ class ThreeLayerArchitecture {
     for (const [model, channelGroups] of groupedByModel) {
       processedModels++
       try {
-        const groupName = this.sanitizeModelName(model)
+        const groupName = modelConfig.generateSafeGroupName(model)
 
         console.log(`🎯 [${processedModels}/${totalModels}] 处理模型: ${model} (${channelGroups.length} 个渠道)`)
 
@@ -1180,7 +1180,7 @@ class ThreeLayerArchitecture {
 
   // 工具方法
   generateModelChannelGroupName(model, channelName) {
-    return `${this.sanitizeModelName(model)}-via-${channelName}`.toLowerCase()
+    return modelConfig.generateModelChannelGroupName(model, channelName)
   }
 
   generateIdentityKey(model, channel) {
@@ -1188,15 +1188,11 @@ class ThreeLayerArchitecture {
   }
 
   generateAggregateKey(model) {
-    return `key-aggregate-${model}`.replace(/[^a-zA-Z0-9-]/g, '-')
+    return modelConfig.generateAggregateKey(model)
   }
 
-  sanitizeModelName(modelName) {
-    return modelName
-      .toLowerCase()
-      .replace(/[^a-z0-9-]/g, '-')
-      .replace(/-+/g, '-')
-  }
+  // 移除重复的sanitizeModelName方法，已迁移到modelConfig
+  // sanitizeModelName 方法已在 model-config.ts 中统一实现
 
   groupModelChannelsByModel(modelChannelGroups) {
     const grouped = new Map()

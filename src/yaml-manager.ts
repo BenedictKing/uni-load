@@ -1,6 +1,7 @@
 import { promises as fs } from 'fs'
 import path from 'path'
 import YAML from 'yaml'
+import modelConfig from './model-config'
 
 class YamlManager {
   constructor() {
@@ -210,25 +211,15 @@ class YamlManager {
 
   /**
    * 标准化模型名称，处理重定向
+   * 现已迁移到 modelConfig.normalizeForUniApi()
    */
   normalizeModelName(originalModel) {
-    let normalizedModel = originalModel
+    // 使用统一的标准化方法
+    const result = modelConfig.normalizeForUniApi(originalModel)
+    const normalizedModel = result.normalizedModel
 
-    // 处理带组织名的模型：deepseek-ai/DeepSeek-V3 -> DeepSeek-V3
-    if (normalizedModel.includes('/')) {
-      const parts = normalizedModel.split('/')
-      normalizedModel = parts[parts.length - 1] // 取最后一部分
-    }
-
-    // 转换为小写
-    normalizedModel = normalizedModel.toLowerCase()
-
-    // 使用正则表达式移除日期格式和版本号
+    // 进一步处理版本和后缀（保留原有的复杂处理逻辑）
     const furtherSimplified = normalizedModel
-      .replace(/-latest$/g, '') // 移除 -latest 后缀
-      .replace(/-preview$/g, '') // 移除 -preview 后缀
-      .replace(/-beta$/g, '') // 移除 -beta 后缀
-      .replace(/-alpha$/g, '') // 移除 -alpha 后缀
       .replace(/-instruct$/g, '') // 移除 -instruct 后缀
       // 移除 YYYY-MM-DD 格式的日期 (如 2025-08-07, -2025-03-24)
       .replace(/-?\d{4}-\d{2}-\d{2}/g, '')
