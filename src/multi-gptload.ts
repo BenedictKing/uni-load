@@ -386,7 +386,28 @@ export class MultiGptloadManager {
 
       return created
     } catch (error) {
-      throw new Error(`创建站点分组失败: ${error.message}`)
+      // 添加详细的错误信息输出
+      console.error(`❌ 创建分组失败详情:`)
+      console.error(`  - 分组名称: ${groupData.name}`)
+      console.error(`  - 错误状态码: ${error.response?.status}`)
+      console.error(`  - 错误消息: ${error.message}`)
+      
+      if (error.response?.data) {
+        console.error(`  - 服务器响应:`, JSON.stringify(error.response.data, null, 2))
+      }
+      
+      if (error.response?.headers) {
+        console.error(`  - 响应头:`, error.response.headers)
+      }
+      
+      if (error.config) {
+        console.error(`  - 请求URL: ${error.config.method?.toUpperCase()} ${error.config.url}`)
+        if (error.config.data) {
+          console.error(`  - 请求体:`, typeof error.config.data === 'string' ? error.config.data : JSON.stringify(JSON.parse(error.config.data), null, 2))
+        }
+      }
+      
+      throw new Error(`创建站点分组失败: ${error.response?.data?.message || error.response?.statusText || error.message}`)
     }
   }
 

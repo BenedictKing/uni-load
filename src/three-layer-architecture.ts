@@ -474,7 +474,28 @@ class ThreeLayerArchitecture {
 
       return created
     } catch (error) {
-      throw new Error(`创建模型-渠道分组失败: ${error.message}`)
+      // 添加详细的错误信息输出
+      console.error(`❌ 创建第2层分组失败详情:`)
+      console.error(`  - 分组名称: ${groupData?.name}`)
+      console.error(`  - 错误状态码: ${error.response?.status}`)
+      console.error(`  - 错误消息: ${error.message}`)
+      
+      if (error.response?.data) {
+        console.error(`  - 服务器响应:`, JSON.stringify(error.response.data, null, 2))
+      }
+      
+      if (error.response?.headers) {
+        console.error(`  - 响应头:`, error.response.headers)
+      }
+      
+      if (error.config) {
+        console.error(`  - 请求URL: ${error.config.method?.toUpperCase()} ${error.config.url}`)
+        if (error.config.data) {
+          console.error(`  - 请求体:`, typeof error.config.data === 'string' ? error.config.data : JSON.stringify(JSON.parse(error.config.data), null, 2))
+        }
+      }
+      
+      throw new Error(`创建模型-渠道分组失败: ${error.response?.data?.message || error.response?.statusText || error.message}`)
     }
   }
 
@@ -1276,38 +1297,64 @@ class ThreeLayerArchitecture {
         return null
       }
 
-      // 创建分组
-      const created = await gptloadService.createSiteGroup(
-        groupName,
-        upstreams[0].url,
-        [],
-        channelGroups[0]?.channel_type || 'openai',
-        {},
-        [model],
-        true // 标记为模型分组
-      )
-
-      if (created) {
-        // 更新为聚合配置
-        await gptloadService.updateGroup(created.id, created._instance.id, {
-          upstreams: upstreams,
-          config: {
-            blacklist_threshold: config.blacklist_threshold,
-            key_validation_interval_minutes: config.key_validation_interval_minutes,
-          },
-          sort: config.sort,
-        })
-
-        // 获取实例并添加认证密钥
-        const instance = gptloadService.manager.getInstance(created._instance.id)
-        if (instance && instance.token) {
-          await gptloadService.manager.addApiKeysToGroup(instance, created.id, [instance.token])
-        }
-
-        return created
+      // 直接创建第3层聚合分组，而不是通过 createSiteGroup
+      const instance = await gptloadService.manager.selectBestInstance('')
+      if (!instance) {
+        throw new Error('没有可用的 gptload 实例')
       }
 
-      return null
+      const groupData = {
+        name: groupName,
+        display_name: `${model} 聚合分组`,
+        description: `${model} 模型的聚合分组，汇聚来自多个渠道的请求`,
+        upstreams: upstreams,
+        test_model: model,
+        channel_type: channelGroups[0]?.channel_type || 'openai',
+        validation_endpoint: channelGroups[0]?.validation_endpoint || '/v1/chat/completions',
+        sort: config.sort, // 第3层分组
+        param_overrides: {},
+        config: {
+          blacklist_threshold: config.blacklist_threshold,
+          key_validation_interval_minutes: config.key_validation_interval_minutes,
+        },
+        tags: ['layer-3', 'aggregate', model],
+      }
+
+      console.log(`🔍 创建第3层聚合分组请求参数:`, {
+        name: groupData.name,
+        display_name: groupData.display_name,
+        channel_type: groupData.channel_type,
+        validation_endpoint: groupData.validation_endpoint,
+        sort: groupData.sort,
+        upstreams: groupData.upstreams,
+        tags: groupData.tags
+      })
+
+      const response = await instance.apiClient.post('/groups', groupData)
+
+      let created
+      if (response.data && typeof response.data.code === 'number') {
+        if (response.data.code === 0) {
+          created = response.data.data
+        } else {
+          throw new Error(`创建失败: ${response.data.message}`)
+        }
+      } else {
+        created = response.data
+      }
+
+      created._instance = {
+        id: instance.id,
+        name: instance.name,
+        url: instance.url,
+      }
+
+      // 获取实例并添加认证密钥
+      if (instance && instance.token) {
+        await gptloadService.manager.addApiKeysToGroup(instance, created.id, [instance.token])
+      }
+
+      return created
     } catch (error) {
       console.error(`❌ 创建模型 ${model} 的聚合分组失败:`, error.message)
       return null
