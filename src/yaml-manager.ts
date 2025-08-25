@@ -306,7 +306,7 @@ class YamlManager implements IYamlManager {
       tools: true,
     }
 
-    // 构建模型映射：原始名称 + 独立的重命名映射
+    // 构建模型映射：原始名称 + 重命名映射对象
     const modelMappings = [originalModelName] // 始终包含原始名称
 
     // 检查是否需要添加重命名映射
@@ -315,32 +315,30 @@ class YamlManager implements IYamlManager {
 
     let mappingsAdded = 0
 
-    // 添加去除组织名的重命名映射
-    if (needsWithoutOrgMapping) {
+    // 如果需要任何映射，创建一个重命名映射对象
+    if (needsWithoutOrgMapping || needsSimplifiedMapping) {
       const renameMapping = {}
-      renameMapping[originalModelName] = withoutOrgName
+      
+      // 优先使用简化名称，如果没有则使用去组织名称
+      if (needsSimplifiedMapping) {
+        renameMapping[originalModelName] = simplifiedName
+        mappingsAdded++
+        console.log(`📝 添加重命名映射: ${originalModelName} -> ${simplifiedName}`)
+      } else if (needsWithoutOrgMapping) {
+        renameMapping[originalModelName] = withoutOrgName
+        mappingsAdded++
+        console.log(`📝 添加重命名映射: ${originalModelName} -> ${withoutOrgName}`)
+      }
+      
       modelMappings.push(renameMapping)
-      mappingsAdded++
-      console.log(`📝 添加重命名映射 #1: ${originalModelName} -> ${withoutOrgName}`)
-    }
-
-    // 添加简化名称的重命名映射
-    if (needsSimplifiedMapping) {
-      const renameMapping = {}
-      renameMapping[originalModelName] = simplifiedName
-      modelMappings.push(renameMapping)
-      mappingsAdded++
-      console.log(`📝 添加重命名映射 #2: ${originalModelName} -> ${simplifiedName}`)
     }
 
     providerConfig.model = modelMappings
 
     // 生成友好的日志输出
     if (mappingsAdded > 0) {
-      const aliases = []
-      if (needsWithoutOrgMapping) aliases.push(`"${withoutOrgName}"`)
-      if (needsSimplifiedMapping) aliases.push(`"${simplifiedName}"`)
-      console.log(`✅ 模型 "${originalModelName}" 添加 ${mappingsAdded} 个别名: ${aliases.join(', ')}`)
+      const targetAlias = needsSimplifiedMapping ? simplifiedName : withoutOrgName
+      console.log(`✅ 模型 "${originalModelName}" 添加别名: "${targetAlias}"`)
     } else {
       console.log(`📝 模型 "${originalModelName}" 无需别名`)
     }

@@ -385,6 +385,16 @@ class ModelConfig {
       .replace(/-alpha$/g, '') // 移除 -alpha 后缀
       .replace(/-beta$/g, '') // 移除 -beta 后缀
       .replace(/-rc\d*$/g, '') // 移除 -rc 后缀
+      .replace(/-instruct$/g, '') // 移除 -instruct 后缀
+
+    // 4. 通用日期格式简化
+    // 移除各种日期格式：YYYYMMDD, YYYY-MM-DD, YYMMDD等
+    normalized = normalized
+      .replace(/-\d{8}$/g, '') // 移除 -20241022 格式
+      .replace(/-\d{4}-\d{2}-\d{2}$/g, '') // 移除 -2024-10-22 格式
+      .replace(/-\d{6}$/g, '') // 移除 -241022 或 -250711 格式
+      .replace(/-\d{4}$/g, '') // 移除 -0324 格式
+      .replace(/-\d{2}-\d{2}$/g, '') // 移除 -10-22 格式
 
     return normalized
   }
