@@ -532,22 +532,25 @@ class MultiGptloadManager {
 
     let lastError = null;
     const attemptedInstances = [];
+    let debugTempGroupId = null; // 用于保留调试分组
+    let debugInstance = null;
     
     for (const instance of healthyInstances) {
       let tempGroupId = null;
       
       try {
         console.log(`🔄 尝试通过实例 ${instance.name} 的代理访问 ${baseUrl}...`);
+        console.log(`🔑 使用API密钥: ${apiKey ? `${apiKey.substring(0, 10)}...` : '无密钥'}`);
         attemptedInstances.push(instance.name);
         
         // 1. 创建临时站点分组
-        const tempGroupName = `temp-models-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 5)}`;
+        const tempGroupName = `debug-models-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 5)}`;
         console.log(`🧪 创建临时站点分组: ${tempGroupName}`);
         
         const tempGroupData = {
           name: tempGroupName,
-          display_name: `临时模型获取分组`,
-          description: `临时分组，用于通过代理获取 ${baseUrl} 的模型列表`,
+          display_name: `调试模型获取分组`,
+          description: `调试分组，用于通过代理获取 ${baseUrl} 的模型列表`,
           upstreams: [{ url: baseUrl, weight: 1 }],
           channel_type: "openai",
           test_model: "gpt-4o-mini",
@@ -571,12 +574,32 @@ class MultiGptloadManager {
         tempGroupId = tempGroup.id;
         console.log(`✅ 临时分组创建成功: ${tempGroupId}`);
         
-        // 2. 添加API密钥到临时分组
+        // 2. 验证并添加API密钥到临时分组
+        if (!apiKey || apiKey.trim() === '') {
+          console.error(`❌ API密钥为空，无法继续`);
+          lastError = new Error('API密钥为空');
+          continue;
+        }
+        
+        console.log(`🔍 验证API密钥格式: 长度=${apiKey.length}, 前缀=${apiKey.substring(0, 3)}`);
+        
         try {
-          await this.addApiKeysToGroup(instance, tempGroupId, [apiKey]);
-          console.log(`🔑 已为临时分组添加API密钥`);
+          const keyAddResult = await this.addApiKeysToGroup(instance, tempGroupId, [apiKey]);
+          console.log(`🔑 API密钥添加结果: ${JSON.stringify(keyAddResult)}`);
+          
+          // 验证密钥是否成功添加
+          const keyStats = await this.getGroupKeyStats(instance, tempGroupId);
+          console.log(`📊 分组密钥统计: ${JSON.stringify(keyStats)}`);
+          
+          if (!keyStats || keyStats.active_keys === 0) {
+            console.warn(`⚠️ 分组中没有可用密钥，添加可能失败`);
+          }
+          
         } catch (keyError) {
-          console.warn(`⚠️ 添加API密钥失败: ${keyError.message}，尝试继续...`);
+          console.error(`❌ 添加API密钥失败: ${keyError.message}`);
+          console.error(`📝 密钥错误详情: ${JSON.stringify(keyError.response?.data || {})}`);
+          lastError = keyError;
+          continue;
         }
         
         // 3. 通过代理获取模型列表
@@ -585,6 +608,20 @@ class MultiGptloadManager {
         
         // 使用 axios 直接请求完整URL
         const axios = require('axios');
+        
+        // 先验证代理端点是否可访问
+        try {
+          console.log(`🔍 验证代理端点可访问性...`);
+          const healthCheck = await axios.get(`${instance.url}/proxy/${tempGroupName}/health`, {
+            timeout: 10000,
+            httpsAgent: this.httpsAgent,
+            validateStatus: () => true, // 接受所有状态码
+          });
+          console.log(`📡 健康检查响应: ${healthCheck.status}`);
+        } catch (healthError) {
+          console.warn(`⚠️ 健康检查失败: ${healthError.message}`);
+        }
+        
         const modelsResponse = await axios.get(proxyUrl, {
           timeout: 30000, // 30秒超时
           httpsAgent: this.httpsAgent,
@@ -597,6 +634,8 @@ class MultiGptloadManager {
         });
         
         console.log(`📡 代理模型响应: ${modelsResponse.status}`);
+        console.log(`📡 响应头: ${JSON.stringify(modelsResponse.headers)}`);
+        console.log(`📡 响应数据: ${JSON.stringify(modelsResponse.data).substring(0, 500)}...`);
         
         // 4. 解析模型数据
         const modelsService = require("./models");
@@ -607,15 +646,12 @@ class MultiGptloadManager {
           this.siteAssignments.set(baseUrl, instance.id);
           console.log(`✅ 实例 ${instance.name} 通过代理成功获取 ${models.length} 个模型`);
           
-          // 清理临时分组
-          try {
-            await instance.apiClient.delete(`/groups/${tempGroupId}`);
-            console.log(`🗑️ 已清理临时分组: ${tempGroupId}`);
-          } catch (cleanupError) {
-            console.warn(`⚠️ 清理临时分组失败: ${cleanupError.message}`);
-          }
+          // 保留成功的临时分组用于调试
+          debugTempGroupId = tempGroupId;
+          debugInstance = instance;
+          console.log(`🛠️ 保留成功的调试分组 ${tempGroupName} (ID: ${tempGroupId}) 用于后续调试`);
           
-          return { models, instanceId: instance.id, instanceName: instance.name };
+          return { models, instanceId: instance.id, instanceName: instance.name, debugGroupId: tempGroupId, debugGroupName: tempGroupName };
         } else {
           console.log(`⚠️ 实例 ${instance.name} 通过代理返回空模型列表`);
           lastError = new Error("返回空模型列表");
@@ -628,6 +664,17 @@ class MultiGptloadManager {
         // 详细错误分析
         if (error.response) {
           console.log(`📊 错误详情: 状态=${error.response.status}, 数据=${JSON.stringify(error.response.data)}`);
+          console.log(`📊 请求头: ${JSON.stringify(error.config?.headers || {})}`);
+          console.log(`📊 请求URL: ${error.config?.url || 'unknown'}`);
+          
+          // 如果是401错误，提供更详细的调试信息
+          if (error.response.status === 401) {
+            console.log(`🔐 401未授权错误分析:`);
+            console.log(`   - API密钥: ${apiKey ? `${apiKey.substring(0, 10)}...` : '无密钥'}`);
+            console.log(`   - 目标URL: ${baseUrl}`);
+            console.log(`   - 代理URL: ${proxyUrl}`);
+            console.log(`   - 建议: 检查API密钥是否正确，或站点是否需要特殊认证方式`);
+          }
         }
         
         // 如果是网络连接问题，标记实例为不健康
@@ -640,9 +687,16 @@ class MultiGptloadManager {
           console.log(`⚠️ 实例 ${instance.name} 因网络错误被标记为不健康`);
         }
         
+        // 保留最后一个失败的临时分组用于调试
+        if (!debugTempGroupId) {
+          debugTempGroupId = tempGroupId;
+          debugInstance = instance;
+          console.log(`🛠️ 保留失败的调试分组 ${tempGroupName} (ID: ${tempGroupId}) 用于调试 401 错误`);
+        }
+        
       } finally {
-        // 确保清理临时分组
-        if (tempGroupId) {
+        // 只清理非调试分组
+        if (tempGroupId && tempGroupId !== debugTempGroupId) {
           try {
             await instance.apiClient.delete(`/groups/${tempGroupId}`);
             console.log(`🗑️ 已清理临时分组: ${tempGroupId}`);
@@ -667,13 +721,37 @@ class MultiGptloadManager {
       }
     } catch (directError) {
       console.log(`❌ 直接访问也失败: ${directError.message}`);
+      console.log(`📊 直接访问错误详情: ${JSON.stringify({
+        status: directError.response?.status,
+        message: directError.message,
+        baseUrl: baseUrl,
+        apiKeyPrefix: apiKey ? apiKey.substring(0, 10) + '...' : '无密钥'
+      })}`);
       lastError = directError;
+    }
+    
+    // 输出调试信息
+    if (debugTempGroupId && debugInstance) {
+      console.log(`🛠️ 调试信息:`);
+      console.log(`   调试分组ID: ${debugTempGroupId}`);
+      console.log(`   调试实例: ${debugInstance.name}`);
+      console.log(`   可以手动访问 ${debugInstance.url}/proxy/debug-* 进行测试`);
     }
     
     // 所有方法都失败了
     const errorMsg = `所有 ${attemptedInstances.length} 个实例代理访问和直接访问都失败`;
     console.error(`${errorMsg}: ${lastError?.message}`);
-    throw new Error(`${errorMsg}。最后错误: ${lastError?.message}`);
+    
+    // 如果是401错误，提供额外建议
+    if (lastError?.response?.status === 401) {
+      console.error(`🔐 401认证失败建议检查:`);
+      console.error(`   1. API密钥格式是否正确 (当前: ${apiKey ? `${apiKey.substring(0, 10)}...` : '无密钥'})`);
+      console.error(`   2. 站点 ${baseUrl} 是否需要特殊的认证方式`);
+      console.error(`   3. API密钥是否有访问该站点的权限`);
+      console.error(`   4. 检查保留的调试分组中的密钥配置`);
+    }
+    
+    throw new Error(`${errorMsg}。最后错误: ${lastError?.message}${lastError?.response?.status === 401 ? '（认证失败，请检查API密钥）' : ''}`);
   }
 
   /**
@@ -1022,7 +1100,7 @@ class MultiGptloadManager {
       // 确保 apiKeys 是数组
       if (!apiKeys) {
         console.log("没有API密钥需要添加");
-        return;
+        return { success: false, message: "没有API密钥" };
       }
       
       let keysArray;
@@ -1033,30 +1111,50 @@ class MultiGptloadManager {
         keysArray = apiKeys.split('\n').filter(key => key.trim());
       } else {
         console.warn("API密钥格式不正确:", typeof apiKeys, apiKeys);
-        return;
+        return { success: false, message: "API密钥格式不正确" };
       }
       
       if (keysArray.length === 0) {
         console.log("没有有效的API密钥需要添加");
-        return;
+        return { success: false, message: "没有有效的API密钥" };
+      }
+      
+      // 验证密钥格式
+      console.log(`🔍 验证 ${keysArray.length} 个API密钥格式:`);
+      for (let i = 0; i < keysArray.length; i++) {
+        const key = keysArray[i];
+        console.log(`   密钥 ${i + 1}: 长度=${key.length}, 前缀=${key.substring(0, 10)}...`);
+        
+        if (key.length < 10) {
+          console.warn(`⚠️ 密钥 ${i + 1} 长度过短，可能无效`);
+        }
       }
       
       const keysText = keysArray.join("\n");
 
+      console.log(`🔄 向分组 ${groupId} 添加 ${keysArray.length} 个API密钥...`);
       const response = await instance.apiClient.post("/keys/add-multiple", {
         group_id: groupId,
         keys_text: keysText,
       });
 
-      console.log(
-        `✅ 成功添加 ${keysArray.length} 个API密钥到分组 ${groupId} (实例: ${instance.name})`
-      );
-      return response.data;
+      console.log(`📡 添加密钥API响应: ${JSON.stringify(response.data)}`);
+      console.log(`✅ 成功添加 ${keysArray.length} 个API密钥到分组 ${groupId} (实例: ${instance.name})`);
+      
+      return { success: true, data: response.data, addedCount: keysArray.length };
     } catch (error) {
-      console.error(`添加API密钥失败: ${error.message}`);
+      console.error(`❌ 添加API密钥失败: ${error.message}`);
+      
       // 添加更详细的错误信息
-      console.error(`错误详情: 实例=${instance?.name}, 分组=${groupId}, 密钥数量=${Array.isArray(apiKeys) ? apiKeys.length : typeof apiKeys}`);
-      console.warn("警告: API密钥添加失败，但分组已创建，可手动添加密钥");
+      if (error.response) {
+        console.error(`📊 API响应错误: 状态=${error.response.status}, 数据=${JSON.stringify(error.response.data)}`);
+      }
+      
+      console.error(`📝 错误详情: 实例=${instance?.name}, 分组=${groupId}, 密钥数量=${Array.isArray(apiKeys) ? apiKeys.length : typeof apiKeys}`);
+      console.warn("⚠️ 警告: API密钥添加失败，但分组已创建，可手动添加密钥");
+      
+      // 抛出错误而不是静默失败，让调用方知道密钥添加失败
+      throw error;
     }
   }
 
