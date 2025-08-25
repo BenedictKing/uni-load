@@ -32,7 +32,7 @@ class ThreeLayerArchitecture {
   }
 
   /**
-   * 初始化三层架构
+   * 初始化三层架构 - 优化版本
    */
   async initialize() {
     console.log("🚀 初始化三层 gptload 架构...");
@@ -42,105 +42,66 @@ class ThreeLayerArchitecture {
       const siteGroups = await this.getSiteGroups();
       console.log(`✅ 第1层: 发现 ${siteGroups.length} 个站点分组`);
 
-      // 2. 创建模型到站点的精确映射
-      const modelSiteMap = new Map(); // 模型 -> 支持该模型的站点分组
-      
-      console.log("📊 分析每个站点分组支持的模型...");
-      for (const siteGroup of siteGroups) {
-        try {
-          // 获取站点支持的实际模型列表
-          const siteModels = await this.getValidatedModelsForSite(siteGroup);
-          console.log(`🔍 站点 ${siteGroup.name}: 支持 ${siteModels.length} 个模型`);
-          
-          for (const model of siteModels) {
-            if (!modelSiteMap.has(model)) {
-              modelSiteMap.set(model, []);
-            }
-            modelSiteMap.get(model).push(siteGroup);
-          }
-        } catch (error) {
-          console.error(`获取站点 ${siteGroup.name} 的模型失败:`, error.message);
-        }
+      if (siteGroups.length === 0) {
+        console.log("⚠️ 没有站点分组，无法初始化三层架构");
+        return { siteGroups: 0, modelChannelGroups: 0, aggregateGroups: 0, totalModels: 0 };
       }
 
-      // 提取所有已验证的模型
-      const models = Array.from(modelSiteMap.keys());
-      console.log(`📊 发现 ${models.length} 个已验证可用模型`);
-      console.log(`🎯 模型分布统计:`);
-      modelSiteMap.forEach((sites, model) => {
-        console.log(`  - ${model}: ${sites.length} 个站点支持`);
-      });
-
-      // 3. 创建模型-渠道分组（第2层）
-      const modelChannelGroups = await this.createModelChannelGroups(
-        models,
-        siteGroups,
-        modelSiteMap
-      );
-      console.log(
-        `✅ 第2层: 创建 ${modelChannelGroups.length} 个模型-渠道分组`
-      );
-
-      // 4. 创建模型聚合分组（第3层）- 基于精确映射
-      const aggregateGroups = [];
-      console.log("🔧 为每个模型创建聚合分组...");
+      // 2. 分析现有分组结构，而不是创建新的测试分组
+      const allGroups = await gptloadService.getAllGroups();
+      const existingModelChannelGroups = allGroups.filter(g => g.sort === 15);
+      const existingAggregateGroups = allGroups.filter(g => g.sort === 10);
       
-      for (const [model, supportingSites] of modelSiteMap) {
-        try {
-          // 仅选择支持该模型的模型-渠道分组
-          const supportingChannels = modelChannelGroups.filter(group => 
-            group.test_model === model && 
-            supportingSites.some(site => group.name.includes(site.name))
-          );
-          
-          if (supportingChannels.length > 0) {
-            console.log(`🎯 模型 ${model}: 找到 ${supportingChannels.length} 个支持的渠道分组`);
-            const aggregateGroup = await this.createAggregateGroupForModel(
-              model,
-              supportingChannels
-            );
-            if (aggregateGroup) {
-              aggregateGroups.push(aggregateGroup);
-            }
-          } else {
-            console.log(`⚠️ 模型 ${model}: 未找到支持的渠道分组，跳过聚合`);
-          }
-        } catch (error) {
-          console.error(`为模型 ${model} 创建聚合分组失败:`, error.message);
-        }
-      }
-      
-      console.log(`✅ 第3层: 创建 ${aggregateGroups.length} 个模型聚合分组`);
+      console.log(`📊 现有第2层分组: ${existingModelChannelGroups.length} 个`);
+      console.log(`📊 现有第3层分组: ${existingAggregateGroups.length} 个`);
 
-      // 5. 设置被动恢复机制
+      // 3. 从站点分组的已验证模型中获取可用模型（不进行实时测试）
+      const availableModels = await this.getAvailableModelsFromSiteGroups(siteGroups);
+      console.log(`📊 从站点分组中发现 ${availableModels.size} 个已验证模型`);
+
+      // 4. 分析需要创建/更新的分组
+      const analysisResult = await this.analyzeRequiredGroups(
+        availableModels, 
+        siteGroups, 
+        existingModelChannelGroups, 
+        existingAggregateGroups
+      );
+
+      console.log(`📋 分析结果: 需要创建 ${analysisResult.toCreate.modelChannel} 个第2层分组, ${analysisResult.toCreate.aggregate} 个第3层分组`);
+      console.log(`📋 分析结果: 需要更新 ${analysisResult.toUpdate.modelChannel} 个第2层分组, ${analysisResult.toUpdate.aggregate} 个第3层分组`);
+
+      // 5. 执行必要的创建和更新操作
+      const createdModelChannelGroups = await this.createMissingModelChannelGroups(analysisResult.toCreate.modelChannelSpecs);
+      const updatedModelChannelGroups = await this.updateExistingModelChannelGroups(analysisResult.toUpdate.modelChannelSpecs);
+      
+      const createdAggregateGroups = await this.createMissingAggregateGroups(analysisResult.toCreate.aggregateSpecs);
+      const updatedAggregateGroups = await this.updateExistingAggregateGroups(analysisResult.toUpdate.aggregateSpecs);
+
+      // 6. 设置被动恢复机制（移除主动验证）
       this.setupPassiveRecovery();
       console.log("🔄 被动恢复机制已启动");
 
-      // 6. 启动权重优化
+      // 7. 启动权重优化
       this.startWeightOptimization();
       console.log("⚖️ 权重优化已启动");
 
-      console.log("✅ 三层架构初始化完成");
-
-      // 新增：更新uni-api配置
+      // 8. 更新uni-api配置
       console.log("🔧 更新uni-api配置...");
       try {
-        // 获取所有聚合分组（第3层）用于uni-api配置
-        const allGroups = await gptloadService.getAllGroups();
-        const aggregateGroups = allGroups.filter((g) => g.tags?.includes("layer-3"));
-        
-        await yamlManager.updateUniApiConfig(aggregateGroups);
-        console.log(`✅ 已将 ${aggregateGroups.length} 个聚合分组同步到uni-api配置`);
+        const finalAggregateGroups = [...existingAggregateGroups, ...createdAggregateGroups];
+        await yamlManager.updateUniApiConfig(finalAggregateGroups);
+        console.log(`✅ 已将 ${finalAggregateGroups.length} 个聚合分组同步到uni-api配置`);
       } catch (error) {
         console.error("❌ 更新uni-api配置失败:", error.message);
-        // 不抛出错误，让三层架构继续工作
       }
+
+      console.log("✅ 三层架构初始化完成");
 
       return {
         siteGroups: siteGroups.length,
-        modelChannelGroups: modelChannelGroups.length,
-        aggregateGroups: aggregateGroups.length,
-        totalModels: models.length,
+        modelChannelGroups: existingModelChannelGroups.length + createdModelChannelGroups.length,
+        aggregateGroups: existingAggregateGroups.length + createdAggregateGroups.length,
+        totalModels: availableModels.size,
       };
     } catch (error) {
       console.error("❌ 三层架构初始化失败:", error);
@@ -187,7 +148,43 @@ class ThreeLayerArchitecture {
   }
 
   /**
-   * 从站点分组获取已验证的模型列表
+   * 从站点分组的已验证模型列表中获取可用模型
+   */
+  async getAvailableModelsFromSiteGroups(siteGroups) {
+    const availableModels = new Map(); // 模型 -> 支持该模型的站点分组列表
+    
+    for (const siteGroup of siteGroups) {
+      let models = [];
+      
+      // 优先使用已缓存的验证模型列表
+      if (siteGroup.validated_models && Array.isArray(siteGroup.validated_models)) {
+        models = siteGroup.validated_models;
+        console.log(`📋 站点 ${siteGroup.name}: 使用已验证的 ${models.length} 个模型`);
+      } else if (siteGroup.test_model) {
+        // 回退到测试模型
+        models = [siteGroup.test_model];
+        console.log(`📋 站点 ${siteGroup.name}: 使用测试模型 ${siteGroup.test_model}`);
+      } else {
+        console.log(`⚠️ 站点 ${siteGroup.name}: 没有可用的模型信息`);
+        continue;
+      }
+      
+      // 应用模型白名单过滤
+      const filteredModels = modelConfig.filterModels(models);
+      
+      for (const model of filteredModels) {
+        if (!availableModels.has(model)) {
+          availableModels.set(model, []);
+        }
+        availableModels.get(model).push(siteGroup);
+      }
+    }
+    
+    return availableModels;
+  }
+
+  /**
+   * 从站点分组获取已验证的模型列表（保留原方法用于兼容性）
    */
   async getValidatedModelsForSite(siteGroup) {
     try {
@@ -197,34 +194,257 @@ class ThreeLayerArchitecture {
         return modelConfig.filterModels(siteGroup.validated_models);
       }
       
-      // 回退方案：从 API 重新获取
-      const apiKeys = await gptloadService.getGroupApiKeys(
-        siteGroup.id,
-        siteGroup._instance.id
-      );
-
-      if (apiKeys.length === 0) {
-        console.log(`⚠️ 站点 ${siteGroup.name} 没有可用的 API 密钥，跳过模型获取`);
-        return [];
+      // 如果没有验证模型列表，使用测试模型
+      if (siteGroup.test_model) {
+        console.log(`📋 站点 ${siteGroup.name}: 使用测试模型 ${siteGroup.test_model}`);
+        return modelConfig.filterModels([siteGroup.test_model]);
       }
-
-      const baseUrl = siteGroup.upstreams[0]?.url;
-
-      if (!baseUrl) {
-        console.log(`⚠️ 站点 ${siteGroup.name} 没有配置上游 URL，跳过模型获取`);
-        return [];
-      }
-
-      console.log(`🔄 从站点 ${siteGroup.name} API 获取模型列表...`);
-      const allModels = await modelsService.getModels(baseUrl, apiKeys[0]);
-      const filteredModels = modelConfig.filterModels(allModels);
       
-      console.log(`✅ 站点 ${siteGroup.name}: 获取到 ${allModels.length} 个模型，过滤后 ${filteredModels.length} 个`);
-      
-      return filteredModels;
+      console.log(`⚠️ 站点 ${siteGroup.name}: 没有可用的模型信息，跳过`);
+      return [];
     } catch (error) {
       console.error(`获取站点 ${siteGroup.name} 的模型失败:`, error.message);
       return [];
+    }
+  }
+
+  /**
+   * 分析需要创建和更新的分组
+   */
+  async analyzeRequiredGroups(availableModels, siteGroups, existingModelChannelGroups, existingAggregateGroups) {
+    const result = {
+      toCreate: {
+        modelChannel: 0,
+        aggregate: 0,
+        modelChannelSpecs: [],
+        aggregateSpecs: []
+      },
+      toUpdate: {
+        modelChannel: 0,
+        aggregate: 0,
+        modelChannelSpecs: [],
+        aggregateSpecs: []
+      }
+    };
+    
+    // 分析每个模型需要的分组
+    for (const [model, supportingSites] of availableModels) {
+      // 检查第2层分组（模型-渠道分组）
+      for (const site of supportingSites) {
+        const expectedGroupName = `${this.sanitizeModelName(model)}-via-${site.name}`;
+        const existingGroup = existingModelChannelGroups.find(g => g.name === expectedGroupName);
+        
+        if (!existingGroup) {
+          result.toCreate.modelChannel++;
+          result.toCreate.modelChannelSpecs.push({
+            model,
+            site,
+            groupName: expectedGroupName
+          });
+        } else {
+          // 检查是否需要更新上游
+          const expectedUpstream = `${site._instance?.url || process.env.GPTLOAD_URL}/proxy/${site.name}`;
+          const hasCorrectUpstream = existingGroup.upstreams?.some(u => u.url === expectedUpstream);
+          
+          if (!hasCorrectUpstream) {
+            result.toUpdate.modelChannel++;
+            result.toUpdate.modelChannelSpecs.push({
+              model,
+              site,
+              existingGroup,
+              expectedUpstream
+            });
+          }
+        }
+      }
+      
+      // 检查第3层分组（聚合分组）
+      const expectedAggregateGroupName = this.sanitizeModelName(model);
+      const existingAggregateGroup = existingAggregateGroups.find(g => g.name === expectedAggregateGroupName);
+      
+      if (!existingAggregateGroup) {
+        result.toCreate.aggregate++;
+        result.toCreate.aggregateSpecs.push({
+          model,
+          supportingSites,
+          groupName: expectedAggregateGroupName
+        });
+      } else {
+        // 检查聚合分组的上游是否完整
+        const expectedUpstreams = supportingSites.map(site => 
+          `${site._instance?.url || process.env.GPTLOAD_URL}/proxy/${this.sanitizeModelName(model)}-via-${site.name}`
+        );
+        
+        const needsUpdate = expectedUpstreams.some(expectedUpstream => 
+          !existingAggregateGroup.upstreams?.some(u => u.url === expectedUpstream)
+        );
+        
+        if (needsUpdate) {
+          result.toUpdate.aggregate++;
+          result.toUpdate.aggregateSpecs.push({
+            model,
+            supportingSites,
+            existingGroup: existingAggregateGroup,
+            expectedUpstreams
+          });
+        }
+      }
+    }
+    
+    return result;
+  }
+
+  /**
+   * 创建缺失的模型-渠道分组
+   */
+  async createMissingModelChannelGroups(specs) {
+    const createdGroups = [];
+    
+    for (const spec of specs) {
+      try {
+        const group = await this.createSingleModelChannelGroup(spec.model, spec.site, spec.groupName);
+        if (group) {
+          createdGroups.push(group);
+          console.log(`✅ 创建第2层分组: ${spec.groupName}`);
+        }
+      } catch (error) {
+        console.error(`❌ 创建第2层分组 ${spec.groupName} 失败:`, error.message);
+      }
+    }
+    
+    return createdGroups;
+  }
+
+  /**
+   * 更新现有的模型-渠道分组
+   */
+  async updateExistingModelChannelGroups(specs) {
+    const updatedGroups = [];
+    
+    for (const spec of specs) {
+      try {
+        const updateData = {
+          upstreams: [{ url: spec.expectedUpstream, weight: 1 }]
+        };
+        
+        await gptloadService.updateGroup(spec.existingGroup.id, spec.existingGroup._instance.id, updateData);
+        updatedGroups.push(spec.existingGroup);
+        console.log(`🔄 更新第2层分组: ${spec.existingGroup.name}`);
+      } catch (error) {
+        console.error(`❌ 更新第2层分组 ${spec.existingGroup.name} 失败:`, error.message);
+      }
+    }
+    
+    return updatedGroups;
+  }
+
+  /**
+   * 创建缺失的聚合分组
+   */
+  async createMissingAggregateGroups(specs) {
+    const createdGroups = [];
+    
+    for (const spec of specs) {
+      try {
+        const supportingChannels = spec.supportingSites.map(site => ({
+          name: `${this.sanitizeModelName(spec.model)}-via-${site.name}`,
+          _instance: site._instance
+        }));
+        
+        const group = await this.createSingleAggregateGroup(spec.model, supportingChannels, this.layerConfigs.aggregateGroup);
+        if (group) {
+          createdGroups.push(group);
+          console.log(`✅ 创建第3层分组: ${spec.groupName}`);
+        }
+      } catch (error) {
+        console.error(`❌ 创建第3层分组 ${spec.groupName} 失败:`, error.message);
+      }
+    }
+    
+    return createdGroups;
+  }
+
+  /**
+   * 更新现有的聚合分组
+   */
+  async updateExistingAggregateGroups(specs) {
+    const updatedGroups = [];
+    
+    for (const spec of specs) {
+      try {
+        const updateData = {
+          upstreams: spec.expectedUpstreams.map(url => ({ url, weight: 1 }))
+        };
+        
+        await gptloadService.updateGroup(spec.existingGroup.id, spec.existingGroup._instance.id, updateData);
+        updatedGroups.push(spec.existingGroup);
+        console.log(`🔄 更新第3层分组: ${spec.existingGroup.name}`);
+      } catch (error) {
+        console.error(`❌ 更新第3层分组 ${spec.existingGroup.name} 失败:`, error.message);
+      }
+    }
+    
+    return updatedGroups;
+  }
+
+  /**
+   * 创建单个模型-渠道分组
+   */
+  async createSingleModelChannelGroup(model, site, groupName) {
+    try {
+      const instance = await gptloadService.manager.selectBestInstance(
+        site.upstreams[0]?.url || ""
+      );
+
+      if (!instance) {
+        throw new Error("没有可用的 gptload 实例");
+      }
+
+      const groupData = {
+        name: groupName,
+        display_name: `${model} @ ${site.name}`,
+        description: `${model} 模型通过 ${site.name} 渠道的专用分组`,
+        upstreams: [{
+          url: `${site._instance?.url || process.env.GPTLOAD_URL || "http://localhost:3001"}/proxy/${site.name}`,
+          weight: 1,
+        }],
+        test_model: model,
+        channel_type: site.channel_type || "openai",
+        validation_endpoint: site.validation_endpoint,
+        sort: 15, // 第2层分组
+        param_overrides: {},
+        config: {
+          blacklist_threshold: this.layerConfigs.modelChannelGroup.blacklist_threshold,
+        },
+        tags: ["layer-2", "model-channel", model, site.name],
+      };
+
+      const response = await instance.apiClient.post("/groups", groupData);
+
+      let created;
+      if (response.data && typeof response.data.code === "number") {
+        if (response.data.code === 0) {
+          created = response.data.data;
+        } else {
+          throw new Error(`创建失败: ${response.data.message}`);
+        }
+      } else {
+        created = response.data;
+      }
+
+      created._instance = {
+        id: instance.id,
+        name: instance.name,
+        url: instance.url,
+      };
+
+      if (instance.token) {
+        await gptloadService.manager.addApiKeysToGroup(instance, created.id, [instance.token]);
+      }
+
+      return created;
+    } catch (error) {
+      throw new Error(`创建模型-渠道分组失败: ${error.message}`);
     }
   }
 
