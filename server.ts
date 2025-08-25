@@ -535,22 +535,6 @@ app.post("/api/sync-models/control", (req, res) => {
   }
 });
 
-// 清理并重置所有模型配置
-app.post("/api/sync-models/cleanup", async (req, res) => {
-  try {
-    const results = await modelSyncService.cleanupAndResetModels();
-    res.json({
-      success: true,
-      message: "模型清理与重置任务完成",
-      data: results,
-    });
-  } catch (error) {
-    res.status(500).json({
-      error: "清理模型配置时出错",
-      details: error.message,
-    });
-  }
-});
 
 // 获取所有站点分组
 app.get("/api/channels/site-groups", async (req, res) => {
@@ -847,69 +831,33 @@ app.get("/api/architecture-stats", async (req, res) => {
   }
 });
 
-// 维护脚本：删除所有二三层分组 (sort=10/sort=15)
+// 维护脚本：删除所有二三层分组 (sort=10/sort=15) 并清理uni-api配置
 app.post("/api/maintenance/delete-model-groups", async (req, res) => {
   console.log("🚨 开始执行维护任务：删除所有二三层分组 (sort=10/sort=15)");
 
   try {
-    const allGroups = await gptloadService.getAllGroups();
-
-    // 筛选出二层(sort=15)和三层(sort=10)分组
-    const modelGroupsToDelete = allGroups.filter(
-      (group) => group.sort === 10 || group.sort === 15
-    );
-
-    if (modelGroupsToDelete.length === 0) {
-      console.log("✅ 没有找到需要删除的二三层分组");
-      return res.json({
-        success: true,
-        message: "没有找到 sort=10 或 sort=15 的分组，无需操作。",
-      });
-    }
-
-    console.log(`🗑️ 发现 ${modelGroupsToDelete.length} 个二三层分组需要删除...`);
-
-    const results = {
-      deleted: [],
-      failed: [],
+    const results = await modelSyncService.cleanupAndResetModels();
+    
+    // 增强响应信息
+    const successMessage = `操作完成：成功删除 ${results.deletedGroups} 个分组，失败 ${results.failedGroups} 个，清理了 ${results.cleanedProviders} 个uni-api配置`;
+    const detailedResults = {
+      deletedGroups: results.deletedGroups,
+      failedGroups: results.failedGroups,
+      cleanedProviders: results.cleanedProviders,
+      errors: results.errors
     };
-
-    for (const group of modelGroupsToDelete) {
-      try {
-        const success = await gptloadService.deleteGroupById(
-          group.id,
-          group._instance.id
-        );
-        if (success) {
-          results.deleted.push(`${group.name} (sort=${group.sort})`);
-        } else {
-          results.failed.push({ 
-            name: group.name, 
-            reason: "删除失败",
-            sort: group.sort
-          });
-        }
-      } catch (error) {
-        results.failed.push({ 
-          name: group.name, 
-          reason: error.message,
-          sort: group.sort
-        });
-      }
-    }
-
-    console.log(
-      `🏁 维护任务完成: 成功删除 ${results.deleted.length} 个, 失败 ${results.failed.length} 个`
-    );
 
     res.json({
       success: true,
-      message: `操作完成。成功删除 ${results.deleted.length} 个二三层分组，失败 ${results.failed.length} 个。`,
-      results,
+      message: successMessage,
+      results: detailedResults
     });
   } catch (error) {
-    console.error("💥 删除二三层分组时发生严重错误:", error);
-    res.status(500).json({ error: "服务器内部错误", details: error.message });
+    console.error("清理操作失败:", error);
+    res.status(500).json({
+      error: "清理操作失败",
+      details: error.message
+    });
   }
 });
 
