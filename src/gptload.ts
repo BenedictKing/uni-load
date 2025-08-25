@@ -19,7 +19,7 @@ class GptloadService {
       await this.manager.checkAllInstancesHealth()
       const instances = this.manager.getAllInstancesStatus()
 
-      const healthyCount = Object.values(instances).filter((inst) => inst.healthy).length
+      const healthyCount = Object.values(instances).filter((inst: any) => inst.healthy).length
       const totalCount = Object.keys(instances).length
 
       return {

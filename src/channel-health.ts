@@ -23,7 +23,7 @@ import {
   ChannelHealthResult,
   DetailedHealthReport,
   ValidationResult,
-  ChannelMetrics
+  ChannelMetrics,
 } from './types'
 
 class ChannelHealthMonitor {
@@ -53,12 +53,9 @@ class ChannelHealthMonitor {
     this.checkChannelHealth()
 
     // 设置定时任务
-    this.monitorInterval = setInterval(
-      () => {
-        this.checkChannelHealth()
-      },
-      this.checkIntervalMinutes * 60 * 1000
-    )
+    this.monitorInterval = setInterval(() => {
+      this.checkChannelHealth()
+    }, this.checkIntervalMinutes * 60 * 1000)
   }
 
   /**
@@ -401,9 +398,9 @@ class ChannelHealthMonitor {
           const error = waitResult.error || (isValid ? null : '验证失败')
 
           console.log(
-            `${isValid ? '✅' : '❌'} 分组 ${siteGroup.name} 验证${
-              isValid ? '成功' : '失败'
-            }${error ? ': ' + error : ''}`
+            `${isValid ? '✅' : '❌'} 分组 ${siteGroup.name} 验证${isValid ? '成功' : '失败'}${
+              error ? ': ' + error : ''
+            }`
           )
 
           return {
@@ -549,8 +546,8 @@ class ChannelHealthMonitor {
    * 记录渠道失败
    */
   async recordChannelFailure(groupName, errorMessage, errorContext = null) {
-    const currentFailures = this.channelFailures.get(groupName) || 0
-    const newFailures = currentFailures + 1
+    const currentFailures = this.channelFailures.get(groupName)
+    const newFailures = currentFailures ? currentFailures + 1 : 1
 
     this.channelFailures.set(groupName, newFailures)
 

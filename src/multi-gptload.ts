@@ -9,7 +9,7 @@ import instanceHealthManager, { HealthResult, InstanceHealthStatus } from './ser
  * 依赖分离的配置管理器和健康检查管理器
  */
 export class MultiGptloadManager {
-  public instances = new Map<string, GptloadInstance>() // gptload实例配置
+  public instances = new Map<string, InstanceHealthStatus>() // gptload实例配置
   private _siteAssignments = new Map<string, string>() // 站点到实例的分配
   public healthStatus = new Map<string, HealthResult>() // 新增 healthStatus 属性
 
@@ -187,18 +187,14 @@ export class MultiGptloadManager {
   }
 
   /**
-   * 获取多实例状态信息
+   * 获取所有实例状态信息（返回对象格式，便于按ID访问）
    */
-  getStatus(): any {
+  getAllInstancesStatus(): Record<string, { id: string; name: string; url: string; priority: number; healthy: boolean; responseTime: number; lastCheck: Date; error?: string }> {
     const instances = this.getAllInstances()
-    const stats = instanceHealthManager.getHealthStatistics(instances)
-
-    return {
-      total: stats.total,
-      healthy: stats.healthy,
-      unhealthy: stats.unhealthy,
-      healthyPercentage: stats.healthyPercentage,
-      instances: instances.map((instance) => ({
+    const result: Record<string, any> = {}
+    
+    instances.forEach((instance) => {
+      result[instance.id] = {
         id: instance.id,
         name: instance.name,
         url: instance.url,
@@ -207,13 +203,26 @@ export class MultiGptloadManager {
         responseTime: instance.health.responseTime,
         lastCheck: instance.health.lastCheck,
         error: instance.health.error,
-      })),
-      siteAssignments: Array.from(this._siteAssignments.entries()).map(([site, instanceId]) => ({
-        site,
+      }
+    })
+    
+    return result
+  }
+
+  /**
+   * 获取站点分配信息
+   */
+  getSiteAssignments(): Record<string, any> {
+    const result: Record<string, any> = {}
+    
+    this._siteAssignments.forEach((instanceId, site) => {
+      result[site] = {
         instanceId,
         instanceName: this.instances.get(instanceId)?.name,
-      })),
-    }
+      }
+    })
+    
+    return result
   }
 
   /**
