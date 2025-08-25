@@ -32,28 +32,38 @@ import { MultiGptloadManager } from '../multi-gptload'
 
 /**
  * 初始化所有服务并注册到依赖注入容器
+ * 注意：服务注册顺序很重要，被依赖的服务必须先注册
  */
 export function initializeServices(): void {
   console.log('🚀 初始化依赖注入服务...')
 
   try {
-    // 注册基础服务（单例）
+    // 1. 注册基础服务（无依赖）
     container.registerSingleton<IInstanceConfigManager>('instanceConfigManager', () => instanceConfigManager)
     container.registerSingleton<IInstanceHealthManager>('instanceHealthManager', () => instanceHealthManager)
     container.registerSingleton<IHealthChecker>('healthChecker', () => new HealthChecker())
     container.registerSingleton<IHttpClientFactory>('httpClientFactory', () => HttpClientFactory)
-
-    // 注册业务服务（单例）
-    container.registerSingleton<IGptloadService>('gptloadService', () => gptloadService)
     container.registerSingleton<IModelsService>('modelsService', () => modelsService)
-    container.registerSingleton<IYamlManager>('yamlManager', () => yamlManager)
     container.registerSingleton<ISiteConfigurationService>('siteConfigurationService', () => siteConfigurationService)
     container.registerSingleton<IThreeLayerArchitecture>('threeLayerArchitecture', () => threeLayerArchitecture)
     
-    // 注册多实例管理器（需要特殊处理，因为它是一个类）
+    // 2. 注册多实例管理器（无依赖）
     container.registerSingleton<IMultiGptloadManager>('multiGptloadManager', () => {
       const manager = new MultiGptloadManager()
       return manager as IMultiGptloadManager
+    })
+
+    // 3. 注册依赖于多实例管理器的服务
+    container.registerSingleton<IGptloadService>('gptloadService', () => gptloadService)
+
+    // 4. 注入依赖：为YamlManager设置依赖
+    container.registerSingleton<IYamlManager>('yamlManager', () => {
+      const gptloadService = container.resolve<IGptloadService>('gptloadService')
+      const multiGptloadManager = container.resolve<IMultiGptloadManager>('multiGptloadManager')
+      
+      // 为现有的yamlManager实例设置依赖
+      yamlManager.setDependencies(gptloadService, multiGptloadManager)
+      return yamlManager
     })
 
     console.log('✅ 依赖注入服务初始化完成')

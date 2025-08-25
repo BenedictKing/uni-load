@@ -1,7 +1,7 @@
-import axios from 'axios'
-import https from 'https'
-
 import modelConfig from './model-config'
+import { HttpClientFactory } from './services/http-client-factory'
+import { IModelsService } from './interfaces'
+import { AxiosInstance } from 'axios'
 
 // 定义需要的类型
 type Model = string
@@ -17,130 +17,66 @@ interface AxiosErrorWithRetry extends Error {
   message: string
 }
 
-class ModelsService {
+class ModelsService implements IModelsService {
+  private apiClient: AxiosInstance
   private timeout: number
-  private httpsAgent: https.Agent
 
   constructor() {
     this.timeout = 30000 // 30秒超时
-
-    // 创建允许自签名证书的 HTTPS Agent
-    this.httpsAgent = new https.Agent({
-      rejectUnauthorized: false, // 允许自签名证书和无效证书
+    // 使用HttpClientFactory创建统一的客户端
+    this.apiClient = HttpClientFactory.createModelClient({
+      timeout: this.timeout,
+      retries: 3,
+      userAgent: 'uni-load/1.0.0'
     })
   }
 
-  /**
-   * 判断错误是否可重试
-   */
-  private isRetryableError(error: AxiosErrorWithRetry): boolean {
-    // 网络连接错误
-    if (
-      error.code === 'ECONNRESET' ||
-      error.code === 'ECONNREFUSED' ||
-      error.code === 'ETIMEDOUT' ||
-      error.code === 'ENOTFOUND'
-    ) {
-      return true
-    }
-
-    // Socket 连接异常断开
-    if (error.message && error.message.includes('socket connection was closed')) {
-      return true
-    }
-
-    // 超时错误
-    if (error.message && error.message.includes('timeout')) {
-      return true
-    }
-
-    // 5xx 服务器错误（可能是临时的）
-    if (error.response && error.response.status >= 500) {
-      return true
-    }
-
-    // 429 限流错误
-    if (error.response && error.response.status === 429) {
-      return true
-    }
-
-    return false
-  }
+  // 重试逻辑已移至 HttpClientFactory，移除冗余方法
 
   /**
-   * 等待指定时间
-   */
-  private sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms))
-  }
-
-  /**
-   * 从AI站点获取支持的模型列表（带重试机制）
+   * 从AI站点获取支持的模型列表
+   * HttpClientFactory已处理重试机制和HTTPS配置
    */
   async getModels(baseUrl: string, apiKey: string, maxRetries: number = 3): Promise<Model[]> {
-    let lastError: Error
+    try {
+      console.log(`正在从 ${baseUrl} 获取模型列表...`)
 
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        console.log(`正在从 ${baseUrl} 获取模型列表...${attempt > 1 ? ` (重试 ${attempt}/${maxRetries})` : ''}`)
+      // 构建模型列表请求URL
+      const modelsUrl = this.buildModelsUrl(baseUrl)
 
-        // 构建模型列表请求URL
-        const modelsUrl = this.buildModelsUrl(baseUrl)
+      // 使用统一的HTTP客户端发送请求
+      const response = await this.apiClient.get(modelsUrl, {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+        },
+      })
 
-        // 发送请求
-        const response = await axios.get(modelsUrl, {
-          timeout: this.timeout,
-          httpsAgent: this.httpsAgent, // 使用自定义的 HTTPS Agent
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-            'User-Agent': 'uni-load/1.0.0',
-          },
-        })
+      // 解析响应数据
+      const models = this.parseModelsResponse(response.data)
 
-        // 解析响应数据
-        const models = this.parseModelsResponse(response.data)
-
-        if (!models || models.length === 0) {
-          console.log('⚠️ 站点返回空模型列表，但API正常响应')
-          return [] // 返回空数组而不是抛出异常
-        }
-
-        console.log(
-          `✅ 成功获取 ${models.length} 个模型:`,
-          models.slice(0, 5).join(', ') + (models.length > 5 ? '...' : '')
-        )
-        return models
-      } catch (error) {
-        lastError = error
-
-        // 判断是否为可重试的错误
-        const isRetryableError = this.isRetryableError(error)
-
-        if (isRetryableError && attempt < maxRetries) {
-          const waitTime = Math.min(1000 * Math.pow(2, attempt - 1), 10000) // 指数退避，最大10秒
-          console.warn(`⚠️ 获取模型列表失败 (尝试 ${attempt}/${maxRetries}): ${error.message}`)
-          console.log(`⏳ 等待 ${waitTime}ms 后重试...`)
-
-          await this.sleep(waitTime)
-          continue
-        }
-
-        // 不可重试的错误或已达到最大重试次数
-        console.error(`获取模型列表失败: ${error.message}`)
-
-        if (error.response) {
-          console.error(`HTTP ${error.response.status}: ${error.response.statusText}`)
-          if (error.response.data) {
-            console.error('响应数据:', error.response.data)
-          }
-        }
-
-        break // 跳出重试循环
+      if (!models || models.length === 0) {
+        console.log('⚠️ 站点返回空模型列表，但API正常响应')
+        return [] // 返回空数组而不是抛出异常
       }
-    }
 
-    throw new Error(`获取模型列表失败 (已重试 ${maxRetries} 次): ${lastError.message}`)
+      console.log(
+        `✅ 成功获取 ${models.length} 个模型:`,
+        models.slice(0, 5).join(', ') + (models.length > 5 ? '...' : '')
+      )
+      return models
+      
+    } catch (error) {
+      console.error(`获取模型列表失败:`, error.message)
+      
+      if (error.response) {
+        console.error(`HTTP ${error.response.status}: ${error.response.statusText}`)
+        if (error.response.data) {
+          console.error('响应数据:', error.response.data)
+        }
+      }
+      
+      throw new Error(`获取模型列表失败: ${error.message}`)
+    }
   }
 
   /**

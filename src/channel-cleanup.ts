@@ -222,40 +222,26 @@ class ChannelCleanupService {
   }
 
   /**
-   * 执行实际的连接测试
+   * 执行实际的连接性测试（使用HealthChecker服务）
    */
-  async performConnectivityTest(baseUrl, timeout) {
+  async performConnectivityTest(baseUrl: string, timeout: number): Promise<boolean> {
     try {
-      // 方法1: 尝试访问 /v1/models 端点
-      const modelsUrl = `${baseUrl.replace(/\/+$/, '')}/v1/models`
-
-      const response = await axios.get(modelsUrl, {
+      const healthChecker = this.getHealthChecker()
+      
+      // 使用HealthChecker进行连接性测试
+      const result = await healthChecker.testConnectivity(baseUrl, {
         timeout,
-        httpsAgent: this.httpsAgent, // 使用自定义的 HTTPS Agent
-        validateStatus: (status) => status < 500, // 4xx可接受，5xx表示服务器问题
-        headers: {
-          'User-Agent': 'uni-load-connectivity-test',
-          Accept: 'application/json',
-        },
+        method: 'GET',
+        endpoint: '/v1/models',
+        expectedStatus: [200, 401, 403] // 4xx可接受，5xx表示服务器问题
       })
-
-      // 如果能收到响应（即使是401、403等），说明服务是可达的
-      console.log(`📡 连接测试响应: ${response.status} ${response.statusText}`)
-      return true
+      
+      console.log(`📡 连接测试结果: ${result.accessible ? '可达' : '不可达'}`)
+      return result.accessible
+      
     } catch (error) {
-      // 网络层面的错误（如ECONNREFUSED, ETIMEDOUT）表示无法连接
-      if (
-        error.code === 'ECONNREFUSED' ||
-        error.code === 'ETIMEDOUT' ||
-        error.code === 'ENOTFOUND' ||
-        error.message.includes('timeout')
-      ) {
-        return false
-      }
-
-      // 其他错误可能表示服务可达但有其他问题
-      console.log(`⚠️ 连接测试遇到非网络错误: ${error.message}`)
-      return true // 保守处理，认为是可达的
+      console.error(`连接性测试失败: ${error.message}`)
+      return false
     }
   }
 
@@ -263,8 +249,8 @@ class ChannelCleanupService {
    * 选择合适的 gptload 实例
    */
   selectInstanceForChannel(channel) {
-    const gptloadService = require('./gptload')
-    const instances = Array.from(gptloadService.manager.instances.values())
+    // 使用注入的 gptloadService 而非动态 require
+    const instances = Array.from(this.gptloadService.manager.instances.values())
 
     if (!instances || instances.length === 0) {
       throw new Error('没有可用的 gptload 实例')
@@ -273,12 +259,12 @@ class ChannelCleanupService {
     // 简单策略：选择健康的实例，优先本地实例
     let bestInstance = instances.find(
       (instance) =>
-        instance.name && instance.name.includes('本地') && gptloadService.manager.healthStatus.get(instance.id)?.healthy
+        instance.name && instance.name.includes('本地') && this.gptloadService.manager.healthStatus.get(instance.id)?.healthy
     )
 
     if (!bestInstance) {
       // 选择第一个健康的实例
-      bestInstance = instances.find((instance) => gptloadService.manager.healthStatus.get(instance.id)?.healthy)
+      bestInstance = instances.find((instance) => this.gptloadService.manager.healthStatus.get(instance.id)?.healthy)
     }
 
     if (!bestInstance) {

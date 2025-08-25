@@ -2,12 +2,31 @@ import { promises as fs } from 'fs'
 import path from 'path'
 import YAML from 'yaml'
 import modelConfig from './model-config'
+import { IGptloadService, IMultiGptloadManager, IYamlManager } from './interfaces'
 
-class YamlManager {
-  constructor() {
+class YamlManager implements IYamlManager {
+  private gptloadService: IGptloadService | null = null
+  private multiGptloadManager: IMultiGptloadManager | null = null
+  private uniApiPath: string
+  private yamlPath: string
+  private gptloadUrl: string
+
+  constructor(gptloadService?: IGptloadService, multiGptloadManager?: IMultiGptloadManager) {
     this.uniApiPath = process.env.UNI_API_PATH || '../uni-api'
     this.yamlPath = process.env.UNI_API_YAML_PATH || path.join(this.uniApiPath, 'api.yaml')
     this.gptloadUrl = process.env.GPTLOAD_URL || 'http://localhost:3001'
+    
+    // 依赖注入，支持延迟注入
+    if (gptloadService) this.gptloadService = gptloadService
+    if (multiGptloadManager) this.multiGptloadManager = multiGptloadManager
+  }
+
+  /**
+   * 设置依赖服务（支持延迟注入）
+   */
+  setDependencies(gptloadService: IGptloadService, multiGptloadManager: IMultiGptloadManager): void {
+    this.gptloadService = gptloadService
+    this.multiGptloadManager = multiGptloadManager
   }
 
   /**
@@ -139,9 +158,12 @@ class YamlManager {
         config.providers = []
       }
 
-      // 获取gpt-load实例的token
-      const gptloadService = require('./gptload')
-      const multiInstanceStatus = gptloadService.getMultiInstanceStatus()
+      // 使用注入的依赖获取token
+      if (!this.gptloadService) {
+        throw new Error('GptloadService 未注入，无法获取实例状态')
+      }
+
+      const multiInstanceStatus = this.gptloadService.getMultiInstanceStatus()
       const gptloadToken = await this.getGptloadToken(multiInstanceStatus)
 
       // 为每个模型添加或更新 provider
@@ -180,9 +202,8 @@ class YamlManager {
         (instance) => instance.name && instance.name.includes('本地')
       )
 
-      if (localInstance) {
-        const multiGptloadManager = require('./multi-gptload')
-        const instance = multiGptloadManager.getInstance('local')
+      if (localInstance && this.multiGptloadManager) {
+        const instance = this.multiGptloadManager.getInstance('local')
         if (instance && instance.token) {
           console.log('✅ 使用本地gpt-load实例的token')
           return instance.token
@@ -190,13 +211,14 @@ class YamlManager {
       }
 
       // 如果本地实例没有token，使用第一个有token的健康实例
-      for (const [instanceId, status] of Object.entries(multiInstanceStatus.instances)) {
-        if (status.healthy) {
-          const multiGptloadManager = require('./multi-gptload')
-          const instance = multiGptloadManager.getInstance(instanceId)
-          if (instance && instance.token) {
-            console.log(`✅ 使用实例 ${instance.name} 的token`)
-            return instance.token
+      if (this.multiGptloadManager) {
+        for (const [instanceId, status] of Object.entries(multiInstanceStatus.instances)) {
+          if (status.healthy) {
+            const instance = this.multiGptloadManager.getInstance(instanceId)
+            if (instance && instance.token) {
+              console.log(`✅ 使用实例 ${instance.name} 的token`)
+              return instance.token
+            }
           }
         }
       }
@@ -211,43 +233,21 @@ class YamlManager {
 
   /**
    * 标准化模型名称，处理重定向
-   * 现已迁移到 modelConfig.normalizeForUniApi()
+   * 完全依赖 modelConfig 的统一实现
    */
   normalizeModelName(originalModel) {
-    // 使用统一的标准化方法
+    // 直接使用 model-config 的标准化方法
     const result = modelConfig.normalizeForUniApi(originalModel)
     const normalizedModel = result.normalizedModel
 
-    // 进一步处理版本和后缀（保留原有的复杂处理逻辑）
-    const furtherSimplified = normalizedModel
-      .replace(/-instruct$/g, '') // 移除 -instruct 后缀
-      // 移除 YYYY-MM-DD 格式的日期 (如 2025-08-07, -2025-03-24)
-      .replace(/-?\d{4}-\d{2}-\d{2}/g, '')
-      // 移除 YYYYMMDD 格式的日期 (如 20250219, -20250324)
-      .replace(/-?\d{8}/g, '')
-      // 移除 YYMMDD 格式的日期 (如 -250528) - 新增支持6位日期格式
-      .replace(/-\d{6}(?=-|$)/g, '')
-      // 移除 MMDD 格式的日期 (如 -0711, -0324)
-      .replace(/-\d{4}(?=-|$)/g, '')
-      // 移除其他常见的版本号和日期模式
-      .replace(/-\d{2}-\d{2}$/g, '') // 移除 -05-20 格式（月-日）
-      .replace(/-\d{3}$/g, '') // 移除 -001 等3位数字格式
-      // 替换连续的多个连字符为单个连字符
-      .replace(/-+/g, '-')
-      // 移除字符串开头和结尾的连字符
-      .replace(/^-+|-+$/g, '')
-
+    // 删除冗余的自定义处理逻辑，统一使用 model-config
     if (originalModel !== normalizedModel) {
-      console.log(`🔄 模型名称处理: ${originalModel} -> ${normalizedModel}`)
-    }
-
-    if (normalizedModel !== furtherSimplified) {
-      console.log(`🔄 模型名称进一步简化: ${normalizedModel} -> ${furtherSimplified}`)
+      console.log(`🔄 模型名称标准化: ${originalModel} -> ${normalizedModel}`)
     }
 
     return {
-      withoutOrg: normalizedModel, // 去除组织名的小写版本
-      simplified: furtherSimplified, // 进一步简化的版本
+      withoutOrg: normalizedModel,
+      simplified: normalizedModel,
     }
   }
 
