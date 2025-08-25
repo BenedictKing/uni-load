@@ -72,20 +72,28 @@ Content-Type: application/json
   "message": "成功配置AI站点 deepseek",
   "data": {
     "siteName": "deepseek",
-    "modelsFound": 5,
+    "baseUrl": "https://api.deepseek.com/v1",
+    "channelTypes": ["openai"],
+    "groupsCreated": 1,
+    "modelsCount": 5,
+    "models": ["deepseek-chat", "deepseek-coder"],
     "siteGroups": [
       {
-        "name": "deepseek",
-        "type": "openai",
-        "upstreams": ["https://api.deepseek.com/v1"]
+        "name": "deepseek-openai",
+        "id": "123",
+        "upstreams": [{"url": "https://api.deepseek.com/v1", "weight": 1}],
+        "_instance": {
+          "id": "local",
+          "name": "本地 gpt-load"
+        }
       }
     ],
-    "modelGroups": [
-      {
-        "name": "deepseek-chat",
-        "upstreams": ["http://localhost:3001/proxy/deepseek-chat"]
-      }
-    ]
+    "modelGroups": 5,
+    "usingManualModels": false,
+    "successfulInstance": {
+      "id": "local",
+      "name": "本地 gpt-load"
+    }
   }
 }
 ```
@@ -213,7 +221,7 @@ POST /api/sync-models/control
 Content-Type: application/json
 
 {
-  "action": "start" | "stop" | "restart"
+  "action": "start" | "stop"
 }
 ```
 
@@ -247,7 +255,7 @@ POST /api/check-channels/control
 Content-Type: application/json
 
 {
-  "action": "start" | "stop" | "restart"
+  "action": "start" | "stop"
 }
 ```
 

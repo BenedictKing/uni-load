@@ -23,6 +23,31 @@ export interface SiteGroup {
 export interface GptloadInstance {
   id: string
   name: string
+  url: string
+  token?: string
+  priority: number
+  description?: string
+  upstream_addresses?: string[]
+}
+
+export interface HealthResult {
+  healthy: boolean
+  responseTime: number
+  statusCode?: number
+  error?: string
+  lastCheck: Date
+}
+
+export interface ConnectivityResult {
+  accessible: boolean
+  responseTime: number
+  error?: string
+  statusCode?: number
+}
+
+export interface InstanceHealthStatus extends GptloadInstance {
+  health: HealthResult
+  apiClient: any // AxiosInstance类型
 }
 
 export interface Model {
@@ -74,4 +99,39 @@ export interface ServiceStatus {
   modelSync: ModelSyncStatus
   channelHealth: ChannelHealthStatus
   channelCleanup: any
+}
+
+// 层级配置相关类型
+export interface LayerConfig {
+  sort: number
+  blacklist_threshold: number
+}
+
+export interface LayerConfigs {
+  siteGroup: LayerConfig
+  modelChannelGroup: LayerConfig
+  aggregateGroup: LayerConfig
+}
+
+// 站点配置服务相关类型
+export interface ProcessResult {
+  success: boolean
+  message: string
+  data: {
+    siteName: string
+    baseUrl: string
+    channelTypes: string[]
+    groupsCreated: number
+    modelsCount: number
+    models: string[]
+    siteGroups: any[]
+    modelGroups: number
+    usingManualModels?: boolean
+    successfulInstance?: {
+      id: string
+      name: string
+    }
+    emptyModelListHandling?: boolean
+    cleanupResult?: any
+  }
 }

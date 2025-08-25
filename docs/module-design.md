@@ -1,15 +1,44 @@
-# uni-load 模块设计文档
+# uni-load 模块设计文档 v2.1
 
 ## 概述
 
-uni-load 采用模块化设计，将功能按职责清晰分离，便于维护和扩展。本文档详细介绍各个模块的设计理念、代码组织和接口定义。
+uni-load 采用现代化的模块化设计，遵循SOLID原则，将功能按职责清晰分离。v2.1版本进行了重大服务架构重构，引入依赖注入模式，大幅提高了代码的可维护性和可测试性。
 
 ## 目录
 
-1. [模块分层设计](#模块分层设计)
-2. [核心模块详解](#核心模块详解)
-3. [模块接口设计](#模块接口设计)
-4. [扩展机制](#扩展机制)
+1. [架构重构概览](#架构重构概览)
+2. [模块分层设计](#模块分层设计)
+3. [核心模块详解](#核心模块详解)
+4. [新增服务模块](#新增服务模块)
+5. [模块接口设计](#模块接口设计)
+6. [扩展机制](#扩展机制)
+
+## 架构重构概览
+
+### v2.1 重构成果
+
+**重构前问题**：
+- 单一文件职责过重（multi-gptload.ts 超过2000行）
+- 业务逻辑与表现层耦合（server.ts 混合路由和业务逻辑）
+- 模块间紧耦合，难以测试和维护
+
+**重构后架构**：
+```
+服务分离架构 (Service Separation Architecture)
+├── 表现层 (server.ts) - 仅处理HTTP路由
+├── 业务逻辑层 (SiteConfigurationService) - 站点配置业务
+├── 协调层 (MultiGptloadManager) - 多实例协调
+├── 服务层 (专门的服务类)
+│   ├── InstanceConfigManager - 实例配置管理
+│   └── InstanceHealthManager - 实例健康管理
+└── 数据访问层 (各种API客户端)
+```
+
+**重构效果**：
+- **代码行数减少**：multi-gptload.ts 从 2000+ 行精简到 290 行
+- **职责清晰**：每个服务类只负责一个明确领域
+- **可测试性**：服务可独立进行单元测试
+- **可扩展性**：新功能可通过新增服务类实现
 
 ## 模块分层设计
 
@@ -149,100 +178,180 @@ async checkAllInstancesHealth(): Promise<InstanceHealthReport[]>
 3. **配置验证**: 创建分组前验证配置参数
 4. **日志记录**: 详细的操作日志用于调试
 
-### 3. 多实例管理器 (multi-gptload.ts)
+### 3. 多实例协调器 (multi-gptload.ts) - 重构后
 
-**职责**: 管理多个 gpt-load 实例的协调和分配
+**职责**: 专注于多实例的协调和调度逻辑（已重构精简）
 
-#### 类设计
+#### 重构后的类设计
 
 ```typescript
-class MultiGPTLoadManager {
-  private instances: Map<string, GptloadInstanceConfig> = new Map();
-  private healthStatus: Map<string, InstanceHealth> = new Map();
-  public siteAssignments: Map<string, string> = new Map();
+export class MultiGptloadManager {
+  private instances = new Map<string, GptloadInstance>()
+  private siteAssignments = new Map<string, string>() 
+  private httpsAgent: https.Agent
+
+  constructor() {
+    // 使用依赖注入的服务
+    // instanceConfigManager 和 instanceHealthManager 作为外部依赖
+  }
+
+  // 核心协调方法
+  async selectBestInstance(siteUrl?: string): Promise<InstanceHealthStatus | null>
+  async reassignSite(siteUrl: string, instanceId?: string): Promise<void>
+  async getModelsViaMultiInstance(baseUrl: string, apiKey: string): Promise<{...}>
   
-  // 实例管理
-  loadInstancesFromConfig(): void;
-  getInstance(instanceId: string): GptloadInstanceConfig | null;
-  getHealthyInstances(): GptloadInstanceConfig[];
-  
-  // 智能分配
-  async selectBestInstanceForSite(siteUrl: string): Promise<string>;
-  async getModelsViaMultiInstance(baseUrl: string, apiKey: string): Promise<{models: Model[], instanceId: string, instanceName: string}>;
-  
-  // 健康管理
-  async checkInstanceHealth(instanceId: string): Promise<InstanceHealth>;
-  async checkAllInstancesHealth(): Promise<Map<string, InstanceHealth>>;
+  // 状态查询
+  getStatus(): MultiInstanceStatus
+  getAllInstances(): InstanceHealthStatus[]
+  getInstance(instanceId: string): InstanceHealthStatus | undefined
 }
 ```
 
-#### 核心算法
+#### 重构亮点
 
-##### 3.1 实例选择算法
+**依赖注入模式**：
 ```typescript
-async selectBestInstanceForSite(siteUrl: string): Promise<string> {
-  // 1. 检查是否有预分配
-  if (this.siteAssignments.has(siteUrl)) {
-    const assignedInstance = this.siteAssignments.get(siteUrl);
-    if (this.isInstanceHealthy(assignedInstance)) {
-      return assignedInstance;
-    }
-  }
+// 初始化时使用外部服务
+async initializeInstances() {
+  // 使用 instanceConfigManager.loadInstancesConfig()
+  const instancesConfig = await instanceConfigManager.loadInstancesConfig()
   
-  // 2. 获取健康实例
-  const healthyInstances = this.getHealthyInstances();
-  
-  // 3. 按优先级排序
-  const sortedInstances = healthyInstances.sort((a, b) => a.priority - b.priority);
-  
-  // 4. 连通性测试
-  for (const instance of sortedInstances) {
-    if (await this.testConnectivity(instance, siteUrl)) {
-      this.siteAssignments.set(siteUrl, instance.id);
-      return instance.id;
-    }
-  }
-  
-  throw new Error('No healthy instance can connect to the site');
+  // 使用 instanceHealthManager.createApiClient()
+  const apiClient = instanceHealthManager.createApiClient(config)
+}
+
+// 健康检查委托给专门服务
+async checkAllInstancesHealth() {
+  const instances = Array.from(this.instances.values())
+  return await instanceHealthManager.checkAllInstancesHealth(instances)
 }
 ```
 
-##### 3.2 健康检查算法
+**职责分离**：
+1. **配置管理** → InstanceConfigManager
+2. **健康检查** → InstanceHealthManager  
+3. **协调逻辑** → MultiGptloadManager (本类专注此职责)
+
+**代码精简效果**：
+- 从 2000+ 行缩减到 290 行
+- 移除了配置解析、健康检查等非核心逻辑
+- 专注于实例选择、分配和状态管理
+
+## 新增服务模块
+
+### 1. SiteConfigurationService (src/services/site-configuration.ts)
+
+**职责**: 站点配置业务逻辑的统一处理
+
+#### 核心功能
 ```typescript
-async checkInstanceHealth(instanceId: string): Promise<InstanceHealth> {
-  const instance = this.getInstance(instanceId);
-  const startTime = Date.now();
+class SiteConfigurationService {
+  // 站点名称生成
+  generateSiteNameFromUrl(baseUrl: string): string
   
-  try {
-    const response = await this.httpClient.get(`${instance.url}/api/health`, {
-      timeout: 5000,
-      headers: instance.token ? { 'Authorization': `Bearer ${instance.token}` } : {}
-    });
-    
-    const responseTime = Date.now() - startTime;
-    
-    return {
-      status: 'healthy',
-      responseTime,
-      lastCheck: new Date(),
-      error: null
-    };
-  } catch (error) {
-    return {
-      status: 'unhealthy',
-      responseTime: Date.now() - startTime,
-      lastCheck: new Date(),
-      error: error.message
-    };
-  }
+  // 配置验证和预处理
+  validateRequest(request: ProcessAiSiteRequest): void
+  preprocessRequest(request: ProcessAiSiteRequest): ProcessAiSiteRequest
+  
+  // 模型获取统一入口
+  async getModels(request: ProcessAiSiteRequest): Promise<{models: string[], successfulInstance?: string}>
+  
+  // 完整配置流程
+  async processSiteConfiguration(request: ProcessAiSiteRequest): Promise<ProcessResult>
+  
+  // 异常处理
+  async handleEmptyModelList(siteName: string, channelTypes: string[]): Promise<ProcessResult>
+}
+```
+
+#### 设计特点
+1. **业务逻辑集中**: 将原本散布在 server.ts 中的业务逻辑统一管理
+2. **流程标准化**: 提供标准的站点配置处理流程
+3. **错误处理**: 统一处理各种异常情况
+4. **依赖整合**: 协调 gptloadService、modelsService 等服务
+
+### 2. InstanceConfigManager (src/services/instance-config-manager.ts)
+
+**职责**: gpt-load 实例配置的专门管理
+
+#### 核心功能
+```typescript
+class InstanceConfigManager {
+  // 配置文件操作
+  async loadInstancesConfig(): Promise<GptloadInstance[]>
+  private parseConfigFile(configPath: string): Promise<any>
+  
+  // 配置验证
+  validateInstanceConnection(instance: GptloadInstance): boolean
+  private validateRequiredFields(instance: any): boolean
+  
+  // 上游地址管理
+  async validateUpstreamAddresses(instances: GptloadInstance[]): Promise<ValidationResult>
+  private checkCircularDependencies(instances: GptloadInstance[]): string[]
+  
+  // 实例排序和管理
+  sortInstancesByPriority(instances: GptloadInstance[]): GptloadInstance[]
+  getInstanceDisplayInfo(instance: GptloadInstance): string
 }
 ```
 
 #### 设计亮点
-1. **智能路由**: 基于优先级和连通性的实例选择
-2. **故障转移**: 自动检测失效实例并重新分配
-3. **负载均衡**: 合理分配站点到不同实例
-4. **状态缓存**: 避免频繁的健康检查请求
+1. **配置解耦**: 将配置管理从 MultiGptloadManager 中分离
+2. **验证增强**: 提供全面的配置验证能力
+3. **循环依赖检测**: 防止上游地址配置中的循环引用
+4. **格式标准化**: 统一的配置格式处理
+
+### 3. InstanceHealthManager (src/services/instance-health-manager.ts)
+
+**职责**: 实例健康状态的专门管理
+
+#### 核心功能
+```typescript  
+class InstanceHealthManager {
+  // API 客户端管理
+  createApiClient(instance: GptloadInstance): AxiosInstance
+  private createHttpsAgent(): https.Agent
+  
+  // 健康检查
+  async checkInstanceHealth(instance: InstanceHealthStatus): Promise<HealthResult>
+  async checkAllInstancesHealth(instances: InstanceHealthStatus[]): Promise<Map<string, HealthResult>>
+  
+  // 连接性测试
+  async testSiteAccessibility(instance: InstanceHealthStatus, siteUrl: string): Promise<ConnectivityResult>
+  
+  // 健康状态分析
+  getHealthyInstances(instances: InstanceHealthStatus[]): InstanceHealthStatus[]
+  getHealthStatistics(instances: InstanceHealthStatus[]): HealthStatistics
+  
+  // 定期检查
+  startPeriodicHealthCheck(instances: InstanceHealthStatus[], interval: number): NodeJS.Timeout
+}
+```
+
+#### 设计特点
+1. **专业化健康检查**: 提供全面的健康检查能力
+2. **批量操作优化**: 支持并发的多实例健康检查
+3. **连接性测试**: 验证实例对特定站点的可达性
+4. **统计分析**: 提供健康状态的统计信息
+5. **定期监控**: 支持自动化的定期健康检查
+
+### 服务间依赖关系
+
+```
+MultiGptloadManager
+├── 依赖 → InstanceConfigManager (配置管理)
+└── 依赖 → InstanceHealthManager (健康检查)
+
+SiteConfigurationService  
+├── 依赖 → GptloadService (gpt-load 接口)
+├── 依赖 → ModelsService (模型获取)
+└── 依赖 → YamlManager (配置更新)
+
+Server.ts
+└── 依赖 → SiteConfigurationService (业务逻辑)
+```
+
+这种依赖关系设计遵循了**依赖倒置原则**，高层模块不直接依赖低层模块的具体实现。
 
 ### 4. 模型服务模块 (models.ts)
 

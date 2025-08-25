@@ -139,8 +139,12 @@ Content-Type: application/json
     "siteGroups": [
       {
         "name": "deepseek-openai",
-        "type": "openai",
-        "upstreams": ["https://api.deepseek.com/v1"]
+        "id": "123",
+        "upstreams": [{"url": "https://api.deepseek.com/v1", "weight": 1}],
+        "_instance": {
+          "id": "local",
+          "name": "本地 gpt-load"
+        }
       }
     ],
     "modelGroups": 5,
@@ -348,7 +352,50 @@ curl -X POST http://localhost:3002/api/process-ai-site \
   }'
 ```
 
-### 场景 5: 删除站点配置
+### 场景 6: 多实例环境操作
+
+**目标**: 在多实例 gpt-load 环境中进行站点分配和健康检查
+
+**查看多实例状态**:
+```bash
+curl http://localhost:3002/api/multi-instances
+```
+
+**检查所有实例健康状态**:
+```bash
+curl -X POST http://localhost:3002/api/check-instances
+```
+
+**重新分配站点到指定实例**:
+```bash
+curl -X POST http://localhost:3002/api/reassign-site \
+  -H "Content-Type: application/json" \
+  -d '{
+    "siteUrl": "https://api.deepseek.com",
+    "instanceId": "us-proxy"
+  }'
+```
+
+### 场景 7: 架构管理操作
+
+**目标**: 管理和优化三层架构
+
+**初始化架构**:
+```bash
+curl -X POST http://localhost:3002/api/initialize-architecture
+```
+
+**获取架构详细统计**:
+```bash
+curl http://localhost:3002/api/architecture-stats
+```
+
+**手动恢复特定模型-渠道关系**:
+```bash
+curl -X POST http://localhost:3002/api/manual-recovery/gpt-4/openai-proxy
+```
+
+### 场景 8: 删除站点配置
 
 **目标**: 完全移除某个站点的配置
 

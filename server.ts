@@ -15,6 +15,7 @@ import modelSyncService from './src/model-sync'
 import channelHealthMonitor from './src/channel-health'
 import channelCleanupService from './src/channel-cleanup'
 import threeLayerArchitecture from './src/three-layer-architecture'
+import siteConfigurationService from './src/services/site-configuration'
 
 const app = express()
 const PORT: number = parseInt(process.env.PORT || '3002', 10)
@@ -23,84 +24,6 @@ const PORT: number = parseInt(process.env.PORT || '3002', 10)
 app.use(cors())
 app.use(express.json())
 app.use(express.static(path.join(__dirname, 'public')))
-
-// 自动生成站点名称的函数
-function generateSiteNameFromUrl(baseUrl: string): string {
-  try {
-    // 移除末尾的斜杠
-    let url = baseUrl.replace(/\/+$/, '')
-
-    // 确保URL有协议前缀
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      url = 'https://' + url
-    }
-
-    const urlObj = new URL(url)
-    let hostname = urlObj.hostname
-
-    // 移除常见的前缀
-    hostname = hostname.replace(/^(www\.|api\.|openai\.|claude\.)/, '')
-
-    // 处理域名规则
-    let siteName = hostname
-
-    const parts = hostname.split('.')
-    if (parts.length >= 2) {
-      // 对于多级域名，优先选择有意义的子域名
-      if (parts.length >= 3) {
-        // 如果有3级或更多域名，优先选择第一个子域名（通常是服务名）
-        // 例如：ai.luckylu71.qzz.io -> luckylu71
-        // 但如果第一个是通用前缀，则选择第二个
-        const firstPart = parts[0]
-        const secondPart = parts[1]
-
-        // 常见的通用前缀
-        const commonPrefixes = ['api', 'www', 'app', 'admin', 'service']
-
-        // 检查 firstPart 是否为通用前缀或以通用前缀开头
-        const isCommonPrefix = commonPrefixes.some(
-          (prefix) => firstPart === prefix || firstPart.startsWith(prefix + '-')
-        )
-
-        if (isCommonPrefix && secondPart) {
-          // 如果是通用前缀，则使用第二个部分作为基础名称
-          siteName = secondPart
-        } else {
-          // 否则，将第一和第二部分组合，以确保唯一性
-          // 例如 v2.voct.dev -> v2-voct
-          siteName = `${firstPart}-${secondPart}`
-        }
-      } else {
-        // 只有2级域名，取主域名
-        siteName = parts[parts.length - 2]
-      }
-    }
-
-    // 转换规则：
-    // 1. 转为小写
-    // 2. 替换 . 为 -
-    // 3. 只保留字母、数字和连字符
-    // 4. 移除开头和结尾的连字符
-    siteName = siteName
-      .toLowerCase()
-      .replace(/\./g, '-')
-      .replace(/[^a-z0-9-]/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .replace(/-+/g, '-') // 合并多个连续的连字符
-
-    // 确保长度在合理范围内 (3-30字符)
-    if (siteName.length < 3) {
-      siteName = siteName + '-ai'
-    }
-    if (siteName.length > 30) {
-      siteName = siteName.substring(0, 30).replace(/-+$/, '')
-    }
-
-    return siteName
-  } catch (error) {
-    throw new Error('Invalid URL format')
-  }
-}
 
 // 预览站点名称的API端点
 app.post('/api/preview-site-name', (req: Request, res: Response) => {
@@ -114,7 +37,7 @@ app.post('/api/preview-site-name', (req: Request, res: Response) => {
     // 规范化baseUrl：移除末尾的斜杠
     baseUrl = baseUrl.replace(/\/+$/, '')
 
-    const siteName = generateSiteNameFromUrl(baseUrl)
+    const siteName = siteConfigurationService.generateSiteNameFromUrl(baseUrl)
     res.json({ siteName })
   } catch (error) {
     res.status(400).json({ error: '无效的 URL 格式' })
@@ -171,7 +94,7 @@ app.post(
       // 自动生成站点名称
       let siteName
       try {
-        siteName = generateSiteNameFromUrl(baseUrl)
+        siteName = siteConfigurationService.generateSiteNameFromUrl(baseUrl)
       } catch (error) {
         return res.status(400).json({
           error: '无效的 baseUrl 格式，无法生成站点名称',

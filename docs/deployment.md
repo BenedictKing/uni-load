@@ -55,16 +55,54 @@ git --version   # >= 2.30.0
 
 ### 环境变量配置
 
-详细的环境变量说明请参考 [README.md](../README.md#环境配置)
+**完整环境变量配置示例** (`.env.local`):
 
 ```bash
-# 创建生产环境配置
-cp .env.example .env.local
-
-# 关键生产配置
+# 基础配置
 NODE_ENV=production
 PORT=3002
+
+# gpt-load 连接配置  
 GPTLOAD_URL=http://localhost:3001
+GPTLOAD_TOKEN=your-optional-token
+
+# uni-api 配置
+UNI_API_PATH=../uni-api
+
+# 服务功能开关
+ENABLE_MODEL_SYNC=true                # 启用模型同步服务
+ENABLE_CHANNEL_HEALTH=true            # 启用渠道健康监控  
+ENABLE_MODEL_OPTIMIZER=true           # 启用三层架构管理器
+
+# 性能调优配置
+MAX_CONCURRENT_REQUESTS=10            # 最大并发请求数
+REQUEST_TIMEOUT_MS=30000              # 请求超时时间（毫秒）
+RETRY_ATTEMPTS=3                      # 失败重试次数
+
+# 监控间隔配置（秒）
+MODEL_SYNC_INTERVAL=60                # 模型同步间隔
+CHANNEL_CHECK_INTERVAL=30             # 渠道健康检查间隔
+ARCHITECTURE_CHECK_INTERVAL=300       # 架构检查间隔
+
+# 调试和日志配置
+LOG_LEVEL=info                        # 日志级别：debug, info, warn, error
+ENABLE_DEBUG_LOGS=false               # 启用调试日志
+ENABLE_METRICS=false                  # 启用性能监控
+
+# 安全配置
+ALLOWED_ORIGINS=http://localhost:3002 # CORS 允许的源
+MAX_REQUEST_SIZE=10mb                 # 最大请求体大小
+```
+
+**生产环境推荐配置**:
+```bash
+# 生产环境优化配置
+NODE_ENV=production
+LOG_LEVEL=warn
+ENABLE_DEBUG_LOGS=false
+MODEL_SYNC_INTERVAL=300               # 降低同步频率
+CHANNEL_CHECK_INTERVAL=60             # 适中的检查频率
+REQUEST_TIMEOUT_MS=45000              # 增加超时时间
 ```
 
 ### gpt-load 实例配置
@@ -336,8 +374,8 @@ pm2 stop uni-load
 #### 3.1 创建 Dockerfile
 
 ```dockerfile
-# Dockerfile
-FROM oven/bun:1-alpine
+# 多阶段构建优化 Dockerfile
+FROM oven/bun:1-alpine as builder
 
 # 设置工作目录
 WORKDIR /app
@@ -345,8 +383,8 @@ WORKDIR /app
 # 复制依赖文件
 COPY package.json bun.lock* ./
 
-# 安装依赖
-RUN bun install --frozen-lockfile
+# 安装依赖（仅生产依赖）
+RUN bun install --frozen-lockfile --production
 
 # 复制源代码
 COPY . .
@@ -354,8 +392,37 @@ COPY . .
 # 编译 TypeScript
 RUN bun run build
 
+# 生产运行时镜像
+FROM oven/bun:1-alpine
+
+# 安装必要的系统包
+RUN apk add --no-cache curl
+
+# 创建非 root 用户
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nextjs -u 1001
+
+# 设置工作目录
+WORKDIR /app
+
+# 从构建阶段复制文件
+COPY --from=builder --chown=nextjs:nodejs /app/dist ./dist
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+
+# 创建日志目录
+RUN mkdir -p logs && chown nextjs:nodejs logs
+
+# 切换到非 root 用户
+USER nextjs
+
 # 暴露端口
 EXPOSE 3002
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:3002/api/health || exit 1
 
 # 启动命令
 CMD ["bun", "start"]
