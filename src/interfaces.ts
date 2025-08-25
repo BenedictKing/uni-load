@@ -82,6 +82,11 @@ export interface IInstanceHealthManager {
 
 export interface IGptloadService {
   /**
+   * 多实例管理器
+   */
+  manager: IMultiGptloadManager
+  
+  /**
    * 获取所有分组
    */
   getAllGroups(): Promise<any[]>
@@ -242,6 +247,16 @@ export interface IThreeLayerArchitecture {
 // ============= 多实例管理接口 =============
 
 export interface IMultiGptloadManager {
+  /**
+   * 实例集合
+   */
+  instances: Map<string, any>
+  
+  /**
+   * 健康状态映射
+   */
+  healthStatus: Map<string, any>
+  
   /**
    * 选择最佳实例
    */
@@ -404,7 +419,7 @@ export interface IDependencyContainer {
   getRegisteredServices(): string[]
 }
 
-export default {
+export {
   IInstanceConfigManager,
   IInstanceHealthManager,
   IGptloadService,

@@ -1,22 +1,41 @@
-import gptloadService from './gptload'
-import axios from 'axios'
-import https from 'https'
+import { IGptloadService, IHealthChecker } from './interfaces'
+import { getService } from './services/service-factory'
 
 class ChannelCleanupService {
+  private gptloadService: IGptloadService | null = null
+  private healthChecker: IHealthChecker | null = null
+  private cleanupHistory: any[] = []
+  private dryRunMode: boolean = false
+
   constructor() {
     this.cleanupHistory = [] // 记录清理历史
     this.dryRunMode = false // 是否为试运行模式
+  }
 
-    // 创建允许自签名证书的 HTTPS Agent
-    this.httpsAgent = new https.Agent({
-      rejectUnauthorized: false, // 允许自签名证书和无效证书
-    })
+  private getGptloadService(): IGptloadService {
+    if (!this.gptloadService) {
+      this.gptloadService = getService<IGptloadService>('gptloadService')
+    }
+    return this.gptloadService
+  }
+
+  private getHealthChecker(): IHealthChecker {
+    if (!this.healthChecker) {
+      this.healthChecker = getService<IHealthChecker>('healthChecker')
+    }
+    return this.healthChecker
   }
 
   /**
    * 检测并清理不可连接的渠道
    */
-  async cleanupDisconnectedChannels(options = {}) {
+  async cleanupDisconnectedChannels(options: {
+    dryRun?: boolean
+    timeout?: number
+    retryCount?: number
+    excludePatterns?: string[]
+    onlyCheckPatterns?: string[]
+  } = {}) {
     const { dryRun = false, timeout = 10000, retryCount = 2, excludePatterns = [], onlyCheckPatterns = [] } = options
 
     this.dryRunMode = dryRun
@@ -34,7 +53,7 @@ class ChannelCleanupService {
 
     try {
       // 1. 获取所有分组
-      const allGroups = await gptloadService.getAllGroups()
+      const allGroups = await this.getGptloadService().getAllGroups()
 
       // 2. 识别站点分组和模型分组
       const { siteGroups, modelGroups } = this.categorizeGroups(allGroups)
@@ -250,7 +269,8 @@ class ChannelCleanupService {
    */
   selectInstanceForChannel(channel) {
     // 使用注入的 gptloadService 而非动态 require
-    const instances = Array.from(this.gptloadService.manager.instances.values())
+    const gptloadService = this.getGptloadService()
+    const instances = Array.from(gptloadService.manager.instances.values())
 
     if (!instances || instances.length === 0) {
       throw new Error('没有可用的 gptload 实例')
@@ -259,12 +279,12 @@ class ChannelCleanupService {
     // 简单策略：选择健康的实例，优先本地实例
     let bestInstance = instances.find(
       (instance) =>
-        instance.name && instance.name.includes('本地') && this.gptloadService.manager.healthStatus.get(instance.id)?.healthy
+        instance.name && instance.name.includes('本地') && gptloadService.manager.healthStatus.get(instance.id)?.healthy
     )
 
     if (!bestInstance) {
       // 选择第一个健康的实例
-      bestInstance = instances.find((instance) => this.gptloadService.manager.healthStatus.get(instance.id)?.healthy)
+      bestInstance = instances.find((instance) => gptloadService.manager.healthStatus.get(instance.id)?.healthy)
     }
 
     if (!bestInstance) {
@@ -377,8 +397,8 @@ class ChannelCleanupService {
       throw new Error(`无法确定模型分组 ${modelGroup.name} 所在的实例`)
     }
 
-    // 使用 gptloadService 来获取实例，避免循环引用
-    const gptloadService = require('./gptload')
+    // 使用注入的 gptloadService 来获取实例，避免循环引用
+    const gptloadService = this.getGptloadService()
     const instance = gptloadService.manager.getInstance(instanceId)
 
     if (!instance) {
@@ -434,7 +454,7 @@ class ChannelCleanupService {
   async manualCleanupChannels(channelNames, dryRun = false) {
     console.log(`🧹 手动清理指定渠道: ${channelNames.join(', ')}${dryRun ? ' (试运行模式)' : ''}`)
 
-    const allGroups = await gptloadService.getAllGroups()
+    const allGroups = await this.getGptloadService().getAllGroups()
     const { siteGroups, modelGroups } = this.categorizeGroups(allGroups)
 
     // 找到指定的渠道分组

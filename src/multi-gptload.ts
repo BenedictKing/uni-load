@@ -1,5 +1,3 @@
-import axios from 'axios'
-import https from 'https'
 import modelConfig from './model-config'
 import instanceConfigManager, { GptloadInstance } from './services/instance-config-manager'
 import instanceHealthManager, { HealthResult, InstanceHealthStatus } from './services/instance-health-manager'
@@ -13,14 +11,8 @@ import instanceHealthManager, { HealthResult, InstanceHealthStatus } from './ser
 export class MultiGptloadManager {
   private instances = new Map<string, GptloadInstance>() // gptload实例配置
   private _siteAssignments = new Map<string, string>() // 站点到实例的分配
-  private httpsAgent: https.Agent
 
   constructor() {
-    // 创建允许自签名证书的 HTTPS Agent
-    this.httpsAgent = new https.Agent({
-      rejectUnauthorized: false, // 允许自签名证书和无效证书
-    })
-
     // 异步初始化实例
     this.initializeInstances().catch((error) => {
       console.error('初始化实例失败:', error)

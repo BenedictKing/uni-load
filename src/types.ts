@@ -165,7 +165,6 @@ export interface ChannelMetrics {
   averageResponseTime: number
   errorRate: number
   lastActivity?: Date
-}
   channelCleanup: any
 }
 

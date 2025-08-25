@@ -5,8 +5,8 @@
  * 从 multi-gptload.ts 中分离的健康检查逻辑
  */
 
-import axios, { AxiosInstance } from 'axios'
-import https from 'https'
+import { AxiosInstance } from 'axios'
+import { HttpClientFactory } from './http-client-factory'
 import { GptloadInstance } from './instance-config-manager'
 
 export interface HealthResult {
@@ -188,23 +188,15 @@ export class InstanceHealthManager {
    * 创建实例专用的API客户端
    */
   createApiClient(instance: GptloadInstance): AxiosInstance {
-    const headers: any = {
-      'Content-Type': 'application/json',
-      'User-Agent': 'uni-load-health-checker/1.0.0'
-    }
-
-    if (instance.token) {
-      headers['Authorization'] = `Bearer ${instance.token}`
-    }
-
-    return axios.create({
-      baseURL: `${instance.url}/api`,
-      headers,
-      timeout: this.healthCheckTimeout,
-      httpsAgent: new https.Agent({
-        rejectUnauthorized: false // 接受自签名证书
-      })
-    })
+    // 使用HttpClientFactory创建统一的gptload客户端
+    return HttpClientFactory.createGptloadClient(
+      `${instance.url}/api`,
+      instance.token,
+      {
+        timeout: this.healthCheckTimeout,
+        userAgent: 'uni-load-health-checker/1.0.0'
+      }
+    )
   }
 
   /**

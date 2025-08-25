@@ -237,7 +237,7 @@ class YamlManager implements IYamlManager {
    */
   normalizeModelName(originalModel) {
     // 直接使用 model-config 的标准化方法
-    const result = modelConfig.normalizeForUniApi(originalModel)
+    const result = (modelConfig.constructor as any).normalizeForUniApi(originalModel)
     const normalizedModel = result.normalizedModel
 
     // 删除冗余的自定义处理逻辑，统一使用 model-config

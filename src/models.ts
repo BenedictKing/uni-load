@@ -163,9 +163,7 @@ class ModelsService implements IModelsService {
         temperature: 0,
       }
 
-      const response = await axios.post(chatUrl, testRequest, {
-        timeout: 15000, // 15秒超时
-        httpsAgent: this.httpsAgent, // 使用自定义的 HTTPS Agent
+      const response = await this.apiClient.post(chatUrl, testRequest, {
         headers: {
           Authorization: `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
