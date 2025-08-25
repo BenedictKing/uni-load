@@ -2,7 +2,7 @@
 
 ## 概述
 
-uni-load 提供了一套完整的 RESTful API 接口，用于管理 AI 站点配置、监控服务状态、控制自动化任务等。
+uni-load v2.1 提供了一套完整的 RESTful API 接口，基于重构后的服务化架构，用于管理 AI 站点配置、监控服务状态、控制自动化任务等。所有接口都通过依赖注入的业务逻辑服务层处理，确保了更好的可维护性和测试能力。
 
 ## 基础信息
 
@@ -36,7 +36,7 @@ Content-Type: application/json
 
 #### 1.2 处理 AI 站点配置
 
-核心接口，用于自动配置 AI 站点到 gpt-load 和 uni-api。
+核心接口，由 `SiteConfigurationService` 处理，用于自动配置 AI 站点到 gpt-load 和 uni-api。该接口协调多个服务（GptloadService、ModelsService、YamlManager）来完成完整的站点配置流程。
 
 ```http
 POST /api/process-ai-site
@@ -84,15 +84,20 @@ Content-Type: application/json
         "upstreams": [{"url": "https://api.deepseek.com/v1", "weight": 1}],
         "_instance": {
           "id": "local",
-          "name": "本地 gpt-load"
+          "name": "本地 gpt-load",
+          "url": "http://localhost:3001",
+          "priority": 1
         }
       }
     ],
     "modelGroups": 5,
     "usingManualModels": false,
-    "successfulInstance": {
+    "selectedInstance": {
       "id": "local",
-      "name": "本地 gpt-load"
+      "name": "本地 gpt-load",
+      "url": "http://localhost:3001",
+      "priority": 1,
+      "healthStatus": "healthy"
     }
   }
 }
@@ -144,11 +149,18 @@ GET /api/status
   "gptload": {
     "status": "connected",
     "instancesCount": 3,
-    "activeInstance": "local"
+    "healthyInstances": 2,
+    "activeInstances": ["local", "us-proxy"]
   },
   "uniApi": {
     "status": "available",
     "configPath": "../uni-api/api.yaml"
+  },
+  "services": {
+    "siteConfigurationService": "active",
+    "instanceHealthManager": "monitoring",
+    "instanceConfigManager": "loaded",
+    "gptloadService": "connected"
   },
   "modelSync": {
     "status": "running",
@@ -182,7 +194,9 @@ GET /api/multi-instances
       "url": "http://localhost:3001",
       "status": "healthy",
       "priority": 1,
-      "sites": ["deepseek", "openai"]
+      "supportedFormats": ["openai"],
+      "lastHealthCheck": "2024-12-20T10:30:00.000Z",
+      "siteGroups": ["deepseek", "openai"]
     },
     {
       "id": "us-proxy",
@@ -190,9 +204,16 @@ GET /api/multi-instances
       "url": "https://us.gpt-load.example.com",
       "status": "healthy",
       "priority": 2,
-      "sites": ["anthropic"]
+      "supportedFormats": ["anthropic"],
+      "lastHealthCheck": "2024-12-20T10:29:45.000Z",
+      "siteGroups": ["anthropic"]
     }
-  ]
+  ],
+  "healthSummary": {
+    "totalInstances": 2,
+    "healthyInstances": 2,
+    "failedInstances": 0
+  }
 }
 ```
 
@@ -371,11 +392,39 @@ GET /api/architecture-stats
 
 #### 7.1 检查所有实例健康状态
 
+由 `InstanceHealthManager` 服务处理，并发检查所有配置的 gpt-load 实例。
+
 ```http
 POST /api/check-instances
 ```
 
+**响应示例**:
+```json
+{
+  "success": true,
+  "healthResults": {
+    "local": {
+      "status": "healthy",
+      "responseTime": 25,
+      "lastCheck": "2024-12-20T10:30:00.000Z"
+    },
+    "us-proxy": {
+      "status": "unhealthy",
+      "error": "Connection timeout",
+      "lastCheck": "2024-12-20T10:30:00.000Z"
+    }
+  },
+  "summary": {
+    "total": 2,
+    "healthy": 1,
+    "unhealthy": 1
+  }
+}
+```
+
 #### 7.2 重新分配站点到实例
+
+通过 `MultiGptloadManager` 重新分配站点分组到特定实例。
 
 ```http
 POST /api/reassign-site
@@ -440,6 +489,19 @@ Content-Type: application/json
 - `400`: 请求参数错误
 - `404`: 资源不存在
 - `500`: 服务器内部错误
+
+## 架构说明
+
+### 服务化架构 (v2.1)
+
+本版本的API接口基于重构后的服务化架构实现：
+
+- **表现层** (`server.ts`): 处理HTTP路由，将请求委托给业务服务
+- **业务逻辑层**: `SiteConfigurationService` 等服务编排具体的业务流程
+- **基础服务层**: `GptloadService`, `ModelsService`, `YamlManager` 等提供原子化功能
+- **依赖注入**: 通过 `service-factory.ts` 管理服务间的依赖关系
+
+这种架构确保了API的高可维护性、可测试性和扩展性。
 
 ## 认证和授权
 

@@ -17,20 +17,31 @@ import modelsService from './models'
 import modelConfig from './model-config'
 import { promises as fs } from 'fs'
 import path from 'path'
+import {
+  ChannelFailureInfo,
+  HealthCheckResult,
+  ChannelHealthResult,
+  DetailedHealthReport,
+  ValidationResult,
+  ChannelMetrics
+} from './types'
 
 class ChannelHealthMonitor {
+  private monitorInterval: NodeJS.Timeout | null = null
+  private checkIntervalMinutes: number
+  private failureThreshold: number
+  private isRunning: boolean = false
+  private channelFailures: Map<string, ChannelFailureInfo> = new Map()
+
   constructor() {
-    this.monitorInterval = null
-    this.checkIntervalMinutes = process.env.CHANNEL_CHECK_INTERVAL || 30 // 默认30分钟
-    this.failureThreshold = process.env.CHANNEL_FAILURE_THRESHOLD || 3 // 连续失败3次后移除
-    this.isRunning = false
-    this.channelFailures = new Map() // 记录渠道失败次数
+    this.checkIntervalMinutes = parseInt(process.env.CHANNEL_CHECK_INTERVAL || '30')
+    this.failureThreshold = parseInt(process.env.CHANNEL_FAILURE_THRESHOLD || '3')
   }
 
   /**
    * 启动渠道健康监控
    */
-  start() {
+  start(): void {
     if (this.monitorInterval) {
       console.log('⚠️ 渠道健康监控已在运行')
       return
@@ -53,7 +64,7 @@ class ChannelHealthMonitor {
   /**
    * 停止渠道健康监控
    */
-  stop() {
+  stop(): void {
     if (this.monitorInterval) {
       clearInterval(this.monitorInterval)
       this.monitorInterval = null

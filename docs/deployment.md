@@ -59,30 +59,40 @@ git --version   # >= 2.30.0
 
 ```bash
 # 基础配置
-NODE_ENV=production
 PORT=3002
 
-# gpt-load 连接配置  
-GPTLOAD_URL=http://localhost:3001
-GPTLOAD_TOKEN=your-optional-token
+# gpt-load 多实例配置文件路径（v2.1版本使用实例配置文件）
+GPTLOAD_INSTANCES_FILE=gptload-instances.json
 
 # uni-api 配置
 UNI_API_PATH=../uni-api
+UNI_API_YAML_PATH=../uni-api/api.yaml
 
 # 服务功能开关
 ENABLE_MODEL_SYNC=true                # 启用模型同步服务
 ENABLE_CHANNEL_HEALTH=true            # 启用渠道健康监控  
 ENABLE_MODEL_OPTIMIZER=true           # 启用三层架构管理器
 
-# 性能调优配置
-MAX_CONCURRENT_REQUESTS=10            # 最大并发请求数
-REQUEST_TIMEOUT_MS=30000              # 请求超时时间（毫秒）
-RETRY_ATTEMPTS=3                      # 失败重试次数
+# 监控间隔配置（分钟）
+MODEL_SYNC_INTERVAL=360               # 模型同步间隔（6小时）
+CHANNEL_CHECK_INTERVAL=10             # 渠道健康检查间隔（10分钟）
+CHANNEL_FAILURE_THRESHOLD=3           # 渠道失败阈值
+```
 
-# 监控间隔配置（秒）
-MODEL_SYNC_INTERVAL=60                # 模型同步间隔
-CHANNEL_CHECK_INTERVAL=30             # 渠道健康检查间隔
-ARCHITECTURE_CHECK_INTERVAL=300       # 架构检查间隔
+**配置参数详细说明**:
+
+| 参数 | 默认值 | 说明 |
+|------|--------|------|
+| `PORT` | 3002 | 服务监听端口 |
+| `GPTLOAD_INSTANCES_FILE` | gptload-instances.json | gpt-load 实例配置文件路径 |
+| `UNI_API_PATH` | ../uni-api | uni-api 项目目录相对路径 |
+| `UNI_API_YAML_PATH` | ../uni-api/api.yaml | uni-api 配置文件路径 |
+| `ENABLE_MODEL_SYNC` | true | 是否启用模型同步服务 |
+| `ENABLE_CHANNEL_HEALTH` | true | 是否启用渠道健康监控 |
+| `ENABLE_MODEL_OPTIMIZER` | true | 是否启用三层架构管理器 |
+| `MODEL_SYNC_INTERVAL` | 360 | 模型同步间隔（分钟） |
+| `CHANNEL_CHECK_INTERVAL` | 10 | 渠道健康检查间隔（分钟） |
+| `CHANNEL_FAILURE_THRESHOLD` | 3 | 连续失败多少次后被认为不可用 |
 
 # 调试和日志配置
 LOG_LEVEL=info                        # 日志级别：debug, info, warn, error
@@ -97,12 +107,9 @@ MAX_REQUEST_SIZE=10mb                 # 最大请求体大小
 **生产环境推荐配置**:
 ```bash
 # 生产环境优化配置
-NODE_ENV=production
-LOG_LEVEL=warn
-ENABLE_DEBUG_LOGS=false
-MODEL_SYNC_INTERVAL=300               # 降低同步频率
-CHANNEL_CHECK_INTERVAL=60             # 适中的检查频率
-REQUEST_TIMEOUT_MS=45000              # 增加超时时间
+MODEL_SYNC_INTERVAL=720               # 降低同步频率为12小时
+CHANNEL_CHECK_INTERVAL=30             # 适中的检查频率
+CHANNEL_FAILURE_THRESHOLD=5           # 增加容错次数
 ```
 
 ### gpt-load 实例配置
@@ -691,16 +698,30 @@ sudo systemctl status uni-load
 - ✅ uni-api 目录是否存在和可访问
 - ✅ 端口 3002 是否被占用
 - ✅ 环境变量是否正确配置
+- ✅ 依赖包是否安装完成
 
 **诊断命令**:
 ```bash
 # 检查端口占用
 lsof -i :3002
 
-# 检查配置文件
+# 检查配置文件语法
 bun run type-check
 
 # 查看详细启动日志
+bun dev
+
+# 检查 gptload-instances.json 格式
+jq . gptload-instances.json
+
+# 检查 uni-api 目录权限
+ls -la ../uni-api
+```
+
+**常见错误信息**:
+- `EADDRINUSE`: 端口 3002 被占用
+- `ENOENT: no such file or directory 'gptload-instances.json'`: 实例配置文件不存在
+- `Cannot resolve module`: TypeScript 编译错误
 bun dev
 ```
 
@@ -750,12 +771,69 @@ tail -f logs/error.log
 - API 站点不支持 `/v1/models` 接口  
 - 网络连接问题
 - gpt-load 实例不可达
+- 模型被白名单/黑名单过滤
 
 **解决方案**:
-1. 验证 API 密钥有效性
-2. 尝试手动指定模型列表
-3. 检查网络连接
-4. 切换到其他 gpt-load 实例
+```bash
+# 1. 验证 API 密钥有效性
+curl -X POST http://localhost:3002/api/probe-api \
+  -H "Content-Type: application/json" \
+  -d '{"baseUrl": "https://api.example.com/v1", "apiKey": "sk-xxx"}'
+
+# 2. 直接测试 API 站点
+curl -H "Authorization: Bearer sk-xxx" \
+     https://api.example.com/v1/models
+
+# 3. 检查模型过滤配置
+grep -n "allowedPrefixes\|blacklistedKeywords" src/model-config.ts
+
+# 4. 使用手动模型列表
+curl -X POST http://localhost:3002/api/process-ai-site \
+  -H "Content-Type: application/json" \
+  -d '{
+    "baseUrl": "https://api.example.com/v1",
+    "apiKeys": ["sk-xxx"],
+    "models": ["model1", "model2"]
+  }'
+```
+
+#### 5. 三层架构问题
+
+**症状**: 模型分组创建失败或结构异常
+
+**诊断步骤**:
+```bash
+# 检查架构状态
+curl http://localhost:3002/api/architecture-status
+
+# 获取详细统计
+curl http://localhost:3002/api/architecture-stats
+
+# 重新初始化架构
+curl -X POST http://localhost:3002/api/initialize-architecture
+```
+
+#### 6. 多实例连接问题
+
+**症状**: 部分 gpt-load 实例不可用
+
+**排查步骤**:
+```bash
+# 检查所有实例状态
+curl http://localhost:3002/api/multi-instances
+
+# 手动检查实例健康
+curl -X POST http://localhost:3002/api/check-instances
+
+# 检查实例配置文件
+cat gptload-instances.json | jq '.instances[] | {id, name, url, priority}'
+
+# 手动测试实例连接
+for url in $(jq -r '.instances[].url' gptload-instances.json); do
+  echo "Testing $url"
+  curl -s "$url/api/health" || echo "Failed"
+done
+```
 
 ### 日志分析
 

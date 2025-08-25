@@ -98,6 +98,74 @@ export interface ServiceStatus {
   uniApi: any
   modelSync: ModelSyncStatus
   channelHealth: ChannelHealthStatus
+}
+
+// 渠道健康监控相关类型
+export interface ChannelFailureInfo {
+  name: string
+  failures: number
+  lastFailure: Date
+  error?: string
+  reason?: string
+  threshold?: number
+  willBeRemoved?: boolean
+}
+
+export interface HealthCheckResult {
+  totalChannels: number
+  healthyChannels: number
+  failedChannels: number
+  newFailures: string[]
+  recoveredChannels: string[]
+  timestamp: Date
+}
+
+export interface ChannelHealthResult {
+  channel: string
+  healthy: boolean
+  responseTime?: number
+  error?: string
+  statusCode?: number
+  lastCheck?: Date
+}
+
+export interface DetailedHealthReport {
+  timestamp: string
+  totalChannels: number
+  summary: {
+    healthy: number
+    warning: number
+    critical: number
+    error: number
+    noData: number
+    skipped: number
+    highCostModels?: number
+  }
+  channels: ChannelHealthResult[]
+  metrics?: {
+    averageResponseTime: number
+    successRate: number
+    totalRequests: number
+  }
+}
+
+export interface ValidationResult {
+  success: boolean
+  error?: string
+  validationResult?: any
+  healthResult?: ChannelHealthResult
+  models?: number
+  details?: any
+}
+
+export interface ChannelMetrics {
+  totalRequests: number
+  successfulRequests: number
+  failedRequests: number
+  averageResponseTime: number
+  errorRate: number
+  lastActivity?: Date
+}
   channelCleanup: any
 }
 
