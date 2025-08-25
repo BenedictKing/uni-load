@@ -9,6 +9,7 @@ import axios, { AxiosInstance, AxiosRequestConfig } from 'axios'
 import https from 'https'
 
 export interface HttpClientOptions {
+  baseURL?: string
   timeout?: number
   retries?: number
   rejectUnauthorized?: boolean
@@ -24,6 +25,7 @@ export class HttpClientFactory {
    */
   static createDefaultClient(options: HttpClientOptions = {}): AxiosInstance {
     const {
+      baseURL,
       timeout = 15000,
       retries = 3,
       rejectUnauthorized = false,
@@ -37,6 +39,7 @@ export class HttpClientFactory {
     })
 
     const client = axios.create({
+      baseURL,
       timeout,
       httpsAgent,
       headers: {
@@ -52,7 +55,11 @@ export class HttpClientFactory {
         response => response,
         async error => {
           const config = error.config
-          if (!config || !config.retry) {
+          if (!config) {
+            return Promise.reject(error)
+          }
+          
+          if (!config.retry) {
             config.retry = 0
           }
 
@@ -112,6 +119,7 @@ export class HttpClientFactory {
     }
 
     return this.createDefaultClient({
+      baseURL: baseUrl,
       timeout: 20000,
       retries: 2,
       userAgent: 'uni-load-gptload-client/1.0',

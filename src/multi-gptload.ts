@@ -226,6 +226,214 @@ export class MultiGptloadManager {
   }
 
   /**
+   * 获取所有实例的分组信息
+   */
+  async getAllGroups(): Promise<any[]> {
+    const allGroups: any[] = []
+    
+    for (const instance of this.getAllInstances()) {
+      if (!instance.health.healthy) {
+        console.warn(`⚠️ 跳过不健康的实例: ${instance.name}`)
+        continue
+      }
+      
+      try {
+        const response = await instance.apiClient.get('/groups')
+        
+        let groups = []
+        if (response.data && typeof response.data.code === 'number' && response.data.data) {
+          // gptload 特定格式: { code: 0, message: "Success", data: [...] }
+          groups = response.data.data
+        } else if (Array.isArray(response.data)) {
+          // 直接返回数组
+          groups = response.data
+        } else if (response.data) {
+          // 其他格式
+          groups = [response.data]
+        }
+        
+        // 为每个分组添加实例信息
+        const groupsWithInstance = groups.map((group: any) => ({
+          ...group,
+          _instance: {
+            id: instance.id,
+            name: instance.name,
+            url: instance.url,
+          }
+        }))
+        
+        allGroups.push(...groupsWithInstance)
+        console.log(`✅ 从实例 ${instance.name} 获取到 ${groups.length} 个分组`)
+        
+      } catch (error) {
+        console.warn(`⚠️ 从实例 ${instance.name} 获取分组失败: ${error.message}`)
+        continue
+      }
+    }
+    
+    console.log(`📊 总共获取到 ${allGroups.length} 个分组`)
+    return allGroups
+  }
+
+  /**
+   * 创建站点分组
+   */
+  async createSiteGroup(
+    siteName: string,
+    baseUrl: string,
+    apiKeys: string[],
+    channelType: string = 'openai',
+    customValidationEndpoints: any = {},
+    availableModels: string[] | null = null,
+    isModelGroup: boolean = false
+  ): Promise<any> {
+    const bestInstance = await this.selectBestInstance(baseUrl)
+    if (!bestInstance) {
+      throw new Error('没有健康的实例可用于创建站点分组')
+    }
+
+    // 这里应该包含创建站点分组的具体逻辑
+    // 暂时抛出错误，表示需要具体实现
+    throw new Error('createSiteGroup 方法需要具体实现')
+  }
+
+  /**
+   * 获取渠道配置
+   */
+  getChannelConfig(channelType: string): any {
+    // 暂时返回基本配置，需要根据实际需求实现
+    const configs = {
+      openai: {
+        validation_endpoint: '/v1/models'
+      },
+      anthropic: {
+        validation_endpoint: '/v1/models'
+      },
+      gemini: {
+        validation_endpoint: '/v1/models'
+      }
+    }
+    
+    return configs[channelType] || configs.openai
+  }
+
+  /**
+   * 选择测试模型
+   */
+  selectTestModel(availableModels: string[] | null, channelType: string): string {
+    const defaultModels = {
+      openai: 'gpt-3.5-turbo',
+      anthropic: 'claude-3-haiku-20240307',
+      gemini: 'gemini-pro'
+    }
+    
+    if (availableModels && availableModels.length > 0) {
+      return availableModels[0]
+    }
+    
+    return defaultModels[channelType] || defaultModels.openai
+  }
+
+  /**
+   * 向分组添加API密钥
+   */
+  async addApiKeysToGroup(instance: any, groupId: string, apiKeys: string[]): Promise<any> {
+    try {
+      const response = await instance.apiClient.post('/keys', {
+        group_id: groupId,
+        keys: apiKeys.map(key => ({
+          key_value: key,
+          status: 'active'
+        }))
+      })
+      
+      return response.data
+    } catch (error) {
+      console.error(`向分组 ${groupId} 添加API密钥失败: ${error.message}`)
+      throw error
+    }
+  }
+
+  /**
+   * 删除分组
+   */
+  async deleteGroup(instance: any, groupId: string): Promise<boolean> {
+    try {
+      await instance.apiClient.delete(`/groups/${groupId}`)
+      return true
+    } catch (error) {
+      console.error(`删除分组 ${groupId} 失败: ${error.message}`)
+      throw error
+    }
+  }
+
+  /**
+   * 删除分组的所有API密钥
+   */
+  async deleteAllApiKeysFromGroup(instance: any, groupId: string): Promise<any> {
+    try {
+      // 先获取分组的所有密钥
+      const response = await instance.apiClient.get('/keys', {
+        params: { group_id: groupId }
+      })
+      
+      if (response.data && response.data.data && response.data.data.items) {
+        const keys = response.data.data.items
+        
+        // 删除每个密钥
+        for (const keyItem of keys) {
+          try {
+            await instance.apiClient.delete(`/keys/${keyItem.id}`)
+          } catch (error) {
+            console.warn(`删除密钥 ${keyItem.id} 失败: ${error.message}`)
+          }
+        }
+        
+        return { deleted: keys.length }
+      }
+      
+      return { deleted: 0 }
+    } catch (error) {
+      console.error(`删除分组 ${groupId} 的所有密钥失败: ${error.message}`)
+      throw error
+    }
+  }
+
+  /**
+   * 切换分组API密钥状态
+   */
+  async toggleApiKeysStatusForGroup(instance: any, groupId: string, status: string): Promise<any> {
+    try {
+      // 先获取分组的所有密钥
+      const response = await instance.apiClient.get('/keys', {
+        params: { group_id: groupId }
+      })
+      
+      if (response.data && response.data.data && response.data.data.items) {
+        const keys = response.data.data.items
+        
+        // 更新每个密钥的状态
+        for (const keyItem of keys) {
+          try {
+            await instance.apiClient.put(`/keys/${keyItem.id}`, {
+              status: status
+            })
+          } catch (error) {
+            console.warn(`更新密钥 ${keyItem.id} 状态失败: ${error.message}`)
+          }
+        }
+        
+        return { updated: keys.length }
+      }
+      
+      return { updated: 0 }
+    } catch (error) {
+      console.error(`切换分组 ${groupId} 密钥状态失败: ${error.message}`)
+      throw error
+    }
+  }
+
+  /**
    * 通过多实例获取模型列表
    */
   async getModelsViaMultiInstance(

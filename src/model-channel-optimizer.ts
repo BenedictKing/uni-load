@@ -14,6 +14,11 @@ const gptloadService = require('./gptload')
 const modelConfig = require('./model-config')
 
 class ModelChannelOptimizer {
+  private modelGroupMapping: Map<string, any[]>
+  private groupMetricsCache: Map<string, any>
+  private optimizationInterval: number
+  private _previousScores: Map<any, any>
+
   constructor() {
     // 模型到分组的映射
     this.modelGroupMapping = new Map()
@@ -47,15 +52,17 @@ class ModelChannelOptimizer {
       for (const [model] of this.modelGroupMapping) {
         try {
           const healthReport = await this.intelligentHealthCheck(model)
-          if (healthReport.overall_status === 'healthy') {
-            healthyModelCount++
-          }
+          if ('overall_status' in healthReport) {
+            if (healthReport.overall_status === 'healthy') {
+              healthyModelCount++
+            }
 
-          // 如果发现严重问题，立即优化
-          if (healthReport.overall_status === 'critical') {
-            console.log(`🚨 模型 ${model} 状态危急，立即优化...`)
-            const groups = this.modelGroupMapping.get(model) || []
-            await this.optimizeModelGroups(model, groups)
+            // 如果发现严重问题，立即优化
+            if (healthReport.overall_status === 'critical') {
+              console.log(`🚨 模型 ${model} 状态危急，立即优化...`)
+              const groups = this.modelGroupMapping.get(model) || []
+              await this.optimizeModelGroups(model, groups)
+            }
           }
         } catch (error) {
           console.error(`检查模型 ${model} 健康状态失败:`, error.message)
@@ -1345,28 +1352,19 @@ class ModelChannelOptimizer {
     console.log('🎧 设置模型渠道优化器定期监控...')
 
     // 主动健康检查（每10分钟）
-    this._healthCheckTimer = setInterval(
-      async () => {
-        await this.performPeriodicHealthCheck()
-      },
-      10 * 60 * 1000
-    )
+    this._healthCheckTimer = setInterval(async () => {
+      await this.performPeriodicHealthCheck()
+    }, 10 * 60 * 1000)
 
     // 智能优化监控（每15分钟）
-    this._smartOptimizationTimer = setInterval(
-      async () => {
-        await this.performSmartOptimization()
-      },
-      15 * 60 * 1000
-    )
+    this._smartOptimizationTimer = setInterval(async () => {
+      await this.performSmartOptimization()
+    }, 15 * 60 * 1000)
 
     // 健康状态变化检测（每2分钟）
-    this._statusChangeTimer = setInterval(
-      async () => {
-        await this.detectHealthStatusChanges()
-      },
-      2 * 60 * 1000
-    )
+    this._statusChangeTimer = setInterval(async () => {
+      await this.detectHealthStatusChanges()
+    }, 2 * 60 * 1000)
 
     console.log('✅ 定期监控设置完成')
   }
