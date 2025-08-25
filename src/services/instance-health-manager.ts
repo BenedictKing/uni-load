@@ -47,8 +47,13 @@ export class InstanceHealthManager {
     try {
       console.log(`🔍 检查实例健康状态: ${instance.name} (${instance.url})`)
 
-      const apiClient = this.createApiClient(instance)
-      const response = await apiClient.get('/health', { timeout: this.healthCheckTimeout })
+      // 创建专门用于健康检查的客户端（不包含 /api 前缀）
+      const healthClient = HttpClientFactory.createHealthClient({
+        baseURL: instance.url,
+        timeout: this.healthCheckTimeout
+      })
+
+      const response = await healthClient.get('/health')
 
       result.responseTime = Date.now() - startTime
       result.statusCode = response.status
