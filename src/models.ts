@@ -27,7 +27,7 @@ class ModelsService implements IModelsService {
     this.apiClient = HttpClientFactory.createModelClient({
       timeout: this.timeout,
       retries: 3,
-      userAgent: 'uni-load/1.0.0'
+      userAgent: 'uni-load/1.0.0',
     })
   }
 
@@ -64,17 +64,16 @@ class ModelsService implements IModelsService {
         models.slice(0, 5).join(', ') + (models.length > 5 ? '...' : '')
       )
       return models
-      
     } catch (error) {
       console.error(`获取模型列表失败:`, error.message)
-      
+
       if (error.response) {
         console.error(`HTTP ${error.response.status}: ${error.response.statusText}`)
         if (error.response.data) {
           console.error('响应数据:', error.response.data)
         }
       }
-      
+
       throw new Error(`获取模型列表失败: ${error.message}`)
     }
   }
@@ -140,6 +139,42 @@ class ModelsService implements IModelsService {
       console.error('解析模型数据失败:', error.message)
       return []
     }
+  }
+
+  /**
+   * API探测
+   */
+  async probeApiStructure(baseUrl: string, apiKey?: string): Promise<any> {
+    const endpointsToTest = ['/v1/models', '/models']
+
+    for (const endpoint of endpointsToTest) {
+      try {
+        const probeUrl = `${baseUrl.replace(/\/$/, '')}${endpoint}`
+        console.log(`🔍 探测 API: ${probeUrl}`)
+
+        const response = await this.apiClient.get(probeUrl, {
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+          },
+          timeout: 10000, // 探测时使用较短超时
+        })
+
+        const models = this.parseModelsResponse(response.data)
+        if (models.length > 0) {
+          return {
+            success: true,
+            endpoint: endpoint,
+            format: 'openai_compatible',
+            modelCount: models.length,
+            modelsSample: models.slice(0, 3),
+          }
+        }
+      } catch (error) {
+        console.warn(`⚠️ 探测端点 ${endpoint} 失败: ${error.message}`)
+      }
+    }
+
+    throw new Error('无法探测到有效的模型API端点')
   }
 
   /**
@@ -242,9 +277,9 @@ class ModelsService implements IModelsService {
     const uniqueModels = [...new Set(filtered)]
 
     console.log(
-      `📋 模型白名单过滤结果: ${models.length} -> ${
-        uniqueModels.length
-      } (过滤掉 ${models.length - uniqueModels.length} 个模型)`
+      `📋 模型白名单过滤结果: ${models.length} -> ${uniqueModels.length} (过滤掉 ${
+        models.length - uniqueModels.length
+      } 个模型)`
     )
 
     return uniqueModels.sort()

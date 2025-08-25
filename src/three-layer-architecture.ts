@@ -277,7 +277,10 @@ class ThreeLayerArchitecture {
         // 检查聚合分组的上游是否完整
         const expectedUpstreams = supportingSites.map(
           (site) =>
-            `${site._instance?.url || process.env.GPTLOAD_URL}/proxy/${modelConfig.generateModelChannelGroupName(model, site.name)}`
+            `${site._instance?.url || process.env.GPTLOAD_URL}/proxy/${modelConfig.generateModelChannelGroupName(
+              model,
+              site.name
+            )}`
         )
 
         const needsUpdate = expectedUpstreams.some(
@@ -777,7 +780,9 @@ class ThreeLayerArchitecture {
           groups.push(created)
           createdCount++
           console.log(
-            `✅ [${processedModels}/${totalModels}] 创建聚合分组: ${created.name} (${created.upstreams?.length || 0}个上游)`
+            `✅ [${processedModels}/${totalModels}] 创建聚合分组: ${created.name} (${
+              created.upstreams?.length || 0
+            }个上游)`
           )
 
           // 将新创建的分组添加到缓存中，避免后续重复检查
@@ -815,12 +820,9 @@ class ThreeLayerArchitecture {
    */
   setupPassiveRecovery() {
     // 定期检查失败的组合
-    setInterval(
-      async () => {
-        await this.performPassiveRecovery()
-      },
-      5 * 60 * 1000
-    ) // 每5分钟检查一次
+    setInterval(async () => {
+      await this.performPassiveRecovery()
+    }, 5 * 60 * 1000) // 每5分钟检查一次
 
     // 分析最近的请求日志
     setInterval(async () => {
@@ -932,20 +934,14 @@ class ThreeLayerArchitecture {
    */
   startWeightOptimization() {
     // 每24小时优化一次权重，避免过于频繁的缓存重载
-    this.weightOptimizationTimer = setInterval(
-      async () => {
-        await this.optimizeAggregateWeights()
-      },
-      24 * 60 * 60 * 1000
-    )
+    this.weightOptimizationTimer = setInterval(async () => {
+      await this.optimizeAggregateWeights()
+    }, 24 * 60 * 60 * 1000)
 
     // 每2小时检查是否需要紧急权重调整
-    this.emergencyOptimizationTimer = setInterval(
-      async () => {
-        await this.checkEmergencyOptimization()
-      },
-      2 * 60 * 60 * 1000
-    )
+    this.emergencyOptimizationTimer = setInterval(async () => {
+      await this.checkEmergencyOptimization()
+    }, 2 * 60 * 60 * 1000)
   }
 
   /**
@@ -1348,6 +1344,13 @@ class ThreeLayerArchitecture {
       console.error('获取架构状态失败:', error)
       return null
     }
+  }
+
+  /**
+   * 获取详细架构统计
+   */
+  async getDetailedArchitectureStats(): Promise<any> {
+    return this.getArchitectureStatus()
   }
 
   /**

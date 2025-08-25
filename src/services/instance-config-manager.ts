@@ -62,7 +62,7 @@ export class InstanceConfigManager {
     const rawConfig = fs.readFileSync(configPath, 'utf8')
     const instances = JSON.parse(rawConfig) as GptloadInstance[]
 
-    this.validateConfig(instances)
+    await this.validateConfig(instances) // 改动：添加 await
 
     console.log(`✅ 成功加载 ${instances.length} 个 gpt-load 实例配置`)
     return instances
@@ -71,7 +71,7 @@ export class InstanceConfigManager {
   /**
    * 验证配置格式
    */
-  private validateConfig(instances: GptloadInstance[]): void {
+  private async validateConfig(instances: GptloadInstance[]): Promise<void> { // 改动：添加 async 和 Promise<void>
     if (!Array.isArray(instances)) {
       throw new Error('配置文件格式错误：应该是实例数组')
     }
@@ -123,10 +123,10 @@ export class InstanceConfigManager {
     }
 
     // 验证上游地址
-    const validationErrors = this.validateUpstreamAddresses(instances)
-    if (validationErrors.length > 0) {
+    const validationResult = await this.validateUpstreamAddresses(instances) // 改动：添加 await
+    if (!validationResult.valid) { // 改动：检查 validationResult.valid
       throw new Error(
-        `上游地址配置错误:\n${validationErrors.join('\n')}\n\n` +
+        `上游地址配置错误:\n${validationResult.issues.join('\n')}\n\n` + // 改动：使用 validationResult.issues
         `规则：实例只能使用序号更大的实例作为上游地址，以避免循环依赖和访问失败`
       )
     }
@@ -135,7 +135,7 @@ export class InstanceConfigManager {
   /**
    * 验证上游地址配置
    */
-  validateUpstreamAddresses(instances: GptloadInstance[]): string[] {
+  async validateUpstreamAddresses(instances: GptloadInstance[]): Promise<{ valid: boolean; issues: string[] }> { // 改动：方法签名
     const errors: string[] = []
     
     for (let i = 0; i < instances.length; i++) {
@@ -163,7 +163,7 @@ export class InstanceConfigManager {
       }
     }
     
-    return errors
+    return { valid: errors.length === 0, issues: errors } // 改动：返回对象
   }
 
   /**

@@ -1,13 +1,13 @@
 /**
  * 服务工厂 - 负责初始化和注册所有服务到依赖注入容器
- * 
+ *
  * 实现依赖倒置原则，通过接口而非具体实现来组装服务
  */
 
 import { container } from './dependency-container'
-import { 
-  IInstanceConfigManager, 
-  IInstanceHealthManager, 
+import {
+  IInstanceConfigManager,
+  IInstanceHealthManager,
   IGptloadService,
   IModelsService,
   IYamlManager,
@@ -15,7 +15,7 @@ import {
   IThreeLayerArchitecture,
   IMultiGptloadManager,
   IHealthChecker,
-  IHttpClientFactory
+  IHttpClientFactory,
 } from '../interfaces'
 
 // 导入具体实现
@@ -26,7 +26,7 @@ import { HttpClientFactory } from './http-client-factory'
 import gptloadService from '../gptload'
 import modelsService from '../models'
 import yamlManager from '../yaml-manager'
-import siteConfigurationService from '../site-configuration'
+import siteConfigurationService from './site-configuration'
 import threeLayerArchitecture from '../three-layer-architecture'
 import { MultiGptloadManager } from '../multi-gptload'
 
@@ -46,7 +46,7 @@ export function initializeServices(): void {
     container.registerSingleton<IModelsService>('modelsService', () => modelsService)
     container.registerSingleton<ISiteConfigurationService>('siteConfigurationService', () => siteConfigurationService)
     container.registerSingleton<IThreeLayerArchitecture>('threeLayerArchitecture', () => threeLayerArchitecture)
-    
+
     // 2. 注册多实例管理器（无依赖）
     container.registerSingleton<IMultiGptloadManager>('multiGptloadManager', () => {
       const manager = new MultiGptloadManager()
@@ -60,7 +60,7 @@ export function initializeServices(): void {
     container.registerSingleton<IYamlManager>('yamlManager', () => {
       const gptloadService = container.resolve<IGptloadService>('gptloadService')
       const multiGptloadManager = container.resolve<IMultiGptloadManager>('multiGptloadManager')
-      
+
       // 为现有的yamlManager实例设置依赖
       yamlManager.setDependencies(gptloadService, multiGptloadManager)
       return yamlManager
@@ -68,10 +68,9 @@ export function initializeServices(): void {
 
     console.log('✅ 依赖注入服务初始化完成')
     console.log(`📦 已注册 ${container.getRegisteredServices().length} 个服务:`)
-    container.getRegisteredServices().forEach(service => {
+    container.getRegisteredServices().forEach((service) => {
       console.log(`  - ${service}`)
     })
-
   } catch (error) {
     console.error('❌ 依赖注入服务初始化失败:', error.message)
     throw error
@@ -96,7 +95,7 @@ export function getService<T>(serviceName: string): T {
 export function validateServiceRegistration(): boolean {
   const requiredServices = [
     'instanceConfigManager',
-    'instanceHealthManager', 
+    'instanceHealthManager',
     'healthChecker',
     'httpClientFactory',
     'gptloadService',
@@ -104,11 +103,11 @@ export function validateServiceRegistration(): boolean {
     'yamlManager',
     'siteConfigurationService',
     'threeLayerArchitecture',
-    'multiGptloadManager'
+    'multiGptloadManager',
   ]
 
   const registeredServices = container.getRegisteredServices()
-  const missingServices = requiredServices.filter(service => !registeredServices.includes(service))
+  const missingServices = requiredServices.filter((service) => !registeredServices.includes(service))
 
   if (missingServices.length > 0) {
     console.error('❌ 缺少必需服务:', missingServices)
