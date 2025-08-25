@@ -189,10 +189,22 @@ export class MultiGptloadManager {
   /**
    * 获取所有实例状态信息（返回对象格式，便于按ID访问）
    */
-  getAllInstancesStatus(): Record<string, { id: string; name: string; url: string; priority: number; healthy: boolean; responseTime: number; lastCheck: Date; error?: string }> {
+  getAllInstancesStatus(): Record<
+    string,
+    {
+      id: string
+      name: string
+      url: string
+      priority: number
+      healthy: boolean
+      responseTime: number
+      lastCheck: Date
+      error?: string
+    }
+  > {
     const instances = this.getAllInstances()
     const result: Record<string, any> = {}
-    
+
     instances.forEach((instance) => {
       result[instance.id] = {
         id: instance.id,
@@ -205,7 +217,7 @@ export class MultiGptloadManager {
         error: instance.health.error,
       }
     })
-    
+
     return result
   }
 
@@ -214,14 +226,14 @@ export class MultiGptloadManager {
    */
   getSiteAssignments(): Record<string, any> {
     const result: Record<string, any> = {}
-    
+
     this._siteAssignments.forEach((instanceId, site) => {
       result[site] = {
         instanceId,
         instanceName: this.instances.get(instanceId)?.name,
       }
     })
-    
+
     return result
   }
 
@@ -230,16 +242,16 @@ export class MultiGptloadManager {
    */
   async getAllGroups(): Promise<any[]> {
     const allGroups: any[] = []
-    
+
     for (const instance of this.getAllInstances()) {
       if (!instance.health.healthy) {
         console.warn(`⚠️ 跳过不健康的实例: ${instance.name}`)
         continue
       }
-      
+
       try {
         const response = await instance.apiClient.get('/groups')
-        
+
         let groups = []
         if (response.data && typeof response.data.code === 'number' && response.data.data) {
           // gptload 特定格式: { code: 0, message: "Success", data: [...] }
@@ -251,7 +263,7 @@ export class MultiGptloadManager {
           // 其他格式
           groups = [response.data]
         }
-        
+
         // 为每个分组添加实例信息
         const groupsWithInstance = groups.map((group: any) => ({
           ...group,
@@ -259,18 +271,17 @@ export class MultiGptloadManager {
             id: instance.id,
             name: instance.name,
             url: instance.url,
-          }
+          },
         }))
-        
+
         allGroups.push(...groupsWithInstance)
         console.log(`✅ 从实例 ${instance.name} 获取到 ${groups.length} 个分组`)
-        
       } catch (error) {
         console.warn(`⚠️ 从实例 ${instance.name} 获取分组失败: ${error.message}`)
         continue
       }
     }
-    
+
     console.log(`📊 总共获取到 ${allGroups.length} 个分组`)
     return allGroups
   }
@@ -304,7 +315,8 @@ export class MultiGptloadManager {
         },
       ],
       channel_type: channelType,
-      validation_endpoint: customValidationEndpoints[channelType] || this.getChannelConfig(channelType).validation_endpoint,
+      validation_endpoint:
+        customValidationEndpoints[channelType] || this.getChannelConfig(channelType).validation_endpoint,
       sort: isModelGroup ? 10 : 20, // 模型分组为10，站点分组为20
       param_overrides: {},
       config: {
@@ -329,6 +341,18 @@ export class MultiGptloadManager {
     }
 
     try {
+      // 添加调试信息
+      console.log(`🔍 创建分组请求参数:`, {
+        name: groupData.name,
+        display_name: groupData.display_name,
+        channel_type: groupData.channel_type,
+        validation_endpoint: groupData.validation_endpoint,
+        sort: groupData.sort,
+        isModelGroup,
+        upstreams: groupData.upstreams,
+        tags: groupData.tags,
+      })
+
       // 调用API创建分组
       const response = await bestInstance.apiClient.post('/groups', groupData)
 
@@ -351,9 +375,13 @@ export class MultiGptloadManager {
         url: bestInstance.url,
       }
 
-      // 如果有API密钥，添加到分组
+      // 如果有API密钥，尝试添加到分组（404错误不会影响分组创建成功）
       if (apiKeys && apiKeys.length > 0) {
-        await this.addApiKeysToGroup(bestInstance, created.id, apiKeys)
+        try {
+          await this.addApiKeysToGroup(bestInstance, created.id, apiKeys)
+        } catch (error) {
+          console.warn(`⚠️ 为分组 ${created.id} 添加API密钥失败，但分组创建成功: ${error.message}`)
+        }
       }
 
       return created
@@ -366,19 +394,19 @@ export class MultiGptloadManager {
    * 获取渠道配置
    */
   getChannelConfig(channelType: string): any {
-    // 暂时返回基本配置，需要根据实际需求实现
+    // 根据渠道类型返回正确的验证端点
     const configs = {
       openai: {
-        validation_endpoint: '/v1/models'
+        validation_endpoint: '/v1/chat/completions',
       },
       anthropic: {
-        validation_endpoint: '/v1/models'
+        validation_endpoint: '/v1/messages',
       },
       gemini: {
-        validation_endpoint: '/v1/models'
-      }
+        validation_endpoint: '/v1beta/models',
+      },
     }
-    
+
     return configs[channelType] || configs.openai
   }
 
@@ -389,13 +417,13 @@ export class MultiGptloadManager {
     const defaultModels = {
       openai: 'gpt-3.5-turbo',
       anthropic: 'claude-3-haiku-20240307',
-      gemini: 'gemini-pro'
+      gemini: 'gemini-pro',
     }
-    
+
     if (availableModels && availableModels.length > 0) {
       return availableModels[0]
     }
-    
+
     return defaultModels[channelType] || defaultModels.openai
   }
 
@@ -406,12 +434,12 @@ export class MultiGptloadManager {
     try {
       const response = await instance.apiClient.post('/keys', {
         group_id: groupId,
-        keys: apiKeys.map(key => ({
+        keys: apiKeys.map((key) => ({
           key_value: key,
-          status: 'active'
-        }))
+          status: 'active',
+        })),
       })
-      
+
       return response.data
     } catch (error) {
       console.error(`向分组 ${groupId} 添加API密钥失败: ${error.message}`)
@@ -439,12 +467,12 @@ export class MultiGptloadManager {
     try {
       // 先获取分组的所有密钥
       const response = await instance.apiClient.get('/keys', {
-        params: { group_id: groupId }
+        params: { group_id: groupId },
       })
-      
+
       if (response.data && response.data.data && response.data.data.items) {
         const keys = response.data.data.items
-        
+
         // 删除每个密钥
         for (const keyItem of keys) {
           try {
@@ -453,10 +481,10 @@ export class MultiGptloadManager {
             console.warn(`删除密钥 ${keyItem.id} 失败: ${error.message}`)
           }
         }
-        
+
         return { deleted: keys.length }
       }
-      
+
       return { deleted: 0 }
     } catch (error) {
       console.error(`删除分组 ${groupId} 的所有密钥失败: ${error.message}`)
@@ -471,26 +499,26 @@ export class MultiGptloadManager {
     try {
       // 先获取分组的所有密钥
       const response = await instance.apiClient.get('/keys', {
-        params: { group_id: groupId }
+        params: { group_id: groupId },
       })
-      
+
       if (response.data && response.data.data && response.data.data.items) {
         const keys = response.data.data.items
-        
+
         // 更新每个密钥的状态
         for (const keyItem of keys) {
           try {
             await instance.apiClient.put(`/keys/${keyItem.id}`, {
-              status: status
+              status: status,
             })
           } catch (error) {
             console.warn(`更新密钥 ${keyItem.id} 状态失败: ${error.message}`)
           }
         }
-        
+
         return { updated: keys.length }
       }
-      
+
       return { updated: 0 }
     } catch (error) {
       console.error(`切换分组 ${groupId} 密钥状态失败: ${error.message}`)

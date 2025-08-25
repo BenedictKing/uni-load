@@ -439,6 +439,16 @@ class ThreeLayerArchitecture {
         tags: ['layer-2', 'model-channel', model, site.name],
       }
 
+      console.log(`🔍 创建第2层分组请求参数:`, {
+        name: groupData.name,
+        display_name: groupData.display_name,
+        channel_type: groupData.channel_type,
+        validation_endpoint: groupData.validation_endpoint,
+        test_model: groupData.test_model,
+        upstreams: groupData.upstreams,
+        sort: groupData.sort
+      })
+
       const response = await instance.apiClient.post('/groups', groupData)
 
       let created

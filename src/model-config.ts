@@ -447,17 +447,27 @@ class ModelConfig {
    * 处理uni-api配置中的模型名称
    * 包含重定向处理和别名映射
    * @param {string} originalModel 原始模型名称
-   * @return {{normalizedModel: string, originalModel: string}} 处理结果
+   * @return {{normalizedModel: string, originalModel: string, withoutOrgModel: string}} 处理结果
    */
   static normalizeForUniApi(originalModel) {
-    if (!originalModel) return { normalizedModel: '', originalModel: '' }
+    if (!originalModel) return { normalizedModel: '', originalModel: '', withoutOrgModel: '' }
 
-    // 使用基础标准化方法
-    const normalizedModel = this.normalizeModelName(originalModel)
+    let withoutOrgModel = originalModel
+    let normalizedModel = originalModel
+
+    // 1. 处理组织名前缀（如 deepseek-ai/DeepSeek-V3 -> DeepSeek-V3）
+    if (originalModel.includes('/')) {
+      const parts = originalModel.split('/')
+      withoutOrgModel = parts[parts.length - 1] // 取最后一部分
+    }
+
+    // 2. 进一步标准化处理（小写化等）
+    normalizedModel = this.normalizeModelName(withoutOrgModel)
 
     return {
       normalizedModel,
       originalModel,
+      withoutOrgModel,
     }
   }
 
