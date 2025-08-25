@@ -687,15 +687,46 @@ class MultiGptloadManager {
           console.log(`⚠️ 实例 ${instance.name} 因网络错误被标记为不健康`);
         }
         
+        // 增强的错误诊断
+        if (error.response && error.response.status === 401) {
+          console.log(`🔐 401认证失败详细诊断:`);
+          console.log(`   - gptload实例token: ${instance.token ? `${instance.token.substring(0, 10)}...` : '❌ 未配置token'}`);
+          console.log(`   - 原始API密钥: ${apiKey ? `${apiKey.substring(0, 10)}...` : '❌ 无原始密钥'}`);
+          console.log(`   - 代理URL: ${proxyUrl}`);
+          console.log(`   - 目标站点: ${baseUrl}`);
+          console.log(`   - 问题分析: 访问gptload代理需要使用gptload的token，不是原始API密钥`);
+          
+          // 测试实例token是否有效
+          try {
+            const tokenTestResponse = await instance.apiClient.get('/groups');
+            console.log(`✅ gptload实例token验证成功，可以访问管理接口`);
+          } catch (tokenError) {
+            console.log(`❌ gptload实例token验证失败: ${tokenError.message}`);
+            console.log(`💡 建议检查gptload-instances.json中实例的token配置`);
+          }
+        }
+        
         // 保留最后一个失败的临时分组用于调试
         if (!debugTempGroupId) {
           debugTempGroupId = tempGroupId;
           debugInstance = instance;
-          console.log(`🛠️ 保留失败的调试分组 ${tempGroupName} (ID: ${tempGroupId}) 用于调试 401 错误`);
+          console.log(`🛠️ 保留失败的调试分组 ${tempGroupName} (ID: ${tempGroupId}) 用于调试`);
         }
         
       } finally {
-        // 只清理非调试分组
+        // 修改策略：保留所有调试分组，方便手动测试和调试
+        if (tempGroupId) {
+          console.log(`🛠️ 保留调试分组 ${tempGroupName} (ID: ${tempGroupId}) 用于手动测试`);
+          console.log(`🔗 可以通过以下方式手动测试:`);
+          console.log(`   1. 代理URL: ${instance.url}/proxy/${tempGroupName}/v1/models`);
+          console.log(`   2. 使用gptload token: ${instance.token ? `${instance.token.substring(0, 10)}...` : '❌ 需配置token'}`);
+          console.log(`   3. 目标站点: ${baseUrl}`);
+          console.log(`   4. 分组管理: ${instance.url}/groups/${tempGroupId}`);
+          console.log(`💡 如需清理，可手动删除或重启gptload服务`);
+        }
+        
+        // 注释掉自动清理代码，保留所有调试分组
+        /*
         if (tempGroupId && tempGroupId !== debugTempGroupId) {
           try {
             await instance.apiClient.delete(`/groups/${tempGroupId}`);
@@ -704,6 +735,7 @@ class MultiGptloadManager {
             console.warn(`⚠️ 清理临时分组失败: ${cleanupError.message}`);
           }
         }
+        */
       }
     }
     
@@ -1362,8 +1394,9 @@ class MultiGptloadManager {
       
       if (keyData && keyData.items) {
         const allKeys = keyData.items;
-        const activeKeys = allKeys.filter(key => key.status === 'active' || key.is_valid).length;
-        const invalidKeys = allKeys.filter(key => key.status === 'invalid' || !key.is_valid).length;
+        // 修复统计计算逻辑：使用标准的status字段
+        const activeKeys = allKeys.filter(key => key.status === 'active').length;
+        const invalidKeys = allKeys.filter(key => key.status === 'invalid').length;
         
         const stats = {
           active_keys: activeKeys,
@@ -1371,7 +1404,8 @@ class MultiGptloadManager {
           total_keys: allKeys.length
         };
         
-        console.log(`✅ 通过密钥接口计算统计: ${JSON.stringify(stats)}`);
+        console.log(`✅ 通过密钥接口计算统计: active=${activeKeys}, invalid=${invalidKeys}, total=${allKeys.length}`);
+        console.log(`📝 密钥状态详情: ${JSON.stringify(allKeys.map(k => ({id: k.id, status: k.status})))}`);
         return stats;
       }
       
