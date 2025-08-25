@@ -2,94 +2,27 @@
 
 ## 概述
 
-uni-load 采用模块化设计，将功能按职责清晰分离，便于维护和扩展。本文档详细介绍各个模块的设计理念、架构组织和接口定义。
+uni-load 采用模块化设计，将功能按职责清晰分离，便于维护和扩展。本文档详细介绍各个模块的设计理念、代码组织和接口定义。
 
 ## 目录
 
-1. [整体架构设计](#整体架构设计)
+1. [模块分层设计](#模块分层设计)
 2. [核心模块详解](#核心模块详解)
-3. [模块间交互](#模块间交互)
-4. [数据流设计](#数据流设计)
-5. [扩展机制](#扩展机制)
+3. [模块接口设计](#模块接口设计)
+4. [扩展机制](#扩展机制)
 
-## 整体架构设计
+## 模块分层设计
 
-### 分层架构模式
+### 职责分离原则
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        表现层 (Presentation Layer)              │
-│  ┌─────────────────┐    ┌─────────────────┐                    │
-│  │   Web UI        │    │  Express Routes │                    │
-│  │ (Static Files)  │    │   (server.ts)   │                    │
-│  └─────────────────┘    └─────────────────┘                    │
-└─────────────────────────────────────────────────────────────────┘
-                                    │
-┌─────────────────────────────────────────────────────────────────┐
-│                        业务逻辑层 (Business Logic Layer)         │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐ │
-│  │ Three-Layer     │  │  Model Sync     │  │ Channel Health  │ │
-│  │ Architecture    │  │   Service       │  │   Monitor       │ │
-│  └─────────────────┘  └─────────────────┘  └─────────────────┘ │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐ │
-│  │ Channel Cleanup │  │ Model Channel   │  │ Temp Group      │ │
-│  │   Service       │  │   Optimizer     │  │   Cleaner       │ │
-│  └─────────────────┘  └─────────────────┘  └─────────────────┘ │
-└─────────────────────────────────────────────────────────────────┘
-                                    │
-┌─────────────────────────────────────────────────────────────────┐
-│                        服务层 (Service Layer)                   │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐ │
-│  │  Gptload        │  │    Models       │  │   YAML          │ │
-│  │  Service        │  │   Service       │  │  Manager        │ │
-│  └─────────────────┘  └─────────────────┘  └─────────────────┘ │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐ │
-│  │ Multi-Gptload   │  │ Layer Configs   │  │  Model Config   │ │
-│  │   Manager       │  │   Manager       │  │   Manager       │ │
-│  └─────────────────┘  └─────────────────┘  └─────────────────┘ │
-└─────────────────────────────────────────────────────────────────┘
-                                    │
-┌─────────────────────────────────────────────────────────────────┐
-│                        数据访问层 (Data Access Layer)            │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐ │
-│  │   HTTP Client   │  │  File System    │  │  Configuration  │ │
-│  │    (Axios)      │  │   Operations    │  │    Files        │ │
-│  └─────────────────┘  └─────────────────┘  └─────────────────┘ │
-└─────────────────────────────────────────────────────────────────┘
+表现层 (Presentation) → 业务逻辑层 (Business) → 服务层 (Service) → 数据访问层 (Data)
 ```
 
-### 模块依赖关系
-
-```mermaid
-graph TD
-    A[server.ts] --> B[gptload.ts]
-    A --> C[models.ts]
-    A --> D[yaml-manager.ts]
-    A --> E[model-sync.ts]
-    A --> F[channel-health.ts]
-    A --> G[channel-cleanup.ts]
-    A --> H[three-layer-architecture.ts]
-    
-    B --> I[multi-gptload.ts]
-    B --> J[layer-configs.ts]
-    
-    E --> B
-    E --> C
-    E --> D
-    
-    F --> B
-    
-    G --> B
-    
-    H --> B
-    H --> K[model-channel-optimizer.ts]
-    
-    B --> L[temp-group-cleaner.ts]
-    
-    All --> M[types.ts]
-    
-    C --> N[model-config.ts]
-```
+- **表现层**: Web UI + Express 路由，负责用户交互
+- **业务逻辑层**: 核心业务处理，如三层架构管理、同步服务
+- **服务层**: 基础服务封装，如 gpt-load 交互、配置管理  
+- **数据访问层**: HTTP 客户端、文件操作、配置读写
 
 ## 核心模块详解
 
@@ -1006,106 +939,30 @@ export interface ServiceStatus {
 3. **可扩展性**: 使用泛型和可选字段支持扩展
 4. **文档化**: 详细的注释说明各字段含义
 
-## 模块间交互
+## 模块接口设计
 
-### 交互模式图
+### 统一接口规范
 
-```mermaid
-sequenceDiagram
-    participant Client as 客户端
-    participant Server as server.ts
-    participant Gptload as gptload.ts
-    participant Multi as multi-gptload.ts
-    participant Models as models.ts
-    participant Yaml as yaml-manager.ts
-    
-    Client->>Server: POST /api/process-ai-site
-    Server->>Models: getModels(baseUrl, apiKey)
-    Models->>Multi: selectBestInstance(siteUrl)
-    Multi-->>Models: instanceId
-    Models-->>Server: models[]
-    
-    Server->>Gptload: createSiteGroup(siteName, models)
-    Gptload->>Multi: selectBestInstance(siteUrl)
-    Multi-->>Gptload: instanceId
-    Gptload-->>Server: siteGroup
-    
-    Server->>Gptload: createOrUpdateModelGroups(models, siteGroups)
-    Gptload-->>Server: modelGroups[]
-    
-    Server->>Yaml: updateUniApiConfig(modelGroups)
-    Yaml-->>Server: success
-    
-    Server-->>Client: ApiResponse<ConfigResult>
-```
-
-### 数据流设计
-
-#### 1. 配置流数据流
-
-```
-用户输入 → 参数验证 → 站点名称生成 → 模型获取 → 实例选择 → 分组创建 → 配置更新
-```
-
-**详细流程**:
-1. **用户输入**: Web 界面或 API 提交配置请求
-2. **参数验证**: 验证 baseUrl、apiKeys 等参数有效性
-3. **站点名称生成**: 根据 URL 自动生成唯一站点名称
-4. **模型获取**: 从 AI 站点获取支持的模型列表
-5. **实例选择**: 选择最佳的 gpt-load 实例
-6. **分组创建**: 创建三层分组架构
-7. **配置更新**: 更新 uni-api 配置文件
-
-#### 2. 监控流数据流
-
-```
-定时器触发 → 状态收集 → 健康检查 → 异常检测 → 恢复操作 → 状态更新
-```
-
-**监控循环**:
-1. **定时器触发**: 按配置间隔触发监控任务
-2. **状态收集**: 收集各个模块的运行状态
-3. **健康检查**: 执行渠道健康检查
-4. **异常检测**: 识别故障和异常情况
-5. **恢复操作**: 自动执行恢复操作
-6. **状态更新**: 更新监控状态和统计信息
-
-### 错误传播机制
-
-#### 错误分类和处理策略
+所有模块遵循统一的接口设计原则：
 
 ```typescript
-// 错误类型枚举
-enum ErrorType {
-  VALIDATION_ERROR = 'VALIDATION_ERROR',
-  NETWORK_ERROR = 'NETWORK_ERROR', 
-  CONFIG_ERROR = 'CONFIG_ERROR',
-  SYSTEM_ERROR = 'SYSTEM_ERROR'
+// 标准模块接口
+interface ModuleInterface {
+  // 模块初始化
+  initialize?(): Promise<void>;
+  
+  // 模块状态
+  getStatus(): ModuleStatus;
+  
+  // 模块清理
+  cleanup?(): Promise<void>;
 }
 
-// 错误处理策略
-class ErrorHandler {
-  static handle(error: Error, context: string): ApiErrorResponse {
-    if (error instanceof ValidationError) {
-      return {
-        error: error.message,
-        details: { type: ErrorType.VALIDATION_ERROR, context }
-      };
-    }
-    
-    if (error instanceof NetworkError) {
-      return {
-        error: '网络连接失败',
-        details: { type: ErrorType.NETWORK_ERROR, originalError: error.message }
-      };
-    }
-    
-    // 默认处理
-    return {
-      error: '系统内部错误',
-      details: { type: ErrorType.SYSTEM_ERROR, context, message: error.message }
-    };
-  }
+// 服务模块接口
+interface ServiceModule extends ModuleInterface {
+  start?(): void;
+  stop?(): void;
+  isRunning(): boolean;
 }
 ```
 

@@ -38,125 +38,42 @@
 
 ## 环境准备
 
-### 1. 安装 Bun 运行时
+### 1. 安装运行时环境
+
+确保已安装必要的运行时环境，基本安装步骤请参考 [README.md](../README.md#快速开始)。
+
+### 2. 验证环境
 
 ```bash
-# macOS/Linux 用户
-curl -fsSL https://bun.sh/install | bash
-
-# Windows 用户（使用 PowerShell）
-powershell -c "irm bun.sh/install.ps1 | iex"
-
-# 或使用 npm 全局安装
-npm install -g bun
-
-# 验证安装
-bun --version
-```
-
-### 2. 克隆项目代码
-
-```bash
-# 克隆项目
-git clone <项目地址>
-cd uni-load
-
-# 安装依赖
-bun install
-```
-
-### 3. 目录结构检查
-
-确保相关目录结构正确：
-
-```
-项目根目录/
-├── uni-load/          # 本项目目录
-├── uni-api/           # uni-api 项目（必需）
-└── gpt-load/          # gpt-load 项目（可选，如果本地运行）
+# 检查版本
+node --version  # >= 18.0.0
+bun --version   # >= 1.0.0
+git --version   # >= 2.30.0
 ```
 
 ## 配置文件设置
 
-### 1. 环境变量配置
+### 环境变量配置
 
-创建环境配置文件：
+详细的环境变量说明请参考 [README.md](../README.md#环境配置)
 
 ```bash
-# 复制示例配置
+# 创建生产环境配置
 cp .env.example .env.local
 
-# 编辑配置文件
-vim .env.local
-```
-
-基本配置示例：
-
-```bash
-# .env.local
-# gpt-load 服务地址
-GPTLOAD_URL=http://localhost:3001
-
-# uni-api 项目路径（相对或绝对路径）
-UNI_API_PATH=../uni-api
-
-# 服务端口
+# 关键生产配置
+NODE_ENV=production
 PORT=3002
-
-# gpt-load 认证令牌（如果需要）
-GPTLOAD_TOKEN=your-token-here
-
-# uni-api 配置文件路径
-UNI_API_YAML_PATH=../uni-api/api.yaml
-
-# 服务开关
-ENABLE_MODEL_SYNC=true
-ENABLE_CHANNEL_HEALTH=true
-ENABLE_MODEL_OPTIMIZER=true
-
-# 同步间隔配置（秒）
-MODEL_SYNC_INTERVAL=60
-CHANNEL_CHECK_INTERVAL=30
-CHANNEL_FAILURE_THRESHOLD=3
+GPTLOAD_URL=http://localhost:3001
 ```
 
-### 2. gpt-load 实例配置
+### gpt-load 实例配置
 
-**重要**: 必须配置 gpt-load 实例才能启动服务！
+详细的实例配置说明请参考 [多实例配置文档](multi-gptload-config.md)
 
 ```bash
 # 复制配置模板
 cp gptload-instances.json.example gptload-instances.json
-
-# 编辑实例配置
-vim gptload-instances.json
-```
-
-配置示例：
-
-```json
-[
-  {
-    "id": "local",
-    "name": "本地 gpt-load",
-    "url": "http://localhost:3001",
-    "token": "",
-    "priority": 1,
-    "description": "本地服务，优先使用",
-    "upstream_addresses": [
-      "https://us.gpt-load.example.com"
-    ]
-  },
-  {
-    "id": "us-proxy",
-    "name": "美国代理 gpt-load",
-    "url": "https://us.gpt-load.example.com",
-    "token": "your-token-here",
-    "priority": 2,
-    "description": "用于本地不易访问的站点",
-    "upstream_addresses": []
-  }
-]
 ```
 
 ## 部署方案
@@ -587,24 +504,38 @@ ping gpt-load-host
 tail -f logs/error.log
 ```
 
-#### 3. uni-api 配置更新失败
+#### 3. 站点配置失败
 
-**检查列表**:
-- ✅ uni-api 目录路径是否正确
-- ✅ api.yaml 文件是否存在和可写
-- ✅ YAML 格式是否正确
+**症状**: API 返回错误，无法创建站点分组
 
-**诊断命令**:
-```bash
-# 检查目录权限
-ls -la ../uni-api/
+**排查步骤**:
+1. **验证 API 密钥**
+   ```bash
+   curl -X POST http://localhost:3002/api/probe-api \
+     -H "Content-Type: application/json" \
+     -d '{"baseUrl": "https://api.example.com/v1", "apiKey": "sk-xxx"}'
+   ```
 
-# 验证 YAML 语法
-bun run yaml-check
+2. **检查网络连接** - 确认能够访问目标 API 站点
 
-# 手动备份配置
-cp ../uni-api/api.yaml ../uni-api/api.yaml.backup
-```
+3. **查看系统状态**
+   ```bash
+   curl http://localhost:3002/api/status
+   ```
+
+#### 4. 模型获取失败
+
+**可能原因**:
+- API 密钥无效或过期
+- API 站点不支持 `/v1/models` 接口  
+- 网络连接问题
+- gpt-load 实例不可达
+
+**解决方案**:
+1. 验证 API 密钥有效性
+2. 尝试手动指定模型列表
+3. 检查网络连接
+4. 切换到其他 gpt-load 实例
 
 ### 日志分析
 

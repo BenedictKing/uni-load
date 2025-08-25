@@ -31,39 +31,16 @@
 
 ### 1. 环境要求
 
+基本环境安装请参考 [README.md](../README.md#前置条件)
+
 ```bash
-# 检查 Node.js 版本
+# 检查开发环境
 node --version  # >= 18.0.0
-
-# 检查 Bun 版本
 bun --version   # >= 1.0.0
-
-# 检查 TypeScript 版本
 npx tsc --version  # >= 5.0.0
 ```
 
-### 2. 项目初始化
-
-```bash
-# 克隆项目
-git clone <项目地址>
-cd uni-load
-
-# 安装依赖
-bun install
-
-# 复制配置文件
-cp .env.example .env.local
-cp gptload-instances.json.example gptload-instances.json
-
-# 类型检查
-bun run type-check
-
-# 构建项目
-bun run build
-```
-
-### 3. IDE 配置
+### 2. 开发工具配置
 
 #### VS Code 推荐插件
 
@@ -99,71 +76,16 @@ bun run build
 }
 ```
 
-## 项目结构详解
-
-```
-uni-load/
-├── src/                          # 源代码目录
-│   ├── types.ts                  # TypeScript 类型定义
-│   ├── gptload.ts               # gpt-load 服务交互
-│   ├── multi-gptload.ts         # 多实例管理
-│   ├── models.ts                # 模型获取服务
-│   ├── yaml-manager.ts          # YAML 配置管理
-│   ├── model-sync.ts            # 模型同步服务
-│   ├── channel-health.ts        # 渠道健康监控
-│   ├── channel-cleanup.ts       # 渠道清理服务
-│   ├── model-config.ts          # 模型配置管理
-│   ├── model-channel-optimizer.ts # 模型渠道优化
-│   ├── three-layer-architecture.ts # 三层架构管理
-│   └── temp-group-cleaner.ts    # 临时分组清理
-├── public/                      # 静态资源
-│   └── index.html              # Web 界面
-├── docs/                       # 文档目录
-├── logs/                       # 日志目录
-├── dist/                       # 编译输出目录
-├── server.ts                   # 主服务器文件
-├── tsconfig.json              # TypeScript 配置
-├── package.json               # 项目配置
-├── bunfig.toml                # Bun 配置
-├── .env.example               # 环境变量示例
-├── .env.local                 # 本地环境变量
-└── gptload-instances.json     # gpt-load 实例配置
-```
-
 ## 代码架构
 
-### 1. 分层架构
+详细的架构设计请参考 [系统架构文档](system-architecture-v2.md) 和 [模块设计文档](module-design.md)
 
-```
-┌─────────────────────────────────────────────────────┐
-│                  Express 路由层                      │
-│  - 请求处理                                         │
-│  - 参数验证                                         │
-│  - 响应格式化                                       │
-└─────────────────────────────────────────────────────┘
-                           │
-┌─────────────────────────────────────────────────────┐
-│                  业务逻辑层                          │
-│  - 站点配置处理                                     │
-│  - 模型管理                                         │
-│  - 实例协调                                         │
-└─────────────────────────────────────────────────────┘
-                           │
-┌─────────────────────────────────────────────────────┐
-│                  服务层                              │
-│  - gptload 交互                                     │
-│  - 模型获取                                         │
-│  - YAML 管理                                        │
-│  - 健康检查                                         │
-└─────────────────────────────────────────────────────┘
-                           │
-┌─────────────────────────────────────────────────────┐
-│                  数据访问层                          │
-│  - HTTP 客户端                                      │
-│  - 文件操作                                         │
-│  - 配置读写                                         │
-└─────────────────────────────────────────────────────┘
-```
+### 核心设计原则
+
+- **SOLID 原则**: 单一职责、开闭原则、里氏替换、接口隔离、依赖倒置
+- **DRY 原则**: 消除重复代码和逻辑
+- **KISS 原则**: 保持简单直观
+- **模块化**: 清晰的模块边界和职责分离
 
 ### 2. 核心模块设计
 

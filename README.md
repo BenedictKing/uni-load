@@ -70,17 +70,15 @@ uni-load 是一个自动化配置工具，帮助用户快速将第三方 AI 站�
 - **连通性测试**: 测试实例是否能访问目标站点
 - **故障转移**: 自动切换到可用实例
 
-## 🏗️ 架构设计
+## 🏗️ 系统架构
+
+uni-load 采用三层分组架构实现 AI 模型的统一管理：
 
 ```
-用户请求 → uni-api → gpt-load模型分组 → gpt-load站点分组 → 第三方AI站点
+用户请求 → uni-api → 模型聚合分组 → 模型-渠道分组 → 站点分组 → AI服务商
 ```
 
-### 分组结构
-
-- **第一层（站点分组）**：如 `deepseek`、`openai`、`anthropic`
-- **第二层（模型分组）**：如 `gpt-4`、`claude-3`、`deepseek-chat`
-- **上游配置**：模型分组的上游指向多个站点分组，实现负载均衡
+详细架构设计请参考 [系统架构文档](docs/system-architecture-v2.md)
 
 ## 🚀 快速开始
 
@@ -154,46 +152,29 @@ bun dev
 http://localhost:3002
 ```
 
-## 🛠️ 使用方法
+## 🛠️ 基本使用
 
 ### Web 界面操作
 
 1. 打开 `http://localhost:3002`
-2. 填写表单：
-   - **API 基础地址**：如 `https://api.deepseek.com/v1`
-   - **API 密钥**：支持多个密钥，用于负载均衡
-3. 系统会根据域名自动生成站点名称（如 `deepseek`）
-4. 点击"🔧 开始配置"
-5. 等待自动配置完成
+2. 填写 AI 站点信息（API地址、密钥、格式类型）
+3. 点击"🔧 开始配置"
+4. 等待自动配置完成
 
-### API 接口
+### API 接口调用
 
-#### 处理 AI 站点配置
-
-```http
-POST /api/process-ai-site
-Content-Type: application/json
-
-{
-  "baseUrl": "https://api.deepseek.com/v1",
-  "apiKeys": ["sk-xxx", "sk-yyy"]
-}
+```bash
+# 配置 AI 站点
+curl -X POST http://localhost:3002/api/process-ai-site \
+  -H "Content-Type: application/json" \
+  -d '{
+    "baseUrl": "https://api.deepseek.com/v1",
+    "apiKeys": ["sk-xxx"],
+    "channelTypes": ["openai"]
+  }'
 ```
 
-> **注意**：`siteName` 参数已移除，系统会根据 `baseUrl` 自动生成站点名称。  
-> 例如：`https://api.deepseek.com/v1` → `deepseek`
-
-#### 获取服务状态
-
-```http
-GET /api/status
-```
-
-#### 健康检查
-
-```http
-GET /api/health
-```
+详细 API 说明请参考 [API 接口文档](docs/api.md)
 
 ## 📁 项目结构
 
@@ -232,50 +213,21 @@ uni-load/
 └── README.md                  # 说明文档
 ```
 
-## ⚙️ 环境变量配置
+## ⚙️ 环境配置
 
-### 配置文件优先级
+系统支持多种配置方式，详细配置说明请参考 [部署指南](docs/deployment.md)
 
-环境变量按以下优先级加载：
-
-1. **`.env.local`** - 本地配置（优先级最高，不提交到版本控制）
-2. **`.env`** - 默认配置（可提交到版本控制）
-
-### 配置参数
+### 基本配置
 
 ```bash
-# gpt-load 服务地址
-GPTLOAD_URL=http://localhost:3001
+# 复制配置文件
+cp .env.example .env.local
+cp gptload-instances.json.example gptload-instances.json
 
-# uni-api 项目路径
-UNI_API_PATH=../uni-api
-
-# 服务端口
-PORT=3002
-
-# gpt-load 认证令牌（如果需要）
-GPTLOAD_TOKEN=sk-Lp15cEHb2D0GjbuvsvdHqd6NP1c1yURJ3C2lAjCbUjK5yApc
-
-# uni-api 配置文件路径
-UNI_API_YAML_PATH=../uni-api/api.yaml
-
-# 服务开关
-ENABLE_MODEL_SYNC=true
-ENABLE_CHANNEL_HEALTH=true
-ENABLE_MODEL_OPTIMIZER=true
-
-# 同步间隔配置
-MODEL_SYNC_INTERVAL=60
-CHANNEL_CHECK_INTERVAL=30
-CHANNEL_FAILURE_THRESHOLD=3
+# 编辑配置
+vim .env.local              # 环境变量配置  
+vim gptload-instances.json  # gpt-load 实例配置
 ```
-
-### 使用建议
-
-- **推荐做法**：直接使用 `cp .env.example .env.local` 创建本地配置
-- **团队开发**：每个开发者使用自己的 `.env.local`，不影响他人
-- **生产部署**：使用 `.env.local` 或系统环境变量
-- **调试测试**：临时修改 `.env.local` 进行测试
 
 ## 📚 文档目录
 
@@ -294,149 +246,53 @@ CHANNEL_FAILURE_THRESHOLD=3
 
 ## 🔄 工作流程
 
-### 1. 模型发现
+1. **模型发现** - 调用 AI 站点的 `/v1/models` 接口获取模型列表
+2. **分组创建** - 在 gpt-load 中创建三层分组架构
+3. **配置更新** - 自动更新 uni-api 的 `api.yaml` 配置
+4. **负载均衡** - 实现多站点、多密钥的智能负载均衡
 
-- 调用第三方 AI 站点的 `/v1/models` 接口
-- 解析响应并过滤有效模型
-- 支持多种响应格式自动适配
+## 🔍 核心特性
 
-### 2. 分组创建
+### ✅ 主要功能
+- 🌐 **Web 界面管理** - 直观的配置界面
+- 🔍 **自动模型发现** - 支持标准 OpenAI API 格式
+- 🏗️ **三层分组架构** - 灵活的负载均衡策略
+- 🔄 **多实例支持** - 支持多个 gpt-load 实例协调工作
+- 📊 **实时监控** - 健康检查和状态监控
+- 🔧 **自动化运维** - 模型同步、故障恢复
 
-```
-站点分组 (deepseek)
-├── 上游: https://api.deepseek.com/v1
-└── API密钥: sk-xxx, sk-yyy
+### 🎯 技术特点
+- **TypeScript** - 类型安全的代码质量保证
+- **模块化设计** - 清晰的服务层分离
+- **容错机制** - 完善的异常处理和恢复
+- **性能优化** - 连接池、缓存和并发控制
 
-模型分组 (deepseek-chat)
-├── 上游: http://localhost:3001/proxy/deepseek-chat
-└── 支持多站点负载均衡
-```
-
-### 3. 配置更新
-
-自动更新 `uni-api/api.yaml`：
-
-```yaml
-providers:
-  - provider: gpt-load-deepseek-chat
-    base_url: http://localhost:3001/proxy/deepseek-chat/v1/chat/completions
-    api: sk-uni-load-auto-generated
-    model:
-      - deepseek-chat
-    tools: true
-```
-
-## 🔍 特性说明
-
-### ✅ 核心功能
-
-- 🌐 **Web 界面**: 直观的表单配置界面
-- 🔍 **模型自动发现**: 支持标准 OpenAI API 格式
-- 🏗️ **三层分组架构**: 站点级 + 模型级 + 渠道级
-- ⚖️ **智能负载均衡**: 多站点、多密钥自动均衡
-- 🔄 **多实例管理**: 支持多个 gpt-load 实例协调工作
-- 📊 **实时监控**: 健康检查和状态监控
-- 🔧 **自动化运维**: 模型同步、渠道清理、故障恢复
-
-### 🎯 高级功能
-
-- **智能路由**: 自动选择最佳实例和路径
-- **故障转移**: 自动检测和切换失效服务
-- **配置备份**: 自动备份和恢复配置文件
-- **渠道优化**: 智能清理和优化无效渠道
-- **临时分组管理**: 自动清理临时和过期分组
-- **日志记录**: 详细的操作和错误日志
-
-### 🔧 技术特点
-
-- **TypeScript 构建**: 类型安全和代码质量保证
-- **模块化设计**: 清晰的服务层分离和职责划分
-- **容错机制**: 完善的异常捕获和恢复逻辑
-- **性能优化**: 连接池、缓存和并发控制
-- **扩展友好**: 插件化架构便于功能扩展
-
-## 🛠️ 快速操作
-
-### 常用命令
+## 🛠️ 常用命令
 
 ```bash
 # 开发模式（热重载）
 bun dev
 
-# 生产构建
-bun run build
-bun start
+# 生产构建和启动
+bun run build && bun start
 
-# 类型检查
-bun run type-check
-
-# 清理构建
-bun run clean
-```
-
-### 快速配置
-
-```bash
-# 1. 复制并配置实例文件（必需）
-cp gptload-instances.json.example gptload-instances.json
-vim gptload-instances.json
-
-# 2. 复制并配置环境变量
-cp .env.example .env.local
-vim .env.local
-
-# 3. 启动服务
-bun dev
-```
-
-### API 快速测试
-
-```bash
 # 健康检查
 curl http://localhost:3002/api/health
 
-# 预览站点名称
-curl -X POST http://localhost:3002/api/preview-site-name \
-  -H "Content-Type: application/json" \
-  -d '{"baseUrl": "https://api.deepseek.com/v1"}'
-
-# 配置 AI 站点
-curl -X POST http://localhost:3002/api/process-ai-site \
-  -H "Content-Type: application/json" \
-  -d '{
-    "baseUrl": "https://api.deepseek.com/v1",
-    "apiKeys": ["sk-xxx"],
-    "channelTypes": ["openai"]
-  }'
+# 查看系统状态
+curl http://localhost:3002/api/status
 ```
 
-## 🐛 故障排除
+## 🐛 故障排查
 
-### 常见问题
+详细的故障排查指南请参考 [用户操作手册](docs/user-guide.md#故障排查)
 
-1. **gpt-load 连接失败**
+### 快速检查
 
-   - 检查 gpt-load 服务是否运行在正确端口
-   - 确认 `GPTLOAD_URL` 环境变量配置
-
-2. **模型获取失败**
-
-   - 验证 API 密钥是否有效
-   - 检查第三方站点的网络连接
-   - 确认 API 基础地址格式
-
-3. **配置文件更新失败**
-   - 检查 uni-api 目录路径
-   - 确认文件写入权限
-   - 验证 YAML 格式正确性
-
-### 调试模式
-
-使用开发模式启动获取详细日志：
-
-```bash
-bun dev
-```
+1. **服务状态** - 确认 gpt-load 和 uni-api 服务正常运行
+2. **配置文件** - 检查 `gptload-instances.json` 和环境变量配置
+3. **网络连接** - 测试到 AI 站点和 gpt-load 实例的连通性
+4. **日志分析** - 查看 `logs/` 目录下的详细日志
 
 ## 🤝 贡献指南
 
