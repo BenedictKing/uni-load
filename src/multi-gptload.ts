@@ -622,11 +622,13 @@ class MultiGptloadManager {
           console.warn(`⚠️ 健康检查失败: ${healthError.message}`);
         }
         
+        // 关键修改：访问gptload代理时应该使用gptload实例的token，而不是原始API密钥
         const modelsResponse = await axios.get(proxyUrl, {
           timeout: 30000, // 30秒超时
           httpsAgent: this.httpsAgent,
           headers: {
-            'Authorization': `Bearer ${apiKey}`,
+            // 使用gptload实例的token进行认证
+            'Authorization': `Bearer ${instance.token || 'dummy-token'}`,
             'Content-Type': 'application/json',
             'User-Agent': 'uni-load/1.0.0',
           },
@@ -634,6 +636,8 @@ class MultiGptloadManager {
         });
         
         console.log(`📡 代理模型响应: ${modelsResponse.status}`);
+        console.log(`🔑 使用的gptload token: ${instance.token ? `${instance.token.substring(0, 10)}...` : '❌ 未配置token'}`);
+        console.log(`🔑 原始API密钥已存储在分组中: ${apiKey ? `${apiKey.substring(0, 10)}...` : '无密钥'}`);
         console.log(`📡 响应头: ${JSON.stringify(modelsResponse.headers)}`);
         console.log(`📡 响应数据: ${JSON.stringify(modelsResponse.data).substring(0, 500)}...`);
         
