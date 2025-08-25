@@ -51,6 +51,15 @@ class MultiGptloadManager {
       );
     }
 
+    // 验证上游地址配置的合法性
+    const validationErrors = this.validateUpstreamAddresses(configs);
+    if (validationErrors.length > 0) {
+      const errorMsg = "❌ 实例上游地址配置不合法：\n" + 
+        validationErrors.map(error => `  - ${error}`).join('\n') +
+        "\n\n规则：实例只能使用序号更大的实例作为上游地址，以避免循环依赖和访问失败";
+      throw new Error(errorMsg);
+    }
+
     return configs;
   }
 
@@ -97,6 +106,56 @@ class MultiGptloadManager {
     }
 
     return configs;
+  }
+
+  /**
+   * 验证上游地址配置的合法性
+   * 规则：实例只能使用序号更大的实例作为上游地址
+   */
+  validateUpstreamAddresses(instances) {
+    const errors = [];
+    
+    for (let i = 0; i < instances.length; i++) {
+      const instance = instances[i];
+      if (!instance.upstream_addresses || !Array.isArray(instance.upstream_addresses)) {
+        continue;
+      }
+      
+      const currentInstanceName = instance.name;
+      const currentInstanceUrl = instance.url;
+      
+      for (const upstreamAddr of instance.upstream_addresses) {
+        // 检查是否引用了序号更小或相等的实例
+        for (let j = 0; j <= i; j++) {
+          const otherInstance = instances[j];
+          const otherInstanceUrl = otherInstance.url;
+          
+          // 比较URL（忽略协议和端口差异）
+          if (this.normalizeUrl(upstreamAddr) === this.normalizeUrl(otherInstanceUrl)) {
+            errors.push(
+              `实例 '${currentInstanceName}' (序号 ${i}) 不能使用序号更小或相等的实例 ` +
+              `'${otherInstance.name}' (序号 ${j}, ${otherInstanceUrl}) 作为上游地址`
+            );
+          }
+        }
+      }
+    }
+    
+    return errors;
+  }
+
+  /**
+   * 标准化URL用于比较
+   */
+  normalizeUrl(url) {
+    try {
+      const urlObj = new URL(url);
+      // 只比较主机名和路径，忽略协议和端口
+      return `${urlObj.hostname}${urlObj.pathname}`;
+    } catch (error) {
+      // 如果不是完整URL，直接返回原始字符串
+      return url.replace(/^https?:\/\//, '').replace(/:\d+$/, '');
+    }
   }
 
   /**

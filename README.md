@@ -34,15 +34,31 @@ uni-load 是一个自动化配置工具，帮助用户快速将第三方 AI 站�
        "name": "本地 gpt-load",
        "url": "http://localhost:3001",
        "priority": 1,
-       "description": "本地服务，优先使用"
+       "description": "本地服务，优先使用",
+       "upstream_addresses": [
+         "https://us.gpt-load.example.com",
+         "https://eu.gpt-load.example.com"
+       ]
      },
      {
-       "id": "us-proxy",
+       "id": "us-proxy", 
        "name": "美国代理 gpt-load",
        "url": "https://us.gpt-load.example.com",
        "token": "your-token-here",
        "priority": 2,
-       "description": "用于本地不易访问的站点"
+       "description": "用于本地不易访问的站点",
+       "upstream_addresses": [
+         "https://eu.gpt-load.example.com"
+       ]
+     },
+     {
+       "id": "eu-proxy",
+       "name": "欧洲代理 gpt-load", 
+       "url": "https://eu.gpt-load.example.com",
+       "token": "your-token-here",
+       "priority": 3,
+       "description": "欧洲服务器，最后备选",
+       "upstream_addresses": []
      }
    ]
    ```
