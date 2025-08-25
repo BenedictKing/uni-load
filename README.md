@@ -199,18 +199,37 @@ GET /api/health
 
 ```
 uni-load/
-├── src/                    # 源代码目录
-│   ├── gptload.js         # gpt-load 服务交互
-│   ├── models.js          # 模型获取服务
-│   └── yaml-manager.js    # uni-api 配置管理
-├── public/                # 静态文件
-│   └── index.html         # Web界面
-├── server.js              # 主服务器
-├── package.json           # 项目配置
-├── bunfig.toml            # Bun 配置
-├── .env                   # 默认环境变量
-├── .env.local.example     # 本地环境变量模板
-└── README.md              # 说明文档
+├── src/                          # 源代码目录
+│   ├── types.ts                  # TypeScript 类型定义
+│   ├── gptload.ts               # gpt-load 服务交互
+│   ├── multi-gptload.ts         # 多实例管理
+│   ├── models.ts                # 模型获取服务
+│   ├── yaml-manager.ts          # uni-api 配置管理
+│   ├── model-sync.ts            # 模型同步服务
+│   ├── channel-health.ts        # 渠道健康监控
+│   ├── channel-cleanup.ts       # 渠道清理服务
+│   ├── model-config.ts          # 模型配置管理
+│   ├── model-channel-optimizer.ts # 模型渠道优化
+│   ├── three-layer-architecture.ts # 三层架构管理
+│   └── temp-group-cleaner.ts    # 临时分组清理
+├── public/                      # 静态资源
+│   └── index.html              # Web界面
+├── docs/                       # 项目文档
+│   ├── architecture.md         # 系统架构设计
+│   ├── api.md                  # API 接口文档
+│   ├── deployment.md           # 部署指南
+│   ├── development.md          # 开发指南
+│   └── multi-gptload-config.md # 多实例配置说明
+├── logs/                       # 日志目录
+├── dist/                       # 编译输出目录
+├── server.ts                   # 主服务器文件
+├── tsconfig.json              # TypeScript 配置
+├── package.json               # 项目配置
+├── bunfig.toml                # Bun 配置
+├── .env.example               # 环境变量示例
+├── .env.local                 # 本地环境变量
+├── gptload-instances.json     # gpt-load 实例配置
+└── README.md                  # 说明文档
 ```
 
 ## ⚙️ 环境变量配置
@@ -258,6 +277,14 @@ CHANNEL_FAILURE_THRESHOLD=3
 - **生产部署**：使用 `.env.local` 或系统环境变量
 - **调试测试**：临时修改 `.env.local` 进行测试
 
+## 📚 文档目录
+
+- 📖 [系统架构设计](docs/architecture.md) - 详细的架构设计和组件说明
+- 🔌 [API 接口文档](docs/api.md) - 完整的 API 接口规范和示例
+- 🚀 [部署指南](docs/deployment.md) - 多种环境的部署方案和配置
+- 🛠️ [开发指南](docs/development.md) - 开发环境设置和编码规范
+- ⚙️ [多实例配置说明](docs/multi-gptload-config.md) - gpt-load 多实例配置详解
+
 ## 🔄 工作流程
 
 ### 1. 模型发现
@@ -294,23 +321,87 @@ providers:
 
 ## 🔍 特性说明
 
-### ✅ 已实现功能
+### ✅ 核心功能
 
-- 🌐 **Web 界面**：直观的表单配置
-- 🔍 **模型自动发现**：支持标准 OpenAI 格式 API
-- 🏗️ **两层分组架构**：站点级 + 模型级
-- ⚖️ **负载均衡**：多站点、多密钥自动均衡
-- 📝 **配置管理**：自动备份和更新
-- 🔄 **容错机制**：重试和错误处理
-- 📊 **状态监控**：服务状态检查
+- 🌐 **Web 界面**: 直观的表单配置界面
+- 🔍 **模型自动发现**: 支持标准 OpenAI API 格式
+- 🏗️ **三层分组架构**: 站点级 + 模型级 + 渠道级
+- ⚖️ **智能负载均衡**: 多站点、多密钥自动均衡
+- 🔄 **多实例管理**: 支持多个 gpt-load 实例协调工作
+- 📊 **实时监控**: 健康检查和状态监控
+- 🔧 **自动化运维**: 模型同步、渠道清理、故障恢复
+
+### 🎯 高级功能
+
+- **智能路由**: 自动选择最佳实例和路径
+- **故障转移**: 自动检测和切换失效服务
+- **配置备份**: 自动备份和恢复配置文件
+- **渠道优化**: 智能清理和优化无效渠道
+- **临时分组管理**: 自动清理临时和过期分组
+- **日志记录**: 详细的操作和错误日志
 
 ### 🔧 技术特点
 
-- **模块化设计**：清晰的服务层分离
-- **错误处理**：完善的异常捕获和恢复
-- **配置备份**：自动创建配置文件备份
-- **日志输出**：详细的操作日志
-- **类型安全**：参数验证和类型检查
+- **TypeScript 构建**: 类型安全和代码质量保证
+- **模块化设计**: 清晰的服务层分离和职责划分
+- **容错机制**: 完善的异常捕获和恢复逻辑
+- **性能优化**: 连接池、缓存和并发控制
+- **扩展友好**: 插件化架构便于功能扩展
+
+## 🛠️ 快速操作
+
+### 常用命令
+
+```bash
+# 开发模式（热重载）
+bun dev
+
+# 生产构建
+bun run build
+bun start
+
+# 类型检查
+bun run type-check
+
+# 清理构建
+bun run clean
+```
+
+### 快速配置
+
+```bash
+# 1. 复制并配置实例文件（必需）
+cp gptload-instances.json.example gptload-instances.json
+vim gptload-instances.json
+
+# 2. 复制并配置环境变量
+cp .env.example .env.local
+vim .env.local
+
+# 3. 启动服务
+bun dev
+```
+
+### API 快速测试
+
+```bash
+# 健康检查
+curl http://localhost:3002/api/health
+
+# 预览站点名称
+curl -X POST http://localhost:3002/api/preview-site-name \
+  -H "Content-Type: application/json" \
+  -d '{"baseUrl": "https://api.deepseek.com/v1"}'
+
+# 配置 AI 站点
+curl -X POST http://localhost:3002/api/process-ai-site \
+  -H "Content-Type: application/json" \
+  -d '{
+    "baseUrl": "https://api.deepseek.com/v1",
+    "apiKeys": ["sk-xxx"],
+    "channelTypes": ["openai"]
+  }'
+```
 
 ## 🐛 故障排除
 
