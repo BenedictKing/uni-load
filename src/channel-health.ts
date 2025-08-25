@@ -13,9 +13,10 @@
  */
 
 import gptloadService from "./gptload";
-const fs = require("fs").promises;
-const path = require("path");
-const modelConfig = require("./model-config");
+import modelsService from "./models";
+import modelConfig from "./model-config";
+import { promises as fs } from "fs";
+import path from "path";
 
 class ChannelHealthMonitor {
   constructor() {

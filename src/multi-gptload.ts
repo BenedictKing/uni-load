@@ -1,6 +1,7 @@
 import axios from "axios";
 import https from "https";
 import modelConfig from "./model-config";
+import { layerConfigs } from "./layer-configs";
 
 export class MultiGptloadManager {
   constructor() {
@@ -934,7 +935,7 @@ export class MultiGptloadManager {
     // 所有实例都失败了，尝试直接访问作为回退
     console.log(`⚠️ 所有实例代理访问都失败，尝试直接访问作为回退...`);
     try {
-      const modelsService = require("./models");
+      const { default: modelsService } = await import("./models");
       const models = await modelsService.getModels(baseUrl, apiKey, 2);
       
       if (models && models.length > 0) {
@@ -1024,18 +1025,56 @@ export class MultiGptloadManager {
     availableModels = null,
     isModelGroup = false
   ) {
+    // 检查是否是本地代理URL（第2/3层分组的情况）
+    if (baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1')) {
+      console.log(`🏠 检测到本地代理URL: ${baseUrl}，直接使用本地实例`);
+      
+      // 直接使用第一个健康的本地实例
+      const localInstance = Array.from(this.instances.values())
+        .filter(inst => this.healthStatus.get(inst.id)?.healthy)
+        .find(inst => inst.url.includes('localhost') || inst.url.includes('127.0.0.1')) ||
+        Array.from(this.instances.values())
+          .filter(inst => this.healthStatus.get(inst.id)?.healthy)[0];
+      
+      if (!localInstance) {
+        throw new Error("没有可用的健康实例创建本地代理分组");
+      }
+      
+      return await this.createSiteGroupOnInstance(
+        localInstance, siteName, baseUrl, apiKeys, channelType,
+        customValidationEndpoints, availableModels, isModelGroup
+      );
+    }
+    
+    // 对于真实的外部API站点，使用最佳实例选择策略
     return await this.executeOnBestInstance(
       baseUrl,
       async (instance) => {
-        // 为不同格式创建不同的分组名
-        let groupName = `${siteName.toLowerCase()}-${channelType}`;
-        
-        // 应用分组名称长度限制和智能截断
-        groupName = this.generateSafeGroupName(groupName);
-        
-        if (!groupName) {
-          throw new Error(`站点名称过长无法生成有效分组名: ${siteName}`);
-        }
+        return await this.createSiteGroupOnInstance(
+          instance, siteName, baseUrl, apiKeys, channelType,
+          customValidationEndpoints, availableModels, isModelGroup
+        );
+      },
+      { channelType }
+    );
+  }
+
+  /**
+   * 在指定实例上创建站点分组
+   */
+  async createSiteGroupOnInstance(
+    instance, siteName, baseUrl, apiKeys, channelType,
+    customValidationEndpoints, availableModels, isModelGroup
+  ) {
+    // 为不同格式创建不同的分组名
+    let groupName = `${siteName.toLowerCase()}-${channelType}`;
+    
+    // 应用分组名称长度限制和智能截断
+    groupName = this.generateSafeGroupName(groupName);
+    
+    if (!groupName) {
+      throw new Error(`站点名称过长无法生成有效分组名: ${siteName}`);
+    }
 
         // 检查分组是否已存在
         const existingGroup = await this.checkGroupExists(instance, groupName);
@@ -1087,7 +1126,7 @@ export class MultiGptloadManager {
           sort: 20, // 渠道分组的排序号为20
           param_overrides: {},
           config: {
-            blacklist_threshold: 3, // require('./three-layer-architecture').layerConfigs.siteGroup.blacklist_threshold,
+            blacklist_threshold: layerConfigs.siteGroup.blacklist_threshold,
           },
         };
 
@@ -1276,15 +1315,15 @@ export class MultiGptloadManager {
         sort: 20, // 渠道分组的排序号为20
         param_overrides: {},
         config: {
-          blacklist_threshold: 3, // require('./three-layer-architecture').layerConfigs.siteGroup.blacklist_threshold,
+          blacklist_threshold: layerConfigs.siteGroup.blacklist_threshold,
         },
       };
 
       await instance.apiClient.put(`/groups/${existingGroup.id}`, updateData);
 
-      // 添加新的 API 密钥（如果有）
+      // 对于现有的渠道分组，不添加新的API密钥，避免破坏原有配置
       if (apiKeys && apiKeys.length > 0) {
-        await this.addApiKeysToGroup(instance, existingGroup.id, apiKeys);
+        console.log(`ℹ️ 跳过向现有渠道分组 ${existingGroup.name} 添加API密钥，保持原有配置不变`);
       }
 
       console.log(
