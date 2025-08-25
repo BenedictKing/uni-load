@@ -455,18 +455,86 @@ curl -X POST http://localhost:3002/api/cleanup-channels/manual \
 
 **功能**: 清理 gpt-load 中的临时分组
 
+临时分组是系统在调试和测试过程中创建的分组，包括：
+- `temp-test-*` 前缀的测试分组
+- `debug-models-*` 前缀的调试分组
+
+这些分组会占用系统资源，建议定期清理。
+
+**获取临时分组统计**:
 ```bash
-# 获取临时分组统计
 curl http://localhost:3002/api/temp-groups/stats
+```
 
-# 清理所有临时分组
+响应格式：
+```json
+{
+  "success": true,
+  "message": "临时分组统计完成",
+  "data": {
+    "totalTempGroups": 5,
+    "instanceStats": [
+      {
+        "instanceName": "本地 gpt-load",
+        "tempGroups": [
+          {
+            "id": 123,
+            "name": "temp-test-deepseek",
+            "created_at": "2024-01-15T10:30:00Z"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**清理所有临时分组**:
+```bash
 curl -X POST http://localhost:3002/api/temp-groups/cleanup
+```
 
-# 清理24小时前创建的临时分组
+**清理指定时间之前的临时分组**:
+```bash
+# 清理24小时前创建的临时分组（默认）
 curl -X POST http://localhost:3002/api/temp-groups/cleanup-old \
   -H "Content-Type: application/json" \
   -d '{"hoursOld": 24}'
+
+# 清理72小时前创建的临时分组
+curl -X POST http://localhost:3002/api/temp-groups/cleanup-old \
+  -H "Content-Type: application/json" \
+  -d '{"hoursOld": 72}'
 ```
+
+**清理响应格式**:
+```json
+{
+  "success": true,
+  "message": "临时分组清理完成，共清理 3 个分组",
+  "data": {
+    "totalCleaned": 3,
+    "instanceResults": [
+      {
+        "instanceName": "本地 gpt-load",
+        "cleaned": 2,
+        "errors": []
+      },
+      {
+        "instanceName": "美国代理 gpt-load",
+        "cleaned": 1,
+        "errors": ["删除分组 debug-models-test 失败: 权限不足"]
+      }
+    ]
+  }
+}
+```
+
+**使用建议**:
+1. **定期统计**: 每周查看一次临时分组统计
+2. **按时清理**: 使用 `cleanup-old` 定期清理过期分组
+3. **全量清理**: 在系统维护时使用 `cleanup` 清理所有临时分组
+4. **监控错误**: 关注清理响应中的 `errors` 字段，及时处理权限或网络问题
 
 #### 3. 维护操作
 

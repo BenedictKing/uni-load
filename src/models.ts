@@ -1,33 +1,33 @@
-import axios from 'axios';
-import https from 'https';
+import axios from 'axios'
+import https from 'https'
 
-import modelConfig from "./model-config";
+import modelConfig from './model-config'
 
 // 定义需要的类型
-type Model = string;
+type Model = string
 
 interface ModelApiResponse {
-  data: Model[];
-  object?: string;
+  data: Model[]
+  object?: string
 }
 
 interface AxiosErrorWithRetry extends Error {
-  code?: string;
-  response?: any;
-  message: string;
+  code?: string
+  response?: any
+  message: string
 }
 
 class ModelsService {
-  private timeout: number;
-  private httpsAgent: https.Agent;
+  private timeout: number
+  private httpsAgent: https.Agent
 
   constructor() {
-    this.timeout = 30000; // 30秒超时
+    this.timeout = 30000 // 30秒超时
 
     // 创建允许自签名证书的 HTTPS Agent
     this.httpsAgent = new https.Agent({
       rejectUnauthorized: false, // 允许自签名证书和无效证书
-    });
+    })
   }
 
   /**
@@ -35,55 +35,57 @@ class ModelsService {
    */
   private isRetryableError(error: AxiosErrorWithRetry): boolean {
     // 网络连接错误
-    if (error.code === 'ECONNRESET' || 
-        error.code === 'ECONNREFUSED' || 
-        error.code === 'ETIMEDOUT' ||
-        error.code === 'ENOTFOUND') {
-      return true;
+    if (
+      error.code === 'ECONNRESET' ||
+      error.code === 'ECONNREFUSED' ||
+      error.code === 'ETIMEDOUT' ||
+      error.code === 'ENOTFOUND'
+    ) {
+      return true
     }
-    
+
     // Socket 连接异常断开
     if (error.message && error.message.includes('socket connection was closed')) {
-      return true;
+      return true
     }
-    
+
     // 超时错误
     if (error.message && error.message.includes('timeout')) {
-      return true;
+      return true
     }
-    
+
     // 5xx 服务器错误（可能是临时的）
     if (error.response && error.response.status >= 500) {
-      return true;
+      return true
     }
-    
+
     // 429 限流错误
     if (error.response && error.response.status === 429) {
-      return true;
+      return true
     }
-    
-    return false;
+
+    return false
   }
 
   /**
    * 等待指定时间
    */
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms))
   }
 
   /**
    * 从AI站点获取支持的模型列表（带重试机制）
    */
   async getModels(baseUrl: string, apiKey: string, maxRetries: number = 3): Promise<Model[]> {
-    let lastError: Error;
-    
+    let lastError: Error
+
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        console.log(`正在从 ${baseUrl} 获取模型列表...${attempt > 1 ? ` (重试 ${attempt}/${maxRetries})` : ''}`);
+        console.log(`正在从 ${baseUrl} 获取模型列表...${attempt > 1 ? ` (重试 ${attempt}/${maxRetries})` : ''}`)
 
         // 构建模型列表请求URL
-        const modelsUrl = this.buildModelsUrl(baseUrl);
+        const modelsUrl = this.buildModelsUrl(baseUrl)
 
         // 发送请求
         const response = await axios.get(modelsUrl, {
@@ -91,57 +93,54 @@ class ModelsService {
           httpsAgent: this.httpsAgent, // 使用自定义的 HTTPS Agent
           headers: {
             Authorization: `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
-            "User-Agent": "uni-load/1.0.0",
+            'Content-Type': 'application/json',
+            'User-Agent': 'uni-load/1.0.0',
           },
-        });
+        })
 
         // 解析响应数据
-        const models = this.parseModelsResponse(response.data);
+        const models = this.parseModelsResponse(response.data)
 
         if (!models || models.length === 0) {
-          console.log("⚠️ 站点返回空模型列表，但API正常响应");
-          return []; // 返回空数组而不是抛出异常
+          console.log('⚠️ 站点返回空模型列表，但API正常响应')
+          return [] // 返回空数组而不是抛出异常
         }
 
         console.log(
           `✅ 成功获取 ${models.length} 个模型:`,
-          models.slice(0, 5).join(", ") + (models.length > 5 ? "..." : "")
-        );
-        return models;
-        
+          models.slice(0, 5).join(', ') + (models.length > 5 ? '...' : '')
+        )
+        return models
       } catch (error) {
-        lastError = error;
-        
+        lastError = error
+
         // 判断是否为可重试的错误
-        const isRetryableError = this.isRetryableError(error);
-        
+        const isRetryableError = this.isRetryableError(error)
+
         if (isRetryableError && attempt < maxRetries) {
-          const waitTime = Math.min(1000 * Math.pow(2, attempt - 1), 10000); // 指数退避，最大10秒
-          console.warn(`⚠️ 获取模型列表失败 (尝试 ${attempt}/${maxRetries}): ${error.message}`);
-          console.log(`⏳ 等待 ${waitTime}ms 后重试...`);
-          
-          await this.sleep(waitTime);
-          continue;
+          const waitTime = Math.min(1000 * Math.pow(2, attempt - 1), 10000) // 指数退避，最大10秒
+          console.warn(`⚠️ 获取模型列表失败 (尝试 ${attempt}/${maxRetries}): ${error.message}`)
+          console.log(`⏳ 等待 ${waitTime}ms 后重试...`)
+
+          await this.sleep(waitTime)
+          continue
         }
-        
+
         // 不可重试的错误或已达到最大重试次数
-        console.error(`获取模型列表失败: ${error.message}`);
+        console.error(`获取模型列表失败: ${error.message}`)
 
         if (error.response) {
-          console.error(
-            `HTTP ${error.response.status}: ${error.response.statusText}`
-          );
+          console.error(`HTTP ${error.response.status}: ${error.response.statusText}`)
           if (error.response.data) {
-            console.error("响应数据:", error.response.data);
+            console.error('响应数据:', error.response.data)
           }
         }
 
-        break; // 跳出重试循环
+        break // 跳出重试循环
       }
     }
-    
-    throw new Error(`获取模型列表失败 (已重试 ${maxRetries} 次): ${lastError.message}`);
+
+    throw new Error(`获取模型列表失败 (已重试 ${maxRetries} 次): ${lastError.message}`)
   }
 
   /**
@@ -149,20 +148,20 @@ class ModelsService {
    */
   buildModelsUrl(baseUrl) {
     // 确保baseUrl以/结尾
-    const normalizedBaseUrl = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
+    const normalizedBaseUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/'
 
     // 如果baseUrl已经包含/v1，直接添加models
-    if (normalizedBaseUrl.includes("/v1/")) {
-      return normalizedBaseUrl + "models";
+    if (normalizedBaseUrl.includes('/v1/')) {
+      return normalizedBaseUrl + 'models'
     }
 
     // 如果baseUrl以/v1结尾，添加/models
-    if (normalizedBaseUrl.endsWith("/v1/")) {
-      return normalizedBaseUrl + "models";
+    if (normalizedBaseUrl.endsWith('/v1/')) {
+      return normalizedBaseUrl + 'models'
     }
 
     // 否则添加v1/models
-    return normalizedBaseUrl + "v1/models";
+    return normalizedBaseUrl + 'v1/models'
   }
 
   /**
@@ -170,44 +169,40 @@ class ModelsService {
    */
   parseModelsResponse(data) {
     try {
-      let models = [];
+      let models = []
 
       // 标准OpenAI格式: { object: "list", data: [...] }
-      if (data && data.object === "list" && Array.isArray(data.data)) {
-        models = data.data
-          .map((model) => model.id || model.name)
-          .filter((id) => id && typeof id === "string");
+      if (data && data.object === 'list' && Array.isArray(data.data)) {
+        models = data.data.map((model) => model.id || model.name).filter((id) => id && typeof id === 'string')
       }
       // 带有额外字段的OpenAI兼容格式: { data: [...], success: true }
       else if (data && Array.isArray(data.data)) {
-        models = data.data
-          .map((model) => model.id || model.name)
-          .filter((id) => id && typeof id === "string");
+        models = data.data.map((model) => model.id || model.name).filter((id) => id && typeof id === 'string')
       }
       // 直接是模型数组
       else if (Array.isArray(data)) {
         models = data
           .map((model) => {
-            if (typeof model === "string") return model;
-            return model.id || model.name || model.model;
+            if (typeof model === 'string') return model
+            return model.id || model.name || model.model
           })
-          .filter((id) => id && typeof id === "string");
+          .filter((id) => id && typeof id === 'string')
       }
       // 其他可能的格式
       else if (data && data.models && Array.isArray(data.models)) {
         models = data.models
           .map((model) => model.id || model.name || model)
-          .filter((id) => id && typeof id === "string");
+          .filter((id) => id && typeof id === 'string')
       } else {
-        console.warn("未识别的模型响应格式:", data);
-        return [];
+        console.warn('未识别的模型响应格式:', data)
+        return []
       }
 
       // 过滤和清理模型
-      return this.filterModels(models);
+      return this.filterModels(models)
     } catch (error) {
-      console.error("解析模型数据失败:", error.message);
-      return [];
+      console.error('解析模型数据失败:', error.message)
+      return []
     }
   }
 
@@ -216,36 +211,36 @@ class ModelsService {
    */
   async validateModel(baseUrl, apiKey, modelName) {
     try {
-      console.log(`验证模型 ${modelName}...`);
+      console.log(`验证模型 ${modelName}...`)
 
-      const chatUrl = this.buildChatUrl(baseUrl);
+      const chatUrl = this.buildChatUrl(baseUrl)
 
       const testRequest = {
         model: modelName,
         messages: [
           {
-            role: "user",
-            content: "Hello",
+            role: 'user',
+            content: 'Hello',
           },
         ],
         max_tokens: 1,
         temperature: 0,
-      };
+      }
 
       const response = await axios.post(chatUrl, testRequest, {
         timeout: 15000, // 15秒超时
         httpsAgent: this.httpsAgent, // 使用自定义的 HTTPS Agent
         headers: {
           Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
-      });
+      })
 
-      console.log(`✅ 模型 ${modelName} 验证成功`);
-      return true;
+      console.log(`✅ 模型 ${modelName} 验证成功`)
+      return true
     } catch (error) {
-      console.warn(`⚠️ 模型 ${modelName} 验证失败: ${error.message}`);
-      return false;
+      console.warn(`⚠️ 模型 ${modelName} 验证失败: ${error.message}`)
+      return false
     }
   }
 
@@ -253,55 +248,53 @@ class ModelsService {
    * 构建聊天API的URL
    */
   buildChatUrl(baseUrl) {
-    const normalizedBaseUrl = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
+    const normalizedBaseUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/'
 
-    if (normalizedBaseUrl.includes("/v1/")) {
-      return normalizedBaseUrl + "chat/completions";
+    if (normalizedBaseUrl.includes('/v1/')) {
+      return normalizedBaseUrl + 'chat/completions'
     }
 
-    if (normalizedBaseUrl.endsWith("/v1/")) {
-      return normalizedBaseUrl + "chat/completions";
+    if (normalizedBaseUrl.endsWith('/v1/')) {
+      return normalizedBaseUrl + 'chat/completions'
     }
 
-    return normalizedBaseUrl + "v1/chat/completions";
+    return normalizedBaseUrl + 'v1/chat/completions'
   }
 
   /**
    * 批量验证模型（可选功能）
    */
   async validateModels(baseUrl, apiKey, models, maxConcurrent = 3) {
-    console.log(`开始批量验证 ${models.length} 个模型...`);
+    console.log(`开始批量验证 ${models.length} 个模型...`)
 
-    const validModels = [];
-    const invalidModels = [];
+    const validModels = []
+    const invalidModels = []
 
     // 控制并发数量
     for (let i = 0; i < models.length; i += maxConcurrent) {
-      const batch = models.slice(i, i + maxConcurrent);
+      const batch = models.slice(i, i + maxConcurrent)
       const promises = batch.map(async (model) => {
-        const isValid = await this.validateModel(baseUrl, apiKey, model);
-        return { model, isValid };
-      });
+        const isValid = await this.validateModel(baseUrl, apiKey, model)
+        return { model, isValid }
+      })
 
-      const results = await Promise.all(promises);
+      const results = await Promise.all(promises)
 
       results.forEach(({ model, isValid }) => {
         if (isValid) {
-          validModels.push(model);
+          validModels.push(model)
         } else {
-          invalidModels.push(model);
+          invalidModels.push(model)
         }
-      });
+      })
     }
 
-    console.log(
-      `✅ 验证完成: ${validModels.length} 个有效, ${invalidModels.length} 个无效`
-    );
+    console.log(`✅ 验证完成: ${validModels.length} 个有效, ${invalidModels.length} 个无效`)
 
     return {
       valid: validModels,
       invalid: invalidModels,
-    };
+    }
   }
 
   /**
@@ -309,19 +302,19 @@ class ModelsService {
    */
   filterModels(models: Model[]): string[] {
     // 使用统一的模型配置进行过滤
-    const filtered = modelConfig.filterModels(models);
-    
+    const filtered = modelConfig.filterModels(models)
+
     // 去重并排序
-    const uniqueModels = [...new Set(filtered)];
+    const uniqueModels = [...new Set(filtered)]
 
     console.log(
       `📋 模型白名单过滤结果: ${models.length} -> ${
         uniqueModels.length
       } (过滤掉 ${models.length - uniqueModels.length} 个模型)`
-    );
+    )
 
-    return uniqueModels.sort();
+    return uniqueModels.sort()
   }
 }
 
-export default new ModelsService();
+export default new ModelsService()

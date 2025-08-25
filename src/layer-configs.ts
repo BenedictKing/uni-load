@@ -25,6 +25,6 @@ export const layerConfigs = {
     key_validation_interval_minutes: 30, // 30分钟验证一次
     max_retries: 9, // 增加尝试次数，适合多上游
   },
-};
+}
 
-export default layerConfigs;
+export default layerConfigs

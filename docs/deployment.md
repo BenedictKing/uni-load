@@ -76,6 +76,159 @@ GPTLOAD_URL=http://localhost:3001
 cp gptload-instances.json.example gptload-instances.json
 ```
 
+### 高级配置选项
+
+#### 模型过滤配置
+
+系统内置了智能的模型过滤机制，通过白名单和黑名单来确保只使用合适的模型。
+
+**白名单配置** (src/model-config.ts):
+- 只有匹配白名单前缀的模型才会被添加到系统中
+- 支持的模型前缀包括：
+  ```javascript
+  // 主流AI模型
+  'gpt-', 'chatgpt-',           // OpenAI
+  'claude-3-5', 'claude-4',     // Anthropic
+  'gemini-2.5-',               // Google
+  'deepseek-',                 // DeepSeek
+  'kimi-k2',                   // Moonshot
+  'doubao-1-6-',               // ByteDance
+  'glm-4.5',                   // 智谱AI
+  'grok-3', 'grok-4',          // xAI
+  'v0-',                       // Vercel
+  
+  // 注释掉的模型（默认不启用）
+  // 'qwen-', 'llama-', 'mixtral-'
+  ```
+
+**黑名单配置**:
+- 包含黑名单关键词的模型会被自动过滤
+- 黑名单关键词包括：
+  ```javascript
+  [
+    'gpt-3.5',      // 过时模型
+    'test',         // 测试模型
+    'vision',       // 多模态模型
+    'image', 'audio', // 非文本模型
+    'embedding',    // 向量模型
+    'whisper',      // 语音模型
+    'dall-e',       // 图像生成
+    'sora',         // 视频生成
+  ]
+  ```
+
+**高消耗模型配置**:
+- 对于成本较高的模型，系统会跳过自动验证
+- 高消耗模型模式：`['o3-', 'o4-']`
+
+**自定义模型过滤**:
+```bash
+# 修改模型配置文件
+vim src/model-config.ts
+
+# 添加新的白名单前缀
+allowedPrefixes: [
+  // 现有配置...
+  'your-custom-model-',
+]
+
+# 添加新的黑名单关键词
+blacklistedKeywords: [
+  // 现有配置...
+  'unwanted-keyword',
+]
+```
+
+#### 三层架构分层配置
+
+系统使用三层架构管理模型分组，每层都有独立的配置参数。
+
+**配置文件**: `src/layer-configs.ts`
+
+**第一层 - 站点分组配置**:
+```javascript
+siteGroup: {
+  sort: 20,                              // 分组排序值
+  blacklist_threshold: 99,               // 高容错，站点问题通常是暂时的
+  key_validation_interval_minutes: 60,   // API密钥验证间隔（分钟）
+}
+```
+
+**第二层 - 模型-渠道分组配置**:
+```javascript
+modelChannelGroup: {
+  sort: 15,                              // 分组排序值
+  blacklist_threshold: 2,                // 快速失败，立即识别不兼容组合
+  key_validation_interval_minutes: 10080, // 7天验证一次，避免API消耗
+}
+```
+
+**第三层 - 模型聚合分组配置**:
+```javascript
+aggregateGroup: {
+  sort: 10,                              // 分组排序值
+  blacklist_threshold: 50,               // 中等容错
+  key_validation_interval_minutes: 30,   // 30分钟验证一次
+  max_retries: 9,                        // 增加尝试次数，适合多上游
+}
+```
+
+**配置参数说明**:
+- `sort`: 分组排序值，数字越小优先级越高
+- `blacklist_threshold`: 失败阈值，超过此值将被加入黑名单
+- `key_validation_interval_minutes`: 密钥验证间隔时间
+- `max_retries`: 最大重试次数
+
+**自定义分层配置**:
+```bash
+# 修改分层配置文件
+vim src/layer-configs.ts
+
+# 调整验证间隔（例如：减少第三层验证频率）
+aggregateGroup: {
+  // ...其他配置
+  key_validation_interval_minutes: 120,  // 改为2小时验证一次
+}
+
+# 调整失败容错（例如：提高第二层容错性）
+modelChannelGroup: {
+  // ...其他配置
+  blacklist_threshold: 5,               // 提高到5次失败才加入黑名单
+}
+```
+
+**最佳实践**:
+1. **站点分组**：高容错配置，因为站点问题通常是网络或临时性的
+2. **模型-渠道分组**：低容错配置，快速识别模型兼容性问题
+3. **聚合分组**：中等容错配置，平衡性能和稳定性
+4. **验证间隔**：根据API成本和系统负载调整验证频率
+5. **生产环境**：建议保持默认配置，除非有特殊需求
+
+#### 环境变量高级配置
+
+除了基础环境变量，系统还支持以下高级配置：
+
+```bash
+# 模型过滤控制
+ENABLE_MODEL_WHITELIST=true           # 启用白名单过滤
+ENABLE_MODEL_BLACKLIST=true           # 启用黑名单过滤
+
+# 性能调优
+MAX_CONCURRENT_REQUESTS=10            # 最大并发请求数
+REQUEST_TIMEOUT_MS=30000              # 请求超时时间（毫秒）
+RETRY_ATTEMPTS=3                      # 失败重试次数
+
+# 调试和监控
+LOG_LEVEL=info                        # 日志级别：debug, info, warn, error
+ENABLE_METRICS=true                   # 启用性能监控
+METRICS_PORT=9090                     # 监控端口
+
+# 功能开关
+ENABLE_MODEL_SYNC=true                # 启用模型同步服务
+ENABLE_CHANNEL_HEALTH=true            # 启用渠道健康监控
+ENABLE_MODEL_OPTIMIZER=true           # 启用三层架构管理器
+```
+
 ## 部署方案
 
 ### 方案一: 开发环境部署

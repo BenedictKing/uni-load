@@ -13,22 +13,22 @@ class ModelConfig {
     // 模型白名单前缀（不区分大小写）
     this.allowedPrefixes = [
       // OpenAI
-      "gpt-",
-      "chatgpt-",
+      'gpt-',
+      'chatgpt-',
 
       // Google
-      "gemini-2.5-", // 仅支持 2.5 及以上版本
-      "gemma-",
+      'gemini-2.5-', // 仅支持 2.5 及以上版本
+      'gemma-',
 
       // Anthropic
-      "claude-opus",
-      "claude-sonnet",
-      "claude-3-5",
-      "claude-3-7",
-      "claude-4",
+      'claude-opus',
+      'claude-sonnet',
+      'claude-3-5',
+      'claude-3-7',
+      'claude-4',
 
       // DeepSeek
-      "deepseek-",
+      'deepseek-',
 
       // Qwen (Alibaba)
       // "qwen-",
@@ -45,18 +45,18 @@ class ModelConfig {
       // "yi-",
 
       // Moonshot
-      "kimi-k2",
+      'kimi-k2',
 
       // Doubao (ByteDance)
-      "doubao-1-6-",
-      "doubao-seed-",
+      'doubao-1-6-',
+      'doubao-seed-',
 
       // Zhipu AI (智谱)
-      "glm-4.5",
+      'glm-4.5',
 
       // xAI
-      "grok-3",
-      "grok-4",
+      'grok-3',
+      'grok-4',
 
       // Flux
       // "flux-",
@@ -67,73 +67,73 @@ class ModelConfig {
       // "o4",
 
       // vercel v0
-      "v0-",
+      'v0-',
 
       // MiniMax
       // "minimax-",
-    ];
+    ]
 
     // 模型黑名单关键词（不区分大小写），包含这些词的模型将被过滤
     this.blacklistedKeywords = [
-      "gpt-3.5",
-      "test",
-      "bge",
-      "distill",
-      "vision",
-      "image",
-      "audio",
-      "rag",
-      "json",
-      "rerank",
-      "tts",
-      "dall-e",
-      "whisper",
-      "embedding",
-      "embed",
-      "generation",
-      "sora",
-    ];
+      'gpt-3.5',
+      'test',
+      'bge',
+      'distill',
+      'vision',
+      'image',
+      'audio',
+      'rag',
+      'json',
+      'rerank',
+      'tts',
+      'dall-e',
+      'whisper',
+      'embedding',
+      'embed',
+      'generation',
+      'sora',
+    ]
 
     // 高消耗模型模式 - 这些模型不能在分组中自动验证
     this.highCostModelPatterns = [
-      "o3-", // OpenAI O3 系列
-      "gpt-5-", // GPT-5 系列
-      "grok-4-", // Grok 4 系列
-      "opus-", // Claude Opus 系列
-      "wan2", // 万达模型
-    ];
+      'o3-', // OpenAI O3 系列
+      'gpt-5-', // GPT-5 系列
+      'grok-4-', // Grok 4 系列
+      'opus-', // Claude Opus 系列
+      'wan2', // 万达模型
+    ]
 
     // 优先使用的小模型列表（按优先级排序，用于验证和测试）
     this.preferredTestModels = [
       // OpenAI 小模型
-      "gpt-oss",
-      "gpt-4o-mini",
-      "gpt-4.1-mini",
-      "gpt-4.1-nano",
-      "gpt-3.5-turbo",
+      'gpt-oss',
+      'gpt-4o-mini',
+      'gpt-4.1-mini',
+      'gpt-4.1-nano',
+      'gpt-3.5-turbo',
 
       // DeepSeek 小模型
-      "deepseek-v3",
-      "deepseek-chat",
+      'deepseek-v3',
+      'deepseek-chat',
 
       // Google 小模型
-      "gemini-2.5-flash-lite",
-      "gemini-2.5-flash",
-      "gemini-1.5-flash",
+      'gemini-2.5-flash-lite',
+      'gemini-2.5-flash',
+      'gemini-1.5-flash',
 
       // Anthropic 小模型
-      "claude-3-haiku",
-      "claude-3-5-haiku",
+      'claude-3-haiku',
+      'claude-3-5-haiku',
 
       // Qwen 小模型
-      "qwen-2.5-turbo",
-      "qwen-turbo",
+      'qwen-2.5-turbo',
+      'qwen-turbo',
 
       // 其他小模型
-      "llama-3.2-3b",
-      "mistral-7b",
-      "yi-lightning",
-    ];
+      'llama-3.2-3b',
+      'mistral-7b',
+      'yi-lightning',
+    ]
   }
 
   /**
@@ -142,20 +142,20 @@ class ModelConfig {
    * @return {boolean} 是否在白名单中
    */
   isModelAllowed(modelName) {
-    if (!modelName) return false;
+    if (!modelName) return false
 
-    const name = modelName.toLowerCase();
+    const name = modelName.toLowerCase()
 
     return this.allowedPrefixes.some((prefix) => {
       // 首先尝试匹配完整名称（例如 "deepseek-ai/..."）
       if (name.startsWith(prefix.toLowerCase())) {
-        return true;
+        return true
       }
 
       // 然后尝试匹配去掉提供商前缀的名称
-      const withoutProvider = name.split("/").pop() || name;
-      return withoutProvider.startsWith(prefix.toLowerCase());
-    });
+      const withoutProvider = name.split('/').pop() || name
+      return withoutProvider.startsWith(prefix.toLowerCase())
+    })
   }
 
   /**
@@ -164,13 +164,11 @@ class ModelConfig {
    * @return {boolean} 是否在黑名单中
    */
   isModelBlacklisted(modelName) {
-    if (!modelName) return false;
+    if (!modelName) return false
 
-    const name = modelName.toLowerCase();
+    const name = modelName.toLowerCase()
 
-    return this.blacklistedKeywords.some((keyword) =>
-      name.includes(keyword.toLowerCase())
-    );
+    return this.blacklistedKeywords.some((keyword) => name.includes(keyword.toLowerCase()))
   }
 
   /**
@@ -179,14 +177,14 @@ class ModelConfig {
    * @return {boolean} 是否为高消耗模型
    */
   isHighCostModel(modelName) {
-    if (!modelName) return false;
+    if (!modelName) return false
 
-    const modelNameLower = modelName.toLowerCase();
+    const modelNameLower = modelName.toLowerCase()
 
     // 检查是否包含任何高消耗模型模式
     return this.highCostModelPatterns.some((pattern) => {
-      return modelNameLower.includes(pattern.toLowerCase());
-    });
+      return modelNameLower.includes(pattern.toLowerCase())
+    })
   }
 
   /**
@@ -198,18 +196,18 @@ class ModelConfig {
     return models.filter((model) => {
       // 黑名单检查：如果模型名称包含任何黑名单关键词，则过滤掉
       if (this.isModelBlacklisted(model)) {
-        console.log(`🚫 过滤掉模型（在黑名单中）: ${model}`);
-        return false;
+        console.log(`🚫 过滤掉模型（在黑名单中）: ${model}`)
+        return false
       }
 
       // 白名单检查
       if (!this.isModelAllowed(model)) {
-        console.log(`🚫 过滤掉模型（不在白名单中）: ${model}`);
-        return false;
+        console.log(`🚫 过滤掉模型（不在白名单中）: ${model}`)
+        return false
       }
 
-      return true;
-    });
+      return true
+    })
   }
 
   /**
@@ -217,7 +215,7 @@ class ModelConfig {
    * @return {string[]} 按优先级排序的测试模型列表
    */
   getPreferredTestModels() {
-    return this.preferredTestModels;
+    return this.preferredTestModels
   }
 
   /**
@@ -226,59 +224,51 @@ class ModelConfig {
    * @param {string} channelType 渠道类型（可选，用于后续扩展）
    * @return {string} 选中的测试模型
    */
-  selectTestModel(availableModels, channelType = "openai") {
+  selectTestModel(availableModels, channelType = 'openai') {
     if (!availableModels || availableModels.length === 0) {
       // 如果没有可用模型，根据渠道类型返回默认模型
       const defaultModels = {
-        openai: "gpt-4o-mini",
-        anthropic: "claude-3-haiku",
-        gemini: "gemini-2.5-flash",
-      };
+        openai: 'gpt-4o-mini',
+        anthropic: 'claude-3-haiku',
+        gemini: 'gemini-2.5-flash',
+      }
 
-      const defaultModel = defaultModels[channelType] || "gpt-4o-mini";
-      console.log(`⚠️ 未提供可用模型列表，使用默认测试模型: ${defaultModel}`);
-      return defaultModel;
+      const defaultModel = defaultModels[channelType] || 'gpt-4o-mini'
+      console.log(`⚠️ 未提供可用模型列表，使用默认测试模型: ${defaultModel}`)
+      return defaultModel
     }
 
     // 将可用模型转换为小写以便比较
-    const availableModelsLower = availableModels.map((model) =>
-      model.toLowerCase()
-    );
+    const availableModelsLower = availableModels.map((model) => model.toLowerCase())
 
     // 优先从小模型列表中选择
     for (const preferredModel of this.preferredTestModels) {
-      const preferredLower = preferredModel.toLowerCase();
+      const preferredLower = preferredModel.toLowerCase()
 
       // 精确匹配
-      const exactMatch = availableModels.find(
-        (model) => model.toLowerCase() === preferredLower
-      );
+      const exactMatch = availableModels.find((model) => model.toLowerCase() === preferredLower)
       if (exactMatch) {
-        console.log(`✅ 选择优先小模型作为测试模型: ${exactMatch}`);
-        return exactMatch;
+        console.log(`✅ 选择优先小模型作为测试模型: ${exactMatch}`)
+        return exactMatch
       }
 
       // 模糊匹配（包含关系）
       const fuzzyMatch = availableModels.find((model) => {
-        const modelLower = model.toLowerCase();
+        const modelLower = model.toLowerCase()
         // 检查是否包含小模型的关键部分
-        const preferredParts = preferredLower.split("-");
-        return preferredParts.every((part) => modelLower.includes(part));
-      });
+        const preferredParts = preferredLower.split('-')
+        return preferredParts.every((part) => modelLower.includes(part))
+      })
       if (fuzzyMatch) {
-        console.log(
-          `✅ 选择匹配的小模型作为测试模型: ${fuzzyMatch} (匹配 ${preferredModel})`
-        );
-        return fuzzyMatch;
+        console.log(`✅ 选择匹配的小模型作为测试模型: ${fuzzyMatch} (匹配 ${preferredModel})`)
+        return fuzzyMatch
       }
     }
 
     // 如果小模型列表中没有匹配的，选择第一个可用模型
-    const fallbackModel = availableModels[0];
-    console.log(
-      `⚠️ 小模型列表中无匹配模型，使用第一个可用模型作为测试模型: ${fallbackModel}`
-    );
-    return fallbackModel;
+    const fallbackModel = availableModels[0]
+    console.log(`⚠️ 小模型列表中无匹配模型，使用第一个可用模型作为测试模型: ${fallbackModel}`)
+    return fallbackModel
   }
 
   /**
@@ -291,7 +281,7 @@ class ModelConfig {
       blacklistedKeywords: this.blacklistedKeywords,
       highCostModelPatterns: this.highCostModelPatterns,
       preferredTestModels: this.preferredTestModels,
-    };
+    }
   }
 
   /**
@@ -300,8 +290,8 @@ class ModelConfig {
    */
   addAllowedPrefix(prefix) {
     if (!this.allowedPrefixes.includes(prefix)) {
-      this.allowedPrefixes.push(prefix);
-      console.log(`✅ 添加白名单前缀: ${prefix}`);
+      this.allowedPrefixes.push(prefix)
+      console.log(`✅ 添加白名单前缀: ${prefix}`)
     }
   }
 
@@ -310,10 +300,10 @@ class ModelConfig {
    * @param {string} prefix 前缀
    */
   removeAllowedPrefix(prefix) {
-    const index = this.allowedPrefixes.indexOf(prefix);
+    const index = this.allowedPrefixes.indexOf(prefix)
     if (index > -1) {
-      this.allowedPrefixes.splice(index, 1);
-      console.log(`❌ 移除白名单前缀: ${prefix}`);
+      this.allowedPrefixes.splice(index, 1)
+      console.log(`❌ 移除白名单前缀: ${prefix}`)
     }
   }
 
@@ -323,8 +313,8 @@ class ModelConfig {
    */
   addBlacklistedKeyword(keyword) {
     if (!this.blacklistedKeywords.includes(keyword)) {
-      this.blacklistedKeywords.push(keyword);
-      console.log(`✅ 添加黑名单关键词: ${keyword}`);
+      this.blacklistedKeywords.push(keyword)
+      console.log(`✅ 添加黑名单关键词: ${keyword}`)
     }
   }
 
@@ -333,10 +323,10 @@ class ModelConfig {
    * @param {string} keyword 关键词
    */
   removeBlacklistedKeyword(keyword) {
-    const index = this.blacklistedKeywords.indexOf(keyword);
+    const index = this.blacklistedKeywords.indexOf(keyword)
     if (index > -1) {
-      this.blacklistedKeywords.splice(index, 1);
-      console.log(`❌ 移除黑名单关键词: ${keyword}`);
+      this.blacklistedKeywords.splice(index, 1)
+      console.log(`❌ 移除黑名单关键词: ${keyword}`)
     }
   }
 
@@ -346,8 +336,8 @@ class ModelConfig {
    */
   addHighCostPattern(pattern) {
     if (!this.highCostModelPatterns.includes(pattern)) {
-      this.highCostModelPatterns.push(pattern);
-      console.log(`✅ 添加高消耗模型模式: ${pattern}`);
+      this.highCostModelPatterns.push(pattern)
+      console.log(`✅ 添加高消耗模型模式: ${pattern}`)
     }
   }
 
@@ -356,13 +346,13 @@ class ModelConfig {
    * @param {string} pattern 模式
    */
   removeHighCostPattern(pattern) {
-    const index = this.highCostModelPatterns.indexOf(pattern);
+    const index = this.highCostModelPatterns.indexOf(pattern)
     if (index > -1) {
-      this.highCostModelPatterns.splice(index, 1);
-      console.log(`❌ 移除高消耗模型模式: ${pattern}`);
+      this.highCostModelPatterns.splice(index, 1)
+      console.log(`❌ 移除高消耗模型模式: ${pattern}`)
     }
   }
 }
 
 // 导出单例实例
-export default new ModelConfig();
+export default new ModelConfig()
