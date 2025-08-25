@@ -15,6 +15,7 @@
 import gptloadService from "./gptload";
 import modelConfig from "./model-config";
 import modelsService from "./models";
+import yamlManager from "./yaml-manager";
 import { layerConfigs } from "./layer-configs";
 
 class ThreeLayerArchitecture {
@@ -124,8 +125,6 @@ class ThreeLayerArchitecture {
       // 新增：更新uni-api配置
       console.log("🔧 更新uni-api配置...");
       try {
-        const yamlManager = require("./yaml-manager");
-        
         // 获取所有聚合分组（第3层）用于uni-api配置
         const allGroups = await gptloadService.getAllGroups();
         const aggregateGroups = allGroups.filter((g) => g.tags?.includes("layer-3"));
@@ -209,7 +208,6 @@ class ThreeLayerArchitecture {
         return [];
       }
 
-      const modelsService = require("./models");
       const baseUrl = siteGroup.upstreams[0]?.url;
 
       if (!baseUrl) {
