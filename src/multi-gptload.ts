@@ -9,8 +9,9 @@ import instanceHealthManager, { HealthResult, InstanceHealthStatus } from './ser
  * 依赖分离的配置管理器和健康检查管理器
  */
 export class MultiGptloadManager {
-  private instances = new Map<string, GptloadInstance>() // gptload实例配置
+  public instances = new Map<string, GptloadInstance>() // gptload实例配置
   private _siteAssignments = new Map<string, string>() // 站点到实例的分配
+  public healthStatus = new Map<string, HealthResult>() // 新增 healthStatus 属性
 
   constructor() {
     // 异步初始化实例

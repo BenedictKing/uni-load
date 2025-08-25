@@ -9,6 +9,11 @@
  */
 
 class ModelConfig {
+  private allowedPrefixes: string[]
+  private blacklistedKeywords: string[]
+  private highCostModelPatterns: string[]
+  private preferredTestModels: string[]
+
   constructor() {
     // 模型白名单前缀（不区分大小写）
     this.allowedPrefixes = [
@@ -375,11 +380,11 @@ class ModelConfig {
 
     // 3. 移除版本和状态后缀
     normalized = normalized
-      .replace(/-latest$/g, '')   // 移除 -latest 后缀
-      .replace(/-preview$/g, '')  // 移除 -preview 后缀
-      .replace(/-alpha$/g, '')    // 移除 -alpha 后缀
-      .replace(/-beta$/g, '')     // 移除 -beta 后缀
-      .replace(/-rc\d*$/g, '')    // 移除 -rc 后缀
+      .replace(/-latest$/g, '') // 移除 -latest 后缀
+      .replace(/-preview$/g, '') // 移除 -preview 后缀
+      .replace(/-alpha$/g, '') // 移除 -alpha 后缀
+      .replace(/-beta$/g, '') // 移除 -beta 后缀
+      .replace(/-rc\d*$/g, '') // 移除 -rc 后缀
 
     return normalized
   }
@@ -404,9 +409,9 @@ class ModelConfig {
 
     // 3. 移除或替换其他不安全字符
     safeName = safeName
-      .replace(/[^a-z0-9-_.]/g, '-')  // 替换非字母数字和安全符号的字符
-      .replace(/-+/g, '-')            // 合并多个连字符
-      .replace(/^-+|-+$/g, '')        // 移除开头和结尾的连字符
+      .replace(/[^a-z0-9-_.]/g, '-') // 替换非字母数字和安全符号的字符
+      .replace(/-+/g, '-') // 合并多个连字符
+      .replace(/^-+|-+$/g, '') // 移除开头和结尾的连字符
 
     // 4. 确保长度合理（gpt-load可能有长度限制）
     if (safeName.length > 64) {
@@ -452,7 +457,7 @@ class ModelConfig {
 
     return {
       normalizedModel,
-      originalModel
+      originalModel,
     }
   }
 
