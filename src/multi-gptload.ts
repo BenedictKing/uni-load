@@ -537,14 +537,15 @@ class MultiGptloadManager {
     
     for (const instance of healthyInstances) {
       let tempGroupId = null;
-      
+      let tempGroupName = null; // 将变量声明移到循环内但在try外
+    
       try {
         console.log(`🔄 尝试通过实例 ${instance.name} 的代理访问 ${baseUrl}...`);
         console.log(`🔑 使用API密钥: ${apiKey ? `${apiKey.substring(0, 10)}...` : '无密钥'}`);
         attemptedInstances.push(instance.name);
-        
+      
         // 1. 创建临时站点分组
-        const tempGroupName = `debug-models-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 5)}`;
+        tempGroupName = `debug-models-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 5)}`;
         console.log(`🧪 创建临时站点分组: ${tempGroupName}`);
         
         const tempGroupData = {
@@ -671,6 +672,13 @@ class MultiGptloadManager {
           console.log(`📊 请求头: ${JSON.stringify(error.config?.headers || {})}`);
           console.log(`📊 请求URL: ${error.config?.url || 'unknown'}`);
           
+          // 503错误特殊处理：NO_KEYS_AVAILABLE
+          if (error.response.status === 503 && error.response.data?.code === "NO_KEYS_AVAILABLE") {
+            console.log(`📊 503错误分析: 分组中没有可用的API密钥`);
+            console.log(`💡 可能原因: API密钥无效或被gptload标记为失效`);
+            console.log(`🔄 继续尝试下一个实例...`);
+          }
+          
           // 如果是401错误，提供更详细的调试信息
           if (error.response.status === 401) {
             console.log(`🔐 401未授权错误分析:`);
@@ -714,12 +722,17 @@ class MultiGptloadManager {
         if (!debugTempGroupId) {
           debugTempGroupId = tempGroupId;
           debugInstance = instance;
-          console.log(`🛠️ 保留失败的调试分组 ${tempGroupName} (ID: ${tempGroupId}) 用于调试`);
+          if (tempGroupName) {
+            console.log(`🛠️ 保留失败的调试分组 ${tempGroupName} (ID: ${tempGroupId}) 用于调试`);
+          }
         }
+        
+        // 不要在这里抛出错误，继续尝试下一个实例
+        continue; // 明确使用continue而不是break
         
       } finally {
         // 修改策略：保留所有调试分组，方便手动测试和调试
-        if (tempGroupId) {
+        if (tempGroupId && tempGroupName) {
           console.log(`🛠️ 保留调试分组 ${tempGroupName} (ID: ${tempGroupId}) 用于手动测试`);
           console.log(`🔗 可以通过以下方式手动测试:`);
           console.log(`   1. 代理URL: ${instance.url}/proxy/${tempGroupName}/v1/models`);
