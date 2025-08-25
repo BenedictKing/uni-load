@@ -1,0 +1,1291 @@
+# uni-load 模块设计文档
+
+## 概述
+
+uni-load 采用模块化设计，将功能按职责清晰分离，便于维护和扩展。本文档详细介绍各个模块的设计理念、架构组织和接口定义。
+
+## 目录
+
+1. [整体架构设计](#整体架构设计)
+2. [核心模块详解](#核心模块详解)
+3. [模块间交互](#模块间交互)
+4. [数据流设计](#数据流设计)
+5. [扩展机制](#扩展机制)
+
+## 整体架构设计
+
+### 分层架构模式
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        表现层 (Presentation Layer)              │
+│  ┌─────────────────┐    ┌─────────────────┐                    │
+│  │   Web UI        │    │  Express Routes │                    │
+│  │ (Static Files)  │    │   (server.ts)   │                    │
+│  └─────────────────┘    └─────────────────┘                    │
+└─────────────────────────────────────────────────────────────────┘
+                                    │
+┌─────────────────────────────────────────────────────────────────┐
+│                        业务逻辑层 (Business Logic Layer)         │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐ │
+│  │ Three-Layer     │  │  Model Sync     │  │ Channel Health  │ │
+│  │ Architecture    │  │   Service       │  │   Monitor       │ │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘ │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐ │
+│  │ Channel Cleanup │  │ Model Channel   │  │ Temp Group      │ │
+│  │   Service       │  │   Optimizer     │  │   Cleaner       │ │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+                                    │
+┌─────────────────────────────────────────────────────────────────┐
+│                        服务层 (Service Layer)                   │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐ │
+│  │  Gptload        │  │    Models       │  │   YAML          │ │
+│  │  Service        │  │   Service       │  │  Manager        │ │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘ │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐ │
+│  │ Multi-Gptload   │  │ Layer Configs   │  │  Model Config   │ │
+│  │   Manager       │  │   Manager       │  │   Manager       │ │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+                                    │
+┌─────────────────────────────────────────────────────────────────┐
+│                        数据访问层 (Data Access Layer)            │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐ │
+│  │   HTTP Client   │  │  File System    │  │  Configuration  │ │
+│  │    (Axios)      │  │   Operations    │  │    Files        │ │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 模块依赖关系
+
+```mermaid
+graph TD
+    A[server.ts] --> B[gptload.ts]
+    A --> C[models.ts]
+    A --> D[yaml-manager.ts]
+    A --> E[model-sync.ts]
+    A --> F[channel-health.ts]
+    A --> G[channel-cleanup.ts]
+    A --> H[three-layer-architecture.ts]
+    
+    B --> I[multi-gptload.ts]
+    B --> J[layer-configs.ts]
+    
+    E --> B
+    E --> C
+    E --> D
+    
+    F --> B
+    
+    G --> B
+    
+    H --> B
+    H --> K[model-channel-optimizer.ts]
+    
+    B --> L[temp-group-cleaner.ts]
+    
+    All --> M[types.ts]
+    
+    C --> N[model-config.ts]
+```
+
+## 核心模块详解
+
+### 1. 服务器主模块 (server.ts)
+
+**职责**: HTTP 服务器和路由管理
+
+#### 核心功能
+- Express 服务器初始化
+- API 路由定义和处理
+- 中间件配置
+- 服务启动和关闭管理
+
+#### 关键设计模式
+- **路由器模式**: 将不同功能的 API 分组管理
+- **中间件模式**: 统一处理 CORS、JSON 解析等
+- **错误处理**: 统一的错误响应格式
+
+#### 代码结构
+```typescript
+// 环境配置加载
+dotenv.config({ path: ".env.local" });
+dotenv.config({ path: ".env" });
+
+// 模块导入
+import gptloadService from "./src/gptload";
+import modelsService from "./src/models";
+// ...
+
+// 中间件配置
+app.use(cors());
+app.use(express.json());
+app.use(express.static(path.join(__dirname, "public")));
+
+// API 路由分组
+// 核心配置 API
+app.post("/api/process-ai-site", processAiSiteHandler);
+app.post("/api/preview-site-name", previewSiteNameHandler);
+
+// 监控 API
+app.get("/api/health", healthCheckHandler);
+app.get("/api/status", statusHandler);
+
+// 管理 API
+app.post("/api/sync-models", syncModelsHandler);
+// ...
+```
+
+#### 设计亮点
+1. **优雅关闭**: 监听进程信号，确保服务平稳关闭
+2. **配置优先级**: `.env.local` > `.env` 的配置加载策略
+3. **错误边界**: 统一的错误捕获和响应处理
+4. **服务协调**: 启动时自动初始化各个后台服务
+
+### 2. gpt-load 服务模块 (gptload.ts)
+
+**职责**: 与 gpt-load 实例交互的核心服务
+
+#### 架构设计
+
+```typescript
+class GptloadService {
+  public manager: MultiGPTLoadManager;
+  
+  constructor() {
+    this.manager = new MultiGPTLoadManager();
+  }
+  
+  // 核心业务方法
+  async createSiteGroup(siteName, baseUrl, apiKeys, channelType, customEndpoints, models);
+  async createOrUpdateModelGroups(models, siteGroups);
+  async deleteAllModelGroups();
+  async handleEmptyModelList(channelName);
+  
+  // 管理方法
+  async getAllGroups();
+  async getGroupApiKeys(groupId, instanceId);
+  async deleteChannelCompletely(channelName);
+  
+  // 状态查询
+  async getStatus();
+  async getMultiInstanceStatus();
+}
+```
+
+#### 核心功能模块
+
+##### 2.1 分组管理
+```typescript
+// 站点分组创建 (第一层)
+async createSiteGroup(
+  siteName: string,
+  baseUrl: string,
+  apiKeys: string[],
+  channelType: string,
+  customEndpoints: any,
+  models: string[]
+): Promise<SiteGroup>
+
+// 模型分组创建 (第二层)
+async createOrUpdateModelGroups(
+  models: string[],
+  siteGroups: SiteGroup[]
+): Promise<ModelGroup[]>
+```
+
+##### 2.2 密钥管理
+```typescript
+// API 密钥操作
+async getGroupApiKeys(groupId: string, instanceId: string): Promise<string[]>
+async updateGroupApiKeys(groupId: string, apiKeys: string[], instanceId: string): Promise<void>
+```
+
+##### 2.3 健康监控
+```typescript
+// 渠道健康分析
+async analyzeChannelHealth(): Promise<ChannelHealthReport>
+async checkAllInstancesHealth(): Promise<InstanceHealthReport[]>
+```
+
+#### 设计特点
+1. **多实例支持**: 通过 MultiGPTLoadManager 管理多个 gpt-load 实例
+2. **错误恢复**: 自动重试和故障转移机制
+3. **配置验证**: 创建分组前验证配置参数
+4. **日志记录**: 详细的操作日志用于调试
+
+### 3. 多实例管理器 (multi-gptload.ts)
+
+**职责**: 管理多个 gpt-load 实例的协调和分配
+
+#### 类设计
+
+```typescript
+class MultiGPTLoadManager {
+  private instances: Map<string, GptloadInstanceConfig> = new Map();
+  private healthStatus: Map<string, InstanceHealth> = new Map();
+  public siteAssignments: Map<string, string> = new Map();
+  
+  // 实例管理
+  loadInstancesFromConfig(): void;
+  getInstance(instanceId: string): GptloadInstanceConfig | null;
+  getHealthyInstances(): GptloadInstanceConfig[];
+  
+  // 智能分配
+  async selectBestInstanceForSite(siteUrl: string): Promise<string>;
+  async getModelsViaMultiInstance(baseUrl: string, apiKey: string): Promise<{models: Model[], instanceId: string, instanceName: string}>;
+  
+  // 健康管理
+  async checkInstanceHealth(instanceId: string): Promise<InstanceHealth>;
+  async checkAllInstancesHealth(): Promise<Map<string, InstanceHealth>>;
+}
+```
+
+#### 核心算法
+
+##### 3.1 实例选择算法
+```typescript
+async selectBestInstanceForSite(siteUrl: string): Promise<string> {
+  // 1. 检查是否有预分配
+  if (this.siteAssignments.has(siteUrl)) {
+    const assignedInstance = this.siteAssignments.get(siteUrl);
+    if (this.isInstanceHealthy(assignedInstance)) {
+      return assignedInstance;
+    }
+  }
+  
+  // 2. 获取健康实例
+  const healthyInstances = this.getHealthyInstances();
+  
+  // 3. 按优先级排序
+  const sortedInstances = healthyInstances.sort((a, b) => a.priority - b.priority);
+  
+  // 4. 连通性测试
+  for (const instance of sortedInstances) {
+    if (await this.testConnectivity(instance, siteUrl)) {
+      this.siteAssignments.set(siteUrl, instance.id);
+      return instance.id;
+    }
+  }
+  
+  throw new Error('No healthy instance can connect to the site');
+}
+```
+
+##### 3.2 健康检查算法
+```typescript
+async checkInstanceHealth(instanceId: string): Promise<InstanceHealth> {
+  const instance = this.getInstance(instanceId);
+  const startTime = Date.now();
+  
+  try {
+    const response = await this.httpClient.get(`${instance.url}/api/health`, {
+      timeout: 5000,
+      headers: instance.token ? { 'Authorization': `Bearer ${instance.token}` } : {}
+    });
+    
+    const responseTime = Date.now() - startTime;
+    
+    return {
+      status: 'healthy',
+      responseTime,
+      lastCheck: new Date(),
+      error: null
+    };
+  } catch (error) {
+    return {
+      status: 'unhealthy',
+      responseTime: Date.now() - startTime,
+      lastCheck: new Date(),
+      error: error.message
+    };
+  }
+}
+```
+
+#### 设计亮点
+1. **智能路由**: 基于优先级和连通性的实例选择
+2. **故障转移**: 自动检测失效实例并重新分配
+3. **负载均衡**: 合理分配站点到不同实例
+4. **状态缓存**: 避免频繁的健康检查请求
+
+### 4. 模型服务模块 (models.ts)
+
+**职责**: 从 AI 站点获取和管理模型信息
+
+#### 核心功能
+
+```typescript
+class ModelsService {
+  // 模型获取
+  async getModels(baseUrl: string, apiKey: string, retryCount: number = 3): Promise<Model[]>
+  
+  // API 探测
+  async probeApiStructure(baseUrl: string, apiKey?: string): Promise<ApiProbeResult>
+  
+  // 模型过滤
+  filterModels(models: Model[]): Model[]
+  
+  // 格式适配
+  private adaptOpenAIFormat(data: any): Model[]
+  private adaptAnthropicFormat(data: any): Model[]
+  private adaptGeminiFormat(data: any): Model[]
+}
+```
+
+#### API 格式适配器
+
+##### 4.1 OpenAI 格式适配
+```typescript
+private adaptOpenAIFormat(data: any): Model[] {
+  if (!data?.data || !Array.isArray(data.data)) {
+    throw new Error('Invalid OpenAI format response');
+  }
+  
+  return data.data
+    .filter(model => model.id && typeof model.id === 'string')
+    .map(model => ({
+      id: model.id,
+      name: model.id,
+      object: model.object || 'model',
+      created: model.created || Date.now(),
+      owned_by: model.owned_by || 'unknown'
+    }));
+}
+```
+
+##### 4.2 多格式探测
+```typescript
+async probeApiStructure(baseUrl: string, apiKey?: string): Promise<ApiProbeResult> {
+  const testEndpoints = [
+    { path: '/models', format: 'openai' },
+    { path: '/v1/models', format: 'openai' },
+    { path: '/api/models', format: 'custom' }
+  ];
+  
+  for (const endpoint of testEndpoints) {
+    try {
+      const response = await this.testEndpoint(baseUrl, endpoint.path, apiKey);
+      if (response.success) {
+        return {
+          supportedFormats: [endpoint.format],
+          bestEndpoint: endpoint.path,
+          modelCount: response.data?.length || 0
+        };
+      }
+    } catch (error) {
+      // 继续尝试下一个端点
+    }
+  }
+  
+  throw new Error('No supported API format detected');
+}
+```
+
+#### 设计特点
+1. **多格式支持**: 自动适配不同 AI 服务的 API 格式
+2. **重试机制**: 网络失败时自动重试
+3. **白名单过滤**: 基于配置的模型过滤机制
+4. **错误处理**: 详细的错误分类和处理
+
+### 5. YAML 配置管理器 (yaml-manager.ts)
+
+**职责**: 管理 uni-api 的 YAML 配置文件
+
+#### 核心功能
+
+```typescript
+class YamlManager {
+  private configPath: string;
+  private backupPath: string;
+  
+  // 配置更新
+  async updateUniApiConfig(modelGroups: ModelGroup[]): Promise<void>
+  
+  // 配置读取
+  async readConfig(): Promise<UniApiConfig>
+  
+  // 配置验证
+  validateConfig(config: UniApiConfig): boolean
+  
+  // 备份管理
+  async createBackup(): Promise<string>
+  async restoreFromBackup(backupPath: string): Promise<void>
+}
+```
+
+#### 配置更新策略
+
+##### 5.1 渐进式更新
+```typescript
+async updateUniApiConfig(modelGroups: ModelGroup[]): Promise<void> {
+  // 1. 创建备份
+  const backupPath = await this.createBackup();
+  
+  try {
+    // 2. 读取现有配置
+    const config = await this.readConfig();
+    
+    // 3. 生成新的 provider 配置
+    const newProviders = modelGroups.map(group => ({
+      provider: `gpt-load-${group.name}`,
+      base_url: `${this.gptloadBaseUrl}/proxy/${group.name}/v1/chat/completions`,
+      api: 'sk-uni-load-auto-generated',
+      model: group.models,
+      tools: true
+    }));
+    
+    // 4. 合并配置 (保留现有的非 gpt-load provider)
+    const existingProviders = config.providers.filter(
+      p => !p.provider.startsWith('gpt-load-')
+    );
+    
+    config.providers = [...existingProviders, ...newProviders];
+    
+    // 5. 验证配置
+    if (!this.validateConfig(config)) {
+      throw new Error('Generated config is invalid');
+    }
+    
+    // 6. 写入配置
+    await this.writeConfig(config);
+    
+    console.log(`✅ 已更新 uni-api 配置，添加 ${newProviders.length} 个 provider`);
+    
+  } catch (error) {
+    // 7. 发生错误时恢复备份
+    console.error('配置更新失败，正在恢复备份...');
+    await this.restoreFromBackup(backupPath);
+    throw error;
+  }
+}
+```
+
+##### 5.2 配置验证规则
+```typescript
+validateConfig(config: UniApiConfig): boolean {
+  // 基本结构验证
+  if (!config || typeof config !== 'object') {
+    return false;
+  }
+  
+  // providers 字段验证
+  if (!Array.isArray(config.providers)) {
+    return false;
+  }
+  
+  // 每个 provider 的字段验证
+  for (const provider of config.providers) {
+    if (!provider.provider || !provider.base_url || !provider.api) {
+      return false;
+    }
+    
+    if (!Array.isArray(provider.model) || provider.model.length === 0) {
+      return false;
+    }
+  }
+  
+  return true;
+}
+```
+
+#### 设计亮点
+1. **原子操作**: 配置更新失败时自动回滚
+2. **备份机制**: 每次更新前自动创建备份
+3. **配置合并**: 智能合并新旧配置，保留用户自定义部分
+4. **格式验证**: 严格的 YAML 格式和内容验证
+
+### 6. 三层架构管理器 (three-layer-architecture.ts)
+
+**职责**: 维护和优化三层分组架构
+
+#### 架构设计
+
+```typescript
+class ThreeLayerArchitecture {
+  private gptloadService: GptloadService;
+  private optimizer: ModelChannelOptimizer;
+  
+  // 架构初始化
+  async initialize(): Promise<ArchitectureInitResult>
+  
+  // 状态查询
+  async getArchitectureStatus(): Promise<ArchitectureStatus>
+  async getDetailedArchitectureStats(): Promise<DetailedStats>
+  
+  // 恢复机制
+  async passiveRecovery(): Promise<RecoveryResult>
+  async manualRecovery(model: string, channel: string): Promise<RecoveryResult>
+}
+```
+
+#### 三层架构逻辑
+
+##### 6.1 架构初始化流程
+```typescript
+async initialize(): Promise<ArchitectureInitResult> {
+  console.log('🏗️ 开始初始化三层架构...');
+  
+  // 第一步: 获取所有分组
+  const allGroups = await this.gptloadService.getAllGroups();
+  console.log(`📊 获取到 ${allGroups.length} 个分组`);
+  
+  // 第二步: 分类分组
+  const layerGroups = this.categorizeGroups(allGroups);
+  
+  // 第三步: 验证第一层 (站点分组)
+  const siteGroups = layerGroups.siteGroups; // sort=20
+  console.log(`🏢 发现 ${siteGroups.length} 个站点分组`);
+  
+  // 第四步: 创建或更新第二层 (模型-渠道分组)
+  const modelChannelResult = await this.createModelChannelGroups(siteGroups);
+  console.log(`🔗 创建/更新 ${modelChannelResult.created} 个模型-渠道分组`);
+  
+  // 第五步: 创建或更新第三层 (模型聚合分组)
+  const aggregateResult = await this.createModelAggregateGroups(modelChannelResult.groups);
+  console.log(`🎯 创建/更新 ${aggregateResult.created} 个模型聚合分组`);
+  
+  return {
+    siteGroupsFound: siteGroups.length,
+    modelChannelGroupsCreated: modelChannelResult.created,
+    aggregateGroupsCreated: aggregateResult.created,
+    totalGroups: allGroups.length
+  };
+}
+```
+
+##### 6.2 分组分类算法
+```typescript
+private categorizeGroups(allGroups: any[]): LayerGroups {
+  return {
+    siteGroups: allGroups.filter(g => g.sort === 20),           // 第一层
+    modelChannelGroups: allGroups.filter(g => g.sort === 15),  // 第二层  
+    aggregateGroups: allGroups.filter(g => g.sort === 10),     // 第三层
+    otherGroups: allGroups.filter(g => ![10, 15, 20].includes(g.sort))
+  };
+}
+```
+
+##### 6.3 被动恢复机制
+```typescript
+async passiveRecovery(): Promise<RecoveryResult> {
+  const recovery = {
+    keysRecovered: 0,
+    groupsOptimized: 0,
+    errors: []
+  };
+  
+  try {
+    // 1. 恢复被禁用的密钥
+    const keyRecovery = await this.recoverDisabledKeys();
+    recovery.keysRecovered = keyRecovery.recovered;
+    
+    // 2. 优化分组权重
+    const weightOptimization = await this.optimizer.optimizeWeights();
+    recovery.groupsOptimized = weightOptimization.optimized;
+    
+    // 3. 清理无效分组引用
+    await this.cleanupInvalidReferences();
+    
+  } catch (error) {
+    recovery.errors.push(error.message);
+  }
+  
+  return recovery;
+}
+```
+
+#### 设计特点
+1. **分层清晰**: 三层分组各司其职，职责明确
+2. **自动恢复**: 被动恢复机制自动处理常见问题
+3. **权重优化**: 基于实际使用数据优化负载均衡
+4. **容错设计**: 单个分组错误不影响整体架构
+
+### 7. 模型同步服务 (model-sync.ts)
+
+**职责**: 定期同步和维护模型配置一致性
+
+#### 服务设计
+
+```typescript
+class ModelSyncService {
+  private interval: NodeJS.Timeout | null = null;
+  private isRunning: boolean = false;
+  
+  // 服务控制
+  start(): void
+  stop(): void
+  getStatus(): ModelSyncStatus
+  
+  // 同步操作
+  async syncAllModels(): Promise<SyncResult>
+  async cleanupAndResetModels(): Promise<CleanupResult>
+  
+  // 私有方法
+  private async performSync(): Promise<void>
+  private async syncModelGroup(siteGroup: SiteGroup): Promise<ModelGroup[]>
+}
+```
+
+#### 同步策略
+
+##### 7.1 全量同步流程
+```typescript
+async syncAllModels(): Promise<SyncResult> {
+  const result = {
+    sitesProcessed: 0,
+    modelsUpdated: 0,
+    groupsCreated: 0,
+    errors: []
+  };
+  
+  try {
+    // 1. 获取所有站点分组
+    const siteGroups = await this.getSiteGroups();
+    
+    for (const siteGroup of siteGroups) {
+      try {
+        // 2. 获取站点的最新模型列表
+        const latestModels = await this.getLatestModels(siteGroup);
+        
+        // 3. 比较现有配置
+        const currentModels = await this.getCurrentModels(siteGroup);
+        
+        // 4. 计算差异
+        const diff = this.calculateModelDiff(currentModels, latestModels);
+        
+        // 5. 应用更新
+        if (diff.hasChanges) {
+          await this.applyModelUpdates(siteGroup, diff);
+          result.modelsUpdated += diff.changedModels.length;
+        }
+        
+        result.sitesProcessed++;
+        
+      } catch (error) {
+        result.errors.push(`站点 ${siteGroup.name}: ${error.message}`);
+      }
+    }
+    
+  } catch (error) {
+    result.errors.push(`同步失败: ${error.message}`);
+  }
+  
+  return result;
+}
+```
+
+##### 7.2 增量更新机制
+```typescript
+private calculateModelDiff(current: Model[], latest: Model[]): ModelDiff {
+  const currentIds = new Set(current.map(m => m.id));
+  const latestIds = new Set(latest.map(m => m.id));
+  
+  return {
+    addedModels: latest.filter(m => !currentIds.has(m.id)),
+    removedModels: current.filter(m => !latestIds.has(m.id)),
+    changedModels: latest.filter(m => {
+      const currentModel = current.find(cm => cm.id === m.id);
+      return currentModel && this.hasModelChanged(currentModel, m);
+    }),
+    hasChanges: currentIds.size !== latestIds.size || 
+                !Array.from(currentIds).every(id => latestIds.has(id))
+  };
+}
+```
+
+#### 设计特点
+1. **定期同步**: 可配置的同步间隔
+2. **增量更新**: 只更新发生变化的模型
+3. **错误隔离**: 单个站点错误不影响其他站点
+4. **状态跟踪**: 详细的同步状态和进度报告
+
+### 8. 渠道健康监控 (channel-health.ts)
+
+**职责**: 监控渠道健康状态，检测和报告异常
+
+#### 监控架构
+
+```typescript
+class ChannelHealthMonitor {
+  private monitorInterval: NodeJS.Timeout | null = null;
+  private channelFailures: Map<string, ChannelFailureInfo> = new Map();
+  private isMonitoring: boolean = false;
+  
+  // 监控控制
+  start(): void
+  stop(): void
+  getStatus(): ChannelHealthStatus
+  
+  // 健康检查
+  async checkChannelHealth(): Promise<HealthCheckResult>
+  
+  // 故障管理
+  getFailedChannels(): ChannelFailureInfo[]
+  resetChannelFailures(channelName?: string): void
+}
+```
+
+#### 健康检查算法
+
+##### 8.1 批量健康检查
+```typescript
+async checkChannelHealth(): Promise<HealthCheckResult> {
+  const result = {
+    totalChannels: 0,
+    healthyChannels: 0,
+    failedChannels: 0,
+    newFailures: [],
+    recoveredChannels: []
+  };
+  
+  try {
+    // 1. 获取所有需要检查的渠道
+    const channels = await this.getMonitorableChannels();
+    result.totalChannels = channels.length;
+    
+    // 2. 并发执行健康检查
+    const healthChecks = channels.map(channel => 
+      this.checkSingleChannel(channel).catch(error => ({
+        channel: channel.name,
+        healthy: false,
+        error: error.message
+      }))
+    );
+    
+    const results = await Promise.allSettled(healthChecks);
+    
+    // 3. 分析检查结果
+    for (let i = 0; i < results.length; i++) {
+      const result = results[i];
+      const channel = channels[i];
+      
+      if (result.status === 'fulfilled') {
+        const checkResult = result.value;
+        
+        if (checkResult.healthy) {
+          result.healthyChannels++;
+          
+          // 检查是否从故障中恢复
+          if (this.channelFailures.has(channel.name)) {
+            result.recoveredChannels.push(channel.name);
+            this.channelFailures.delete(channel.name);
+          }
+          
+        } else {
+          result.failedChannels++;
+          this.recordChannelFailure(channel.name, checkResult.error);
+          
+          // 检查是否是新故障
+          const failureInfo = this.channelFailures.get(channel.name);
+          if (failureInfo && failureInfo.failureCount === 1) {
+            result.newFailures.push(channel.name);
+          }
+        }
+      }
+    }
+    
+  } catch (error) {
+    console.error('健康检查执行失败:', error);
+  }
+  
+  return result;
+}
+```
+
+##### 8.2 单个渠道检查
+```typescript
+private async checkSingleChannel(channel: ChannelInfo): Promise<ChannelHealthResult> {
+  const startTime = Date.now();
+  
+  try {
+    // 构造测试请求
+    const testPayload = {
+      model: channel.testModel || 'gpt-3.5-turbo',
+      messages: [{ role: 'user', content: 'test' }],
+      max_tokens: 1,
+      temperature: 0
+    };
+    
+    // 发送健康检查请求
+    const response = await axios.post(
+      `${channel.baseUrl}/v1/chat/completions`,
+      testPayload,
+      {
+        headers: {
+          'Authorization': `Bearer ${channel.apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 10000
+      }
+    );
+    
+    const responseTime = Date.now() - startTime;
+    
+    return {
+      channel: channel.name,
+      healthy: true,
+      responseTime,
+      statusCode: response.status
+    };
+    
+  } catch (error) {
+    return {
+      channel: channel.name,
+      healthy: false,
+      responseTime: Date.now() - startTime,
+      error: error.message,
+      statusCode: error.response?.status
+    };
+  }
+}
+```
+
+#### 故障分析和报告
+
+##### 8.3 故障模式识别
+```typescript
+private analyzeFailurePatterns(): FailureAnalysis {
+  const patterns = {
+    authenticationFailures: 0,
+    networkTimeouts: 0,
+    serverErrors: 0,
+    quotaExceeded: 0,
+    unknownErrors: 0
+  };
+  
+  for (const [channelName, failureInfo] of this.channelFailures) {
+    const errorType = this.categorizeError(failureInfo.lastError);
+    patterns[errorType]++;
+  }
+  
+  return {
+    patterns,
+    totalFailures: this.channelFailures.size,
+    criticalChannels: Array.from(this.channelFailures.entries())
+      .filter(([_, info]) => info.failureCount >= this.failureThreshold)
+      .map(([name]) => name)
+  };
+}
+
+private categorizeError(error: string): keyof FailurePatterns {
+  if (error.includes('401') || error.includes('403') || error.includes('authentication')) {
+    return 'authenticationFailures';
+  }
+  if (error.includes('timeout') || error.includes('ETIMEDOUT')) {
+    return 'networkTimeouts';
+  }
+  if (error.includes('500') || error.includes('502') || error.includes('503')) {
+    return 'serverErrors';
+  }
+  if (error.includes('quota') || error.includes('rate limit')) {
+    return 'quotaExceeded';
+  }
+  return 'unknownErrors';
+}
+```
+
+#### 设计特点
+1. **实时监控**: 持续监控所有渠道状态
+2. **故障分类**: 智能识别不同类型的故障
+3. **恢复检测**: 自动检测渠道恢复情况
+4. **模式分析**: 分析故障模式以优化系统
+
+### 9. 类型定义模块 (types.ts)
+
+**职责**: 统一的 TypeScript 类型定义
+
+#### 核心类型设计
+
+##### 9.1 通用响应类型
+```typescript
+// 统一的 API 响应格式
+export interface ApiResponse<T = any> {
+  success: boolean;
+  message?: string;
+  data?: T;
+  error?: string;
+  details?: string | object;
+}
+
+// 错误响应格式
+export interface ApiErrorResponse {
+  error: string;
+  details?: string | object;
+}
+```
+
+##### 9.2 业务实体类型
+```typescript
+// 站点分组
+export interface SiteGroup {
+  id: string;
+  name: string;
+  sort: number;
+  _instance?: GptloadInstance;
+  upstreams?: any[];
+  tags?: string[];
+  models?: string[];
+}
+
+// gpt-load 实例
+export interface GptloadInstance {
+  id: string;
+  name: string;
+  url: string;
+  token?: string;
+  priority: number;
+  description?: string;
+  upstream_addresses?: string[];
+}
+
+// AI 模型
+export interface Model {
+  id: string;
+  name: string;
+  object?: string;
+  created?: number;
+  owned_by?: string;
+}
+```
+
+##### 9.3 请求参数类型
+```typescript
+// 处理 AI 站点请求
+export interface ProcessAiSiteRequest {
+  baseUrl: string;
+  apiKeys?: string[];
+  channelTypes?: string[];
+  customValidationEndpoints?: Record<string, string>;
+  models?: string[];
+}
+
+// 清理选项
+export interface CleanupOptions {
+  dryRun?: boolean;
+  force?: boolean;
+  maxFailures?: number;
+  olderThanDays?: number;
+}
+```
+
+##### 9.4 状态和监控类型
+```typescript
+// 渠道健康状态
+export interface ChannelHealthStatus {
+  status: 'monitoring' | 'stopped' | 'error';
+  totalChannels: number;
+  healthyChannels: number;
+  failedChannels: string[];
+  lastCheck?: Date;
+}
+
+// 模型同步状态
+export interface ModelSyncStatus {
+  isRunning: boolean;
+  lastSync?: Date;
+  nextSync?: Date;
+  syncInterval: number;
+}
+
+// 系统整体状态
+export interface ServiceStatus {
+  gptload: any;
+  uniApi: any;
+  modelSync: ModelSyncStatus;
+  channelHealth: ChannelHealthStatus;
+  channelCleanup: any;
+}
+```
+
+#### 设计原则
+1. **类型安全**: 严格的类型检查，避免运行时错误
+2. **接口一致**: 统一的命名规范和结构设计
+3. **可扩展性**: 使用泛型和可选字段支持扩展
+4. **文档化**: 详细的注释说明各字段含义
+
+## 模块间交互
+
+### 交互模式图
+
+```mermaid
+sequenceDiagram
+    participant Client as 客户端
+    participant Server as server.ts
+    participant Gptload as gptload.ts
+    participant Multi as multi-gptload.ts
+    participant Models as models.ts
+    participant Yaml as yaml-manager.ts
+    
+    Client->>Server: POST /api/process-ai-site
+    Server->>Models: getModels(baseUrl, apiKey)
+    Models->>Multi: selectBestInstance(siteUrl)
+    Multi-->>Models: instanceId
+    Models-->>Server: models[]
+    
+    Server->>Gptload: createSiteGroup(siteName, models)
+    Gptload->>Multi: selectBestInstance(siteUrl)
+    Multi-->>Gptload: instanceId
+    Gptload-->>Server: siteGroup
+    
+    Server->>Gptload: createOrUpdateModelGroups(models, siteGroups)
+    Gptload-->>Server: modelGroups[]
+    
+    Server->>Yaml: updateUniApiConfig(modelGroups)
+    Yaml-->>Server: success
+    
+    Server-->>Client: ApiResponse<ConfigResult>
+```
+
+### 数据流设计
+
+#### 1. 配置流数据流
+
+```
+用户输入 → 参数验证 → 站点名称生成 → 模型获取 → 实例选择 → 分组创建 → 配置更新
+```
+
+**详细流程**:
+1. **用户输入**: Web 界面或 API 提交配置请求
+2. **参数验证**: 验证 baseUrl、apiKeys 等参数有效性
+3. **站点名称生成**: 根据 URL 自动生成唯一站点名称
+4. **模型获取**: 从 AI 站点获取支持的模型列表
+5. **实例选择**: 选择最佳的 gpt-load 实例
+6. **分组创建**: 创建三层分组架构
+7. **配置更新**: 更新 uni-api 配置文件
+
+#### 2. 监控流数据流
+
+```
+定时器触发 → 状态收集 → 健康检查 → 异常检测 → 恢复操作 → 状态更新
+```
+
+**监控循环**:
+1. **定时器触发**: 按配置间隔触发监控任务
+2. **状态收集**: 收集各个模块的运行状态
+3. **健康检查**: 执行渠道健康检查
+4. **异常检测**: 识别故障和异常情况
+5. **恢复操作**: 自动执行恢复操作
+6. **状态更新**: 更新监控状态和统计信息
+
+### 错误传播机制
+
+#### 错误分类和处理策略
+
+```typescript
+// 错误类型枚举
+enum ErrorType {
+  VALIDATION_ERROR = 'VALIDATION_ERROR',
+  NETWORK_ERROR = 'NETWORK_ERROR', 
+  CONFIG_ERROR = 'CONFIG_ERROR',
+  SYSTEM_ERROR = 'SYSTEM_ERROR'
+}
+
+// 错误处理策略
+class ErrorHandler {
+  static handle(error: Error, context: string): ApiErrorResponse {
+    if (error instanceof ValidationError) {
+      return {
+        error: error.message,
+        details: { type: ErrorType.VALIDATION_ERROR, context }
+      };
+    }
+    
+    if (error instanceof NetworkError) {
+      return {
+        error: '网络连接失败',
+        details: { type: ErrorType.NETWORK_ERROR, originalError: error.message }
+      };
+    }
+    
+    // 默认处理
+    return {
+      error: '系统内部错误',
+      details: { type: ErrorType.SYSTEM_ERROR, context, message: error.message }
+    };
+  }
+}
+```
+
+## 扩展机制
+
+### 1. 插件化渠道类型
+
+支持新的 AI API 格式：
+
+```typescript
+// 渠道类型接口
+interface ChannelTypeAdapter {
+  name: string;
+  validateEndpoint(baseUrl: string, apiKey: string): Promise<boolean>;
+  getModels(baseUrl: string, apiKey: string): Promise<Model[]>;
+  formatConfig(config: any): any;
+}
+
+// OpenAI 适配器实现
+class OpenAIAdapter implements ChannelTypeAdapter {
+  name = 'openai';
+  
+  async validateEndpoint(baseUrl: string, apiKey: string): Promise<boolean> {
+    // OpenAI 特定的验证逻辑
+  }
+  
+  async getModels(baseUrl: string, apiKey: string): Promise<Model[]> {
+    // OpenAI 格式的模型获取
+  }
+  
+  formatConfig(config: any): any {
+    // OpenAI 特定的配置格式化
+  }
+}
+
+// 注册机制
+class ChannelTypeRegistry {
+  private adapters: Map<string, ChannelTypeAdapter> = new Map();
+  
+  register(adapter: ChannelTypeAdapter): void {
+    this.adapters.set(adapter.name, adapter);
+  }
+  
+  getAdapter(type: string): ChannelTypeAdapter | null {
+    return this.adapters.get(type) || null;
+  }
+}
+```
+
+### 2. 自定义监控指标
+
+扩展健康检查指标：
+
+```typescript
+// 监控指标接口
+interface HealthMetric {
+  name: string;
+  check(channel: ChannelInfo): Promise<MetricResult>;
+}
+
+// 响应时间指标
+class ResponseTimeMetric implements HealthMetric {
+  name = 'response_time';
+  
+  async check(channel: ChannelInfo): Promise<MetricResult> {
+    const startTime = Date.now();
+    // 执行检查
+    const responseTime = Date.now() - startTime;
+    
+    return {
+      metric: this.name,
+      value: responseTime,
+      status: responseTime < 5000 ? 'healthy' : 'warning'
+    };
+  }
+}
+
+// 指标注册器
+class MetricRegistry {
+  private metrics: Map<string, HealthMetric> = new Map();
+  
+  register(metric: HealthMetric): void {
+    this.metrics.set(metric.name, metric);
+  }
+  
+  async checkAll(channel: ChannelInfo): Promise<MetricResult[]> {
+    const results = [];
+    for (const [name, metric] of this.metrics) {
+      try {
+        const result = await metric.check(channel);
+        results.push(result);
+      } catch (error) {
+        results.push({
+          metric: name,
+          value: null,
+          status: 'error',
+          error: error.message
+        });
+      }
+    }
+    return results;
+  }
+}
+```
+
+### 3. 配置驱动的行为
+
+通过配置文件控制模块行为：
+
+```typescript
+// 模块配置接口
+interface ModuleConfig {
+  enabled: boolean;
+  options: Record<string, any>;
+}
+
+// 配置管理器
+class ConfigManager {
+  private config: Record<string, ModuleConfig> = {};
+  
+  loadConfig(configPath: string): void {
+    const configData = require(configPath);
+    this.config = configData.modules || {};
+  }
+  
+  getModuleConfig(moduleName: string): ModuleConfig {
+    return this.config[moduleName] || { enabled: true, options: {} };
+  }
+  
+  isModuleEnabled(moduleName: string): boolean {
+    return this.getModuleConfig(moduleName).enabled;
+  }
+}
+
+// 在模块中使用配置
+class ModelSyncService {
+  constructor(private configManager: ConfigManager) {}
+  
+  start(): void {
+    if (!this.configManager.isModuleEnabled('modelSync')) {
+      console.log('模型同步服务已禁用');
+      return;
+    }
+    
+    const options = this.configManager.getModuleConfig('modelSync').options;
+    const interval = options.interval || 60000;
+    
+    // 启动服务
+    this.interval = setInterval(() => this.performSync(), interval);
+  }
+}
+```
+
+## 设计优势
+
+### 1. 高内聚低耦合
+- 每个模块职责单一，功能内聚
+- 模块间通过明确的接口交互
+- 依赖关系清晰，易于测试和维护
+
+### 2. 可扩展性强
+- 插件化的渠道类型支持
+- 可配置的监控指标
+- 灵活的配置管理机制
+
+### 3. 容错性好
+- 多层次的错误处理
+- 自动重试和故障转移
+- 优雅降级机制
+
+### 4. 性能优化
+- 异步处理和并发控制
+- 智能缓存机制
+- 资源池管理
+
+### 5. 可观测性
+- 详细的日志记录
+- 实时状态监控
+- 性能指标收集
+
+## 总结
+
+uni-load 的模块化设计遵循了软件工程的最佳实践，通过清晰的分层架构、明确的职责划分和灵活的扩展机制，实现了一个高质量、可维护、可扩展的系统。每个模块都有明确的边界和接口，便于独立开发、测试和部署。

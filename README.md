@@ -279,11 +279,18 @@ CHANNEL_FAILURE_THRESHOLD=3
 
 ## 📚 文档目录
 
+### 基础文档
 - 📖 [系统架构设计](docs/architecture.md) - 详细的架构设计和组件说明
 - 🔌 [API 接口文档](docs/api.md) - 完整的 API 接口规范和示例
 - 🚀 [部署指南](docs/deployment.md) - 多种环境的部署方案和配置
 - 🛠️ [开发指南](docs/development.md) - 开发环境设置和编码规范
 - ⚙️ [多实例配置说明](docs/multi-gptload-config.md) - gpt-load 多实例配置详解
+
+### 进阶文档
+- 👤 [用户操作手册](docs/user-guide.md) - Web 界面和 API 使用的详细指南
+- 🏗️ [模块设计文档](docs/module-design.md) - 详细的模块架构和设计模式
+- ⚡ [性能优化指南](docs/performance-optimization.md) - 系统性能调优和监控指南
+- 🏛️ [系统架构设计 v2.0](docs/system-architecture-v2.md) - 三层架构的深度解析
 
 ## 🔄 工作流程
 
