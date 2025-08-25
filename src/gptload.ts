@@ -318,7 +318,7 @@ class GptloadService {
    */
   sanitizeModelNameForUrl(modelName) {
     // 使用统一的方法处理
-    const sanitized = modelConfig.generateSafeGroupName(modelName)
+    const sanitized = (modelConfig.constructor as any).generateSafeGroupName(modelName)
 
     if (modelName !== sanitized) {
       console.log(`🔧 处理URL不安全字符: ${modelName} -> ${sanitized}`)
@@ -334,9 +334,9 @@ class GptloadService {
   generateSafeGroupName(modelName, channelType) {
     // 保持原始模型名称和渠道类型的组合
     const combinedName = `${modelName}-${channelType}`
-    
+
     // 使用统一的安全名称生成方法
-    let groupName = modelConfig.generateSafeGroupName(combinedName)
+    let groupName = (modelConfig.constructor as any).generateSafeGroupName(combinedName)
 
     // 保留原有的长度和规范检查逻辑
     if (groupName.length < 3) {
@@ -481,6 +481,7 @@ class GptloadService {
       targetInstance = this.manager.getInstance(healthyInstanceId)
     }
 
+    let groupData
     try {
       // 为所有站点分组创建上游配置
       const upstreams = siteGroups
@@ -511,7 +512,7 @@ class GptloadService {
       console.log(`ℹ️ 模型 ${originalModelName} 将使用 ${channelType.toUpperCase()} 格式`)
 
       // 创建模型分组，上游指向所有站点分组
-      const groupData = {
+      groupData = {
         name: groupName,
         display_name: `${originalModelName} 模型 (${channelType.toUpperCase()})`,
         description: `${originalModelName} 模型聚合分组 (格式: ${channelType}, 跨实例)`,
@@ -792,8 +793,7 @@ class GptloadService {
     })
 
     // 获取最新错误
-    const lastError =
-      failedLogs.length > 0 ? failedLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0] : null
+    const lastError = failedLogs.length > 0 ? failedLogs.sort((a, b) => b.timestamp - a.timestamp)[0] : null
 
     // 判断健康状态
     let status = 'healthy'

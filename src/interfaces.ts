@@ -131,12 +131,46 @@ export interface IGptloadService {
   /**
    * 获取状态
    */
-  getStatus(): Promise<any>
+  getStatus(): Promise<{
+    connected: boolean
+    instances: Record<string, {
+      id: string
+      name: string
+      url: string
+      priority: number
+      healthy: boolean
+      responseTime: number
+      lastCheck: Date
+      error?: string
+    }>
+    healthyCount: number
+    totalCount: number
+    siteAssignments: Record<string, {
+      instanceId: string
+      instanceName?: string
+    }>
+    error?: string
+  }>
 
   /**
    * 获取多实例状态
    */
-  getMultiInstanceStatus(): any
+  getMultiInstanceStatus(): {
+    instances: Record<string, {
+      id: string
+      name: string
+      url: string
+      priority: number
+      healthy: boolean
+      responseTime: number
+      lastCheck: Date
+      error?: string
+    }>
+    siteAssignments: Record<string, {
+      instanceId: string
+      instanceName?: string
+    }>
+  }
 
   /**
    * 重新分配站点
@@ -280,9 +314,26 @@ export interface IMultiGptloadManager {
   }>
 
   /**
-   * 获取状态
+   * 获取所有实例状态信息（返回对象格式，便于按ID访问）
    */
-  getStatus(): any
+  getAllInstancesStatus(): Record<string, {
+    id: string
+    name: string
+    url: string
+    priority: number
+    healthy: boolean
+    responseTime: number
+    lastCheck: Date
+    error?: string
+  }>
+
+  /**
+   * 获取站点分配信息
+   */
+  getSiteAssignments(): Record<string, {
+    instanceId: string
+    instanceName?: string
+  }>
 
   /**
    * 获取所有实例

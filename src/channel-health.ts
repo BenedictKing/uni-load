@@ -31,7 +31,7 @@ class ChannelHealthMonitor {
   private checkIntervalMinutes: number
   private failureThreshold: number
   private isRunning: boolean = false
-  private channelFailures: Map<string, ChannelFailureInfo> = new Map()
+  private channelFailures: Map<string, number> = new Map()
 
   constructor() {
     this.checkIntervalMinutes = parseInt(process.env.CHANNEL_CHECK_INTERVAL || '30')
