@@ -1,6 +1,6 @@
-const gptloadService = require('./gptload');
-const axios = require('axios');
-const https = require('https');
+import gptloadService from './gptload';
+import axios from 'axios';
+import https from 'https';
 
 class ChannelCleanupService {
   constructor() {
@@ -520,4 +520,4 @@ class ChannelCleanupService {
   }
 }
 
-module.exports = new ChannelCleanupService();
+export default new ChannelCleanupService();

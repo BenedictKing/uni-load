@@ -1,6 +1,7 @@
 {
   "name": "uni-load",
   "version": "1.0.0",
+  "type": "module",
   "description": "中间桥梁项目，连接 uni-api 和 gptload，实现第三方AI站点的自动配置",
   "main": "dist/server.js",
   "scripts": {

@@ -365,4 +365,4 @@ class ModelConfig {
 }
 
 // 导出单例实例
-module.exports = new ModelConfig();
+export default new ModelConfig();

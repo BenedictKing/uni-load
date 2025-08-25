@@ -1,6 +1,6 @@
-const fs = require("fs").promises;
-const path = require("path");
-const YAML = require("yaml");
+import { promises as fs } from "fs";
+import path from "path";
+import YAML from "yaml";
 
 class YamlManager {
   constructor() {
@@ -527,4 +527,4 @@ class YamlManager {
   }
 }
 
-module.exports = new YamlManager();
+export default new YamlManager();

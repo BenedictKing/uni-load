@@ -747,6 +747,37 @@
           </div>
         </div>
 
+        <!-- 临时分组清理面板 -->
+        <div class="sync-panel">
+          <h3>🧹 临时分组清理</h3>
+          <div class="sync-status" id="tempGroupsStatus">
+            <p>正在获取统计...</p>
+          </div>
+          <div class="sync-controls">
+            <button
+              type="button"
+              class="btn-refresh"
+              onclick="refreshTempGroupsStats()"
+            >
+              刷新统计
+            </button>
+            <button
+              type="button"
+              class="btn-warning"
+              onclick="cleanupAllTempGroups()"
+            >
+              清理所有临时分组
+            </button>
+            <button
+              type="button"
+              class="btn-secondary"
+              onclick="cleanupOldTempGroups()"
+            >
+              清理24小时前的分组
+            </button>
+          </div>
+        </div>
+
         <!-- 渠道健康监控面板 -->
         <div class="sync-panel">
           <h3>🩺 渠道健康监控</h3>
@@ -1098,6 +1129,9 @@
         // 初始化同步状态
         refreshSyncStatus();
 
+        // 初始化临时分组统计
+        refreshTempGroupsStats();
+
         // 初始化渠道健康状态
         refreshChannelHealthStatus();
 
@@ -1114,6 +1148,134 @@
         } catch (error) {
           document.getElementById("syncStatus").innerHTML =
             '<p style="color: #dc3545;">❌ 无法获取同步状态</p>';
+        }
+      }
+
+      // 临时分组清理相关函数
+      // 刷新临时分组统计
+      async function refreshTempGroupsStats() {
+        try {
+          const response = await fetch("/api/temp-groups/stats");
+          const data = await response.json();
+          
+          if (data.success) {
+            updateTempGroupsStatusDisplay(data.data);
+          } else {
+            document.getElementById("tempGroupsStatus").innerHTML =
+              '<p style="color: #dc3545;">❌ 获取统计失败: ' + (data.error || '未知错误') + '</p>';
+          }
+        } catch (error) {
+          document.getElementById("tempGroupsStatus").innerHTML =
+            '<p style="color: #dc3545;">❌ 无法获取临时分组统计</p>';
+        }
+      }
+
+      // 更新临时分组状态显示
+      function updateTempGroupsStatusDisplay(stats) {
+        const statusEl = document.getElementById("tempGroupsStatus");
+        
+        if (stats.totalTempGroups === 0) {
+          statusEl.innerHTML = '<p style="color: #28a745;">✅ 无临时分组需要清理</p>';
+          return;
+        }
+
+        let html = `
+          <p>发现 <strong>${stats.totalTempGroups}</strong> 个临时分组需要清理</p>
+          <div style="margin-top: 10px;">
+        `;
+
+        stats.instanceStats.forEach(instance => {
+          if (instance.tempGroups.length > 0) {
+            html += `
+              <div style="margin-bottom: 8px; padding: 8px; background: #f8f9fa; border-radius: 4px;">
+                <strong>${instance.instanceName}:</strong> ${instance.tempGroups.length} 个分组
+                <div style="font-size: 0.9em; margin-top: 4px;">
+            `;
+            
+            instance.tempGroups.forEach(group => {
+              const isDebug = group.name.startsWith('debug-models-');
+              const icon = isDebug ? '🛠️' : '🧪';
+              html += `<div>${icon} ${group.name} (ID: ${group.id})</div>`;
+            });
+            
+            html += '</div></div>';
+          }
+        });
+
+        html += '</div>';
+        statusEl.innerHTML = html;
+      }
+
+      // 清理所有临时分组
+      async function cleanupAllTempGroups() {
+        if (!confirm("您确定要清理所有临时分组吗？\n\n这将删除所有以 'temp-test-' 和 'debug-models-' 开头的分组。")) {
+          return;
+        }
+
+        const btn = event.target;
+        const originalText = btn.textContent;
+
+        try {
+          btn.disabled = true;
+          btn.textContent = "清理中...";
+
+          const response = await fetch("/api/temp-groups/cleanup", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            alert("✅ " + data.message);
+            setTimeout(refreshTempGroupsStats, 1000); // 1秒后刷新状态
+          } else {
+            throw new Error(data.error || "清理失败");
+          }
+        } catch (error) {
+          alert("❌ 清理失败: " + error.message);
+        } finally {
+          btn.disabled = false;
+          btn.textContent = originalText;
+        }
+      }
+
+      // 清理过期临时分组（24小时前创建的）
+      async function cleanupOldTempGroups() {
+        if (!confirm("您确定要清理24小时前创建的临时分组吗？\n\n这将删除创建时间超过24小时的临时分组。")) {
+          return;
+        }
+
+        const btn = event.target;
+        const originalText = btn.textContent;
+
+        try {
+          btn.disabled = true;
+          btn.textContent = "清理中...";
+
+          const response = await fetch("/api/temp-groups/cleanup-old", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ hoursOld: 24 })
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            alert("✅ " + data.message);
+            setTimeout(refreshTempGroupsStats, 1000); // 1秒后刷新状态
+          } else {
+            throw new Error(data.error || "清理失败");
+          }
+        } catch (error) {
+          alert("❌ 清理失败: " + error.message);
+        } finally {
+          btn.disabled = false;
+          btn.textContent = originalText;
         }
       }
 

@@ -1,6 +1,6 @@
-const gptloadService = require('./gptload');
-const modelsService = require('./models');
-const yamlManager = require('./yaml-manager');
+import gptloadService from './gptload';
+import modelsService from './models';
+import yamlManager from './yaml-manager';
 
 class ModelSyncService {
   constructor() {
@@ -368,4 +368,4 @@ class ModelSyncService {
   }
 }
 
-module.exports = new ModelSyncService();
+export default new ModelSyncService();

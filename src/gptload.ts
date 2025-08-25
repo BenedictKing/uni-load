@@ -1,6 +1,10 @@
-const multiGptloadManager = require("./multi-gptload");
+import MultiGptloadManager from "./multi-gptload";
+
+const multiGptloadManager = new MultiGptloadManager();
 
 class GptloadService {
+  public manager: any; // 暴露 manager 属性
+  
   constructor() {
     // 使用多实例管理器
     this.manager = multiGptloadManager;
@@ -951,6 +955,13 @@ class GptloadService {
   }
 
   /**
+   * 获取多实例管理器实例（用于临时分组清理等高级操作）
+   */
+  getMultiGPTLoadManager() {
+    return this.manager;
+  }
+
+  /**
    * 手动检查所有实例健康状态
    */
   async checkAllInstancesHealth() {
@@ -1112,4 +1123,4 @@ class GptloadService {
   }
 }
 
-module.exports = new GptloadService();
+export default new GptloadService();

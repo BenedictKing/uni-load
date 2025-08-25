@@ -8,13 +8,13 @@ import { ProcessAiSiteRequest, ApiResponse, CleanupOptions, ApiErrorResponse } f
 dotenv.config({ path: ".env.local" });
 dotenv.config({ path: ".env" });
 
-const gptloadService = require("./src/gptload");
-const modelsService = require("./src/models");
-const yamlManager = require("./src/yaml-manager");
-const modelSyncService = require("./src/model-sync");
-const channelHealthMonitor = require("./src/channel-health");
-const channelCleanupService = require("./src/channel-cleanup");
-const threeLayerArchitecture = require("./src/three-layer-architecture");
+import gptloadService from "./src/gptload";
+import modelsService from "./src/models";
+import yamlManager from "./src/yaml-manager";
+import modelSyncService from "./src/model-sync";
+import channelHealthMonitor from "./src/channel-health";
+import channelCleanupService from "./src/channel-cleanup";
+import threeLayerArchitecture from "./src/three-layer-architecture";
 
 const app = express();
 const PORT: number = parseInt(process.env.PORT || '3002', 10);
@@ -887,6 +887,71 @@ app.delete("/api/channels/:channelName", async (req, res) => {
   } catch (error) {
     console.error(`删除渠道时发生严重错误:`, error);
     res.status(500).json({ error: "服务器内部错误", details: error.message });
+  }
+});
+
+// 临时分组清理API
+// 获取临时分组统计
+app.get("/api/temp-groups/stats", async (req, res) => {
+  try {
+    const { TempGroupCleaner } = require('./src/temp-group-cleaner');
+    const cleaner = new TempGroupCleaner(gptloadService.getMultiGPTLoadManager());
+    
+    const stats = await cleaner.getTempGroupsStats();
+    
+    res.json({
+      success: true,
+      message: "临时分组统计完成",
+      data: stats
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      error: "获取临时分组统计失败", 
+      details: error.message 
+    });
+  }
+});
+
+// 清理所有临时分组
+app.post("/api/temp-groups/cleanup", async (req, res) => {
+  try {
+    const { TempGroupCleaner } = require('./src/temp-group-cleaner');
+    const cleaner = new TempGroupCleaner(gptloadService.getMultiGPTLoadManager());
+    
+    const results = await cleaner.cleanupAllTempGroups();
+    
+    res.json({
+      success: true,
+      message: `临时分组清理完成，共清理 ${results.totalCleaned} 个分组`,
+      data: results
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      error: "清理临时分组失败", 
+      details: error.message 
+    });
+  }
+});
+
+// 清理过期临时分组（默认24小时前创建的）
+app.post("/api/temp-groups/cleanup-old", async (req, res) => {
+  try {
+    const { hoursOld = 24 } = req.body;
+    const { TempGroupCleaner } = require('./src/temp-group-cleaner');
+    const cleaner = new TempGroupCleaner(gptloadService.getMultiGPTLoadManager());
+    
+    const results = await cleaner.cleanupOldTempGroups(hoursOld);
+    
+    res.json({
+      success: true,
+      message: `过期临时分组清理完成，共清理 ${results.totalCleaned} 个分组`,
+      data: results
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      error: "清理过期临时分组失败", 
+      details: error.message 
+    });
   }
 });
 

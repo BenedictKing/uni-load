@@ -12,8 +12,8 @@
  * 3. 快速故障隔离和智能恢复
  */
 
-const gptloadService = require("./gptload");
-const modelConfig = require("./model-config");
+import gptloadService from "./gptload";
+import modelConfig from "./model-config";
 
 class ThreeLayerArchitecture {
   constructor() {
@@ -1371,4 +1371,4 @@ process.on("SIGTERM", () => {
   threeLayerArchitecture.stop();
 });
 
-module.exports = threeLayerArchitecture;
+export default threeLayerArchitecture;

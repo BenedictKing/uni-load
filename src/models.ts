@@ -1,7 +1,7 @@
-const axios = require('axios');
-const https = require('https');
+import axios from 'axios';
+import https from 'https';
 
-const modelConfig = require("./model-config");
+import modelConfig from "./model-config";
 
 // 定义需要的类型
 type Model = string;
@@ -324,4 +324,4 @@ class ModelsService {
   }
 }
 
-module.exports = new ModelsService();
+export default new ModelsService();

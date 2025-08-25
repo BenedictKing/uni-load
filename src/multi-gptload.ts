@@ -1,8 +1,8 @@
-const axios = require("axios");
-const https = require("https");
-const modelConfig = require("./model-config");
+import axios from "axios";
+import https from "https";
+import modelConfig from "./model-config";
 
-class MultiGptloadManager {
+export class MultiGptloadManager {
   constructor() {
     this.instances = new Map(); // gptload实例配置
     this.healthStatus = new Map(); // 实例健康状态
@@ -13,15 +13,19 @@ class MultiGptloadManager {
       rejectUnauthorized: false, // 允许自签名证书和无效证书
     });
 
-    this.initializeInstances();
+    // 异步初始化实例
+    this.initializeInstances().catch(error => {
+      console.error("初始化实例失败:", error);
+      process.exit(1); // 如果配置文件不存在，强制退出
+    });
   }
 
   /**
    * 初始化gptload实例配置
    */
-  initializeInstances() {
+  async initializeInstances() {
     // 从环境变量读取配置
-    const instancesConfig = this.parseInstancesConfig();
+    const instancesConfig = await this.parseInstancesConfig();
 
     for (const config of instancesConfig) {
       this.addInstance(config);
@@ -40,9 +44,9 @@ class MultiGptloadManager {
   /**
    * 解析实例配置
    */
-  parseInstancesConfig() {
+  async parseInstancesConfig() {
     // 从 JSON 文件读取配置
-    const configs = this.parseInstancesFromJsonFile();
+    const configs = await this.parseInstancesFromJsonFile();
 
     // 强制要求使用 JSON 文件配置
     if (configs.length === 0) {
@@ -66,9 +70,9 @@ class MultiGptloadManager {
   /**
    * 从 JSON 文件解析实例配置
    */
-  parseInstancesFromJsonFile() {
-    const fs = require("fs");
-    const path = require("path");
+  async parseInstancesFromJsonFile() {
+    const fs = await import("fs");
+    const path = await import("path");
     const configs = [];
 
     // 支持的配置文件路径（按优先级）
@@ -294,7 +298,84 @@ class MultiGptloadManager {
   }
 
   /**
-   * 为站点找到最佳实例
+   * 验证现有渠道分组的模型可用性（用于启动时验证）
+   */
+  async validateExistingChannelModels() {
+    console.log("🔍 开始验证现有渠道分组的模型可用性...");
+    
+    const allGroups = await this.getAllGroups();
+    const channelGroups = allGroups.filter(group => group.sort === 20); // 渠道分组 sort=20
+    
+    if (channelGroups.length === 0) {
+      console.log("ℹ️ 未发现现有渠道分组");
+      return { validChannels: [], invalidChannels: [], availableModels: {} };
+    }
+    
+    console.log(`📋 发现 ${channelGroups.length} 个渠道分组，开始验证...`);
+    
+    const validChannels = [];
+    const invalidChannels = [];
+    const availableModels = {}; // 按渠道分组分类的可用模型
+    
+    for (const channel of channelGroups) {
+      const instance = this.instances.get(channel._instance?.id);
+      if (!instance || !this.healthStatus.get(instance.id)?.healthy) {
+        console.log(`⚠️ 渠道分组 ${channel.name} 所在实例不健康，跳过验证`);
+        invalidChannels.push({ ...channel, reason: 'instance_unhealthy' });
+        continue;
+      }
+      
+      try {
+        console.log(`🔄 验证渠道分组 ${channel.name}...`);
+        
+        // 通过代理获取模型列表来验证渠道可用性
+        const proxyUrl = `${instance.url}/proxy/${channel.name}/v1/models`;
+        const { default: axios } = await import('axios');
+        
+        const modelsResponse = await axios.get(proxyUrl, {
+          timeout: 15000,
+          httpsAgent: this.httpsAgent,
+          headers: {
+            'Authorization': `Bearer ${instance.token || 'dummy-token'}`,
+            'Content-Type': 'application/json',
+            'User-Agent': 'uni-load/1.0.0',
+          },
+          validateStatus: (status) => status < 500,
+        });
+        
+        if (modelsResponse.status === 200) {
+          const { default: modelsService } = await import("./models");
+          const models = modelsService.parseModelsResponse(modelsResponse.data);
+          
+          if (models && models.length > 0) {
+            validChannels.push(channel);
+            availableModels[channel.name] = models;
+            console.log(`✅ 渠道分组 ${channel.name} 验证成功，发现 ${models.length} 个模型`);
+          } else {
+            invalidChannels.push({ ...channel, reason: 'no_models' });
+            console.log(`⚠️ 渠道分组 ${channel.name} 返回空模型列表`);
+          }
+        } else {
+          invalidChannels.push({ ...channel, reason: `http_${modelsResponse.status}` });
+          console.log(`❌ 渠道分组 ${channel.name} 验证失败: HTTP ${modelsResponse.status}`);
+        }
+      } catch (error) {
+        invalidChannels.push({ ...channel, reason: error.message });
+        console.log(`❌ 渠道分组 ${channel.name} 验证出错: ${error.message}`);
+      }
+    }
+    
+    console.log(`🏁 渠道验证完成: 成功 ${validChannels.length} 个，失败 ${invalidChannels.length} 个`);
+    
+    return {
+      validChannels,
+      invalidChannels,
+      availableModels
+    };
+  }
+
+  /**
+   * 为站点找到最佳实例（优化版本，优先使用现有分组）
    */
   async findBestInstanceForSite(siteUrl, options) {
     // 获取健康的实例，按优先级排序
@@ -304,11 +385,8 @@ class MultiGptloadManager {
 
     if (healthyInstances.length === 0) {
       console.log("⚠️ 没有健康的 gptload 实例，执行健康检查...");
-
-      // 主动进行健康检查
       await this.checkAllInstancesHealth();
-
-      // 重新获取健康的实例
+      
       healthyInstances = Array.from(this.instances.values())
         .filter((instance) => this.healthStatus.get(instance.id)?.healthy)
         .sort((a, b) => a.priority - b.priority);
@@ -321,9 +399,27 @@ class MultiGptloadManager {
       console.log(`✅ 健康检查后发现 ${healthyInstances.length} 个健康实例`);
     }
 
-    console.log(`🔍 开始依次测试 ${healthyInstances.length} 个健康实例对 ${siteUrl} 的访问能力...`);
+    console.log(`🔍 为站点 ${siteUrl} 寻找最佳实例...`);
 
-    // 依次测试每个实例是否能访问该站点
+    // 首先检查是否已有该站点的渠道分组
+    const existingChannels = await this.findExistingChannelGroupsForSite(siteUrl);
+    
+    if (existingChannels.length > 0) {
+      console.log(`✅ 发现 ${existingChannels.length} 个现有渠道分组，直接使用`);
+      
+      // 选择第一个健康的实例上的渠道分组
+      for (const channel of existingChannels) {
+        const instance = this.instances.get(channel._instance?.id);
+        if (instance && this.healthStatus.get(instance.id)?.healthy) {
+          console.log(`🎯 选择实例 ${instance.name}，已有渠道分组 ${channel.name}`);
+          return instance;
+        }
+      }
+    }
+
+    // 如果没有现有渠道分组，才创建临时分组验证
+    console.log(`ℹ️ 未找到现有渠道分组，进行连通性验证...`);
+    
     for (let i = 0; i < healthyInstances.length; i++) {
       const instance = healthyInstances[i];
       
@@ -337,29 +433,49 @@ class MultiGptloadManager {
         );
 
         if (canAccess) {
-          console.log(`✅ 实例 ${instance.name} 可以访问 ${siteUrl}，选择此实例`);
+          console.log(`✅ 实例 ${instance.name} 可以访问 ${siteUrl}`);
           return instance;
         } else {
           console.log(`❌ 实例 ${instance.name} 无法访问 ${siteUrl}`);
-          
-          // 如果不是最后一个实例，继续测试下一个
-          if (i < healthyInstances.length - 1) {
-            console.log(`🔄 继续测试下一个实例...`);
-          }
         }
       } catch (error) {
         console.error(`❌ 测试实例 ${instance.name} 时发生错误: ${error.message}`);
-        
-        // 如果不是最后一个实例，继续测试下一个
-        if (i < healthyInstances.length - 1) {
-          console.log(`🔄 跳过出错的实例，继续测试下一个...`);
-        }
       }
     }
 
-    // 所有实例都测试失败，返回null而不是回退实例
-    console.log(`❌ 所有 ${healthyInstances.length} 个实例都无法访问 ${siteUrl}`);
+    console.log(`❌ 所有实例都无法访问 ${siteUrl}`);
     return null;
+  }
+
+  /**
+   * 根据站点URL查找现有的渠道分组
+   */
+  async findExistingChannelGroupsForSite(siteUrl) {
+    try {
+      const allGroups = await this.getAllGroups();
+      const channelGroups = allGroups.filter(group => group.sort === 20); // 渠道分组 sort=20
+      
+      // 匹配包含相同域名的渠道分组
+      const matchingChannels = channelGroups.filter(group => {
+        if (!group.upstreams || group.upstreams.length === 0) {
+          return false;
+        }
+        
+        try {
+          const upstreamUrl = group.upstreams[0].url;
+          const siteHost = new URL(siteUrl).host;
+          const upstreamHost = new URL(upstreamUrl).host;
+          return siteHost === upstreamHost;
+        } catch (error) {
+          return false;
+        }
+      });
+      
+      return matchingChannels;
+    } catch (error) {
+      console.error(`查找现有渠道分组失败: ${error.message}`);
+      return [];
+    }
   }
 
   /**
@@ -667,7 +783,7 @@ class MultiGptloadManager {
         console.log(`🔗 通过代理获取模型: ${proxyUrl}`);
         
         // 使用 axios 直接请求完整URL
-        const axios = require('axios');
+        const { default: axios } = await import('axios');
         
         // 先验证代理端点是否可访问
         try {
@@ -702,7 +818,7 @@ class MultiGptloadManager {
         console.log(`📡 响应数据: ${JSON.stringify(modelsResponse.data).substring(0, 500)}...`);
         
         // 4. 解析模型数据
-        const modelsService = require("./models");
+        const { default: modelsService } = await import("./models");
         const models = modelsService.parseModelsResponse(modelsResponse.data);
         
         if (models && models.length > 0) {
@@ -790,28 +906,28 @@ class MultiGptloadManager {
         continue; // 明确使用continue而不是break
         
       } finally {
-        // 修改策略：保留所有调试分组，方便手动测试和调试
-        if (tempGroupId && tempGroupName) {
-          console.log(`🛠️ 保留调试分组 ${tempGroupName} (ID: ${tempGroupId}) 用于手动测试`);
+        // 智能清理策略：失败的临时分组立即清理，成功的保留用于调试
+        if (tempGroupId && tempGroupId !== debugTempGroupId) {
+          try {
+            await instance.apiClient.delete(`/groups/${tempGroupId}`);
+            console.log(`🗑️ 已清理失败的临时分组: ${tempGroupId}`);
+          } catch (cleanupError) {
+            console.warn(`⚠️ 清理临时分组失败: ${cleanupError.message}`);
+            console.log(`🛠️ 分组 ${tempGroupName} (ID: ${tempGroupId}) 清理失败，需手动清理`);
+            console.log(`   管理链接: ${instance.url}/groups/${tempGroupId}`);
+          }
+        }
+        
+        // 对于成功的调试分组，提供手动测试信息
+        if (tempGroupId === debugTempGroupId && tempGroupName) {
+          console.log(`🛠️ 保留成功的调试分组 ${tempGroupName} (ID: ${tempGroupId}) 用于调试`);
           console.log(`🔗 可以通过以下方式手动测试:`);
           console.log(`   1. 代理URL: ${instance.url}/proxy/${tempGroupName}/v1/models`);
           console.log(`   2. 使用gptload token: ${instance.token ? `${instance.token.substring(0, 10)}...` : '❌ 需配置token'}`);
           console.log(`   3. 目标站点: ${baseUrl}`);
           console.log(`   4. 分组管理: ${instance.url}/groups/${tempGroupId}`);
-          console.log(`💡 如需清理，可手动删除或重启gptload服务`);
+          console.log(`💡 调试完成后建议手动删除此分组`);
         }
-        
-        // 注释掉自动清理代码，保留所有调试分组
-        /*
-        if (tempGroupId && tempGroupId !== debugTempGroupId) {
-          try {
-            await instance.apiClient.delete(`/groups/${tempGroupId}`);
-            console.log(`🗑️ 已清理临时分组: ${tempGroupId}`);
-          } catch (cleanupError) {
-            console.warn(`⚠️ 清理临时分组失败: ${cleanupError.message}`);
-          }
-        }
-        */
       }
     }
     
@@ -971,7 +1087,7 @@ class MultiGptloadManager {
           sort: 20, // 渠道分组的排序号为20
           param_overrides: {},
           config: {
-            blacklist_threshold: require('./three-layer-architecture').layerConfigs.siteGroup.blacklist_threshold,
+            blacklist_threshold: 3, // require('./three-layer-architecture').layerConfigs.siteGroup.blacklist_threshold,
           },
         };
 
@@ -1160,7 +1276,7 @@ class MultiGptloadManager {
         sort: 20, // 渠道分组的排序号为20
         param_overrides: {},
         config: {
-          blacklist_threshold: require('./three-layer-architecture').layerConfigs.siteGroup.blacklist_threshold,
+          blacklist_threshold: 3, // require('./three-layer-architecture').layerConfigs.siteGroup.blacklist_threshold,
         },
       };
 
@@ -1808,4 +1924,4 @@ class MultiGptloadManager {
   }
 }
 
-module.exports = new MultiGptloadManager();
+export default MultiGptloadManager;

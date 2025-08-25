@@ -12,7 +12,7 @@
  * - GET /keys - 获取API密钥进行直接测试
  */
 
-const gptloadService = require("./gptload");
+import gptloadService from "./gptload";
 const fs = require("fs").promises;
 const path = require("path");
 const modelConfig = require("./model-config");
@@ -324,7 +324,6 @@ class ChannelHealthMonitor {
    * 使用 gptload 的 validate-group 接口验证分组健康状况
    */
   async validateGroupHealth(siteGroup) {
-    const gptloadService = require("./gptload");
     const instance = gptloadService.manager.getInstance(siteGroup._instance.id);
 
     if (!instance) {
@@ -1004,4 +1003,4 @@ class ChannelHealthMonitor {
   }
 }
 
-module.exports = new ChannelHealthMonitor();
+export default new ChannelHealthMonitor();
