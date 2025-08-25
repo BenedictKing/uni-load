@@ -15,10 +15,16 @@
 import gptloadService from './gptload'
 import modelConfig from './model-config'
 import modelsService from './models'
-import yamlManager from './yaml-manager'
+import { getService } from './services/service-factory'
+import { IYamlManager } from './interfaces'
 import { layerConfigs } from './layer-configs'
 
 class ThreeLayerArchitecture {
+  layerConfigs: any
+  recoverySchedule: Map<string, any>
+  failureHistory: Map<string, any>
+  weightCache: Map<string, any>
+
   constructor() {
     // 使用外部配置
     this.layerConfigs = layerConfigs
@@ -97,6 +103,7 @@ class ThreeLayerArchitecture {
       console.log('🔧 更新uni-api配置...')
       try {
         const finalAggregateGroups = [...existingAggregateGroups, ...createdAggregateGroups]
+        const yamlManager = getService<IYamlManager>('yamlManager')
         await yamlManager.updateUniApiConfig(finalAggregateGroups)
         console.log(`✅ 已将 ${finalAggregateGroups.length} 个聚合分组同步到uni-api配置`)
       } catch (error) {
@@ -247,7 +254,7 @@ class ThreeLayerArchitecture {
           })
         } else {
           // 检查是否需要更新上游
-          const expectedUpstream = `${site._instance?.url || process.env.GPTLOAD_URL}/proxy/${site.name}`
+          const expectedUpstream = `${site._instance?.url || process.env.GPTLOAD_URL || 'http://localhost:3001'}/proxy/${site.name}`
           const hasCorrectUpstream = existingGroup.upstreams?.some((u) => u.url === expectedUpstream)
 
           if (!hasCorrectUpstream) {
@@ -277,7 +284,7 @@ class ThreeLayerArchitecture {
         // 检查聚合分组的上游是否完整
         const expectedUpstreams = supportingSites.map(
           (site) =>
-            `${site._instance?.url || process.env.GPTLOAD_URL}/proxy/${(modelConfig.constructor as any).generateModelChannelGroupName(
+            `${site._instance?.url || process.env.GPTLOAD_URL || 'http://localhost:3001'}/proxy/${(modelConfig.constructor as any).generateModelChannelGroupName(
               model,
               site.name
             )}`
@@ -416,7 +423,7 @@ class ThreeLayerArchitecture {
         description: `${model} 模型通过 ${site.name} 渠道的专用分组`,
         upstreams: [
           {
-            url: `${site._instance?.url || process.env.GPTLOAD_URL || 'http://localhost:3001'}/proxy/${site.name}`,
+            url: `${instance.url}/proxy/${site.name}`,
             weight: 1,
           },
         ],
@@ -427,6 +434,7 @@ class ThreeLayerArchitecture {
         param_overrides: {},
         config: {
           blacklist_threshold: this.layerConfigs.modelChannelGroup.blacklist_threshold,
+          key_validation_interval_minutes: this.layerConfigs.modelChannelGroup.key_validation_interval_minutes,
         },
         tags: ['layer-2', 'model-channel', model, site.name],
       }
@@ -605,7 +613,7 @@ class ThreeLayerArchitecture {
             description: `${model} 模型通过 ${site.name} 渠道的专用分组`,
             upstreams: [
               {
-                url: `${site._instance?.url || process.env.GPTLOAD_URL || 'http://localhost:3001'}/proxy/${site.name}`,
+                url: `${instance.url}/proxy/${site.name}`,
                 weight: 1,
               },
             ],
@@ -1236,7 +1244,7 @@ class ThreeLayerArchitecture {
    * 创建单个聚合分组（从原 createAggregateGroupForModel 方法提取优化）
    */
   async createSingleAggregateGroup(model, channelGroups, config) {
-    const groupName = modelConfig.generateSafeGroupName(model)
+    const groupName = (modelConfig.constructor as any).generateSafeGroupName(model)
 
     try {
       // 🔧 添加渠道分组验证

@@ -292,9 +292,74 @@ export class MultiGptloadManager {
       throw new Error('没有健康的实例可用于创建站点分组')
     }
 
-    // 这里应该包含创建站点分组的具体逻辑
-    // 暂时抛出错误，表示需要具体实现
-    throw new Error('createSiteGroup 方法需要具体实现')
+    // 构建分组数据
+    const groupData: any = {
+      name: siteName,
+      display_name: `${siteName} 渠道`,
+      description: `${siteName} 通过 ${channelType} 格式提供API服务`,
+      upstreams: [
+        {
+          url: baseUrl,
+          weight: 1,
+        },
+      ],
+      channel_type: channelType,
+      validation_endpoint: customValidationEndpoints[channelType] || this.getChannelConfig(channelType).validation_endpoint,
+      sort: isModelGroup ? 10 : 20, // 模型分组为10，站点分组为20
+      param_overrides: {},
+      config: {
+        blacklist_threshold: 3,
+        key_validation_interval_minutes: 30,
+      },
+    }
+
+    // 如果有可用模型列表，设置测试模型
+    if (availableModels && availableModels.length > 0) {
+      groupData.test_model = availableModels[0]
+    }
+
+    // 设置tags
+    if (isModelGroup) {
+      groupData.tags = ['layer-3', 'aggregate']
+      if (availableModels && availableModels.length > 0) {
+        groupData.tags.push(availableModels[0])
+      }
+    } else {
+      groupData.tags = ['layer-1', 'site', channelType]
+    }
+
+    try {
+      // 调用API创建分组
+      const response = await bestInstance.apiClient.post('/groups', groupData)
+
+      // 处理响应
+      let created
+      if (response.data && typeof response.data.code === 'number') {
+        if (response.data.code === 0) {
+          created = response.data.data
+        } else {
+          throw new Error(`创建失败: ${response.data.message}`)
+        }
+      } else {
+        created = response.data
+      }
+
+      // 添加实例信息
+      created._instance = {
+        id: bestInstance.id,
+        name: bestInstance.name,
+        url: bestInstance.url,
+      }
+
+      // 如果有API密钥，添加到分组
+      if (apiKeys && apiKeys.length > 0) {
+        await this.addApiKeysToGroup(bestInstance, created.id, apiKeys)
+      }
+
+      return created
+    } catch (error) {
+      throw new Error(`创建站点分组失败: ${error.message}`)
+    }
   }
 
   /**
