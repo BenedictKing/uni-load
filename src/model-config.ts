@@ -197,7 +197,7 @@ class ModelConfig {
    * @param {string[]} models 模型列表
    * @return {string[]} 过滤后的模型列表
    */
-  filterModels(models) {
+  filterModels(models: string[]): string[] {
     return models.filter((model) => {
       // 黑名单检查：如果模型名称包含任何黑名单关键词，则过滤掉
       if (this.isModelBlacklisted(model)) {

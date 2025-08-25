@@ -269,9 +269,10 @@ class ModelsService implements IModelsService {
   /**
    * 过滤和清理模型名称
    */
-  filterModels(models: Model[]): string[] {
+  filterModels(models: any[]): string[] {
     // 使用统一的模型配置进行过滤
-    const filtered = modelConfig.filterModels(models)
+    const stringModels = models.filter((m): m is string => typeof m === 'string')
+    const filtered = modelConfig.filterModels(stringModels)
 
     // 去重并排序
     const uniqueModels = [...new Set(filtered)]

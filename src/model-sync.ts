@@ -3,9 +3,13 @@ import modelsService from './models'
 import yamlManager from './yaml-manager'
 
 class ModelSyncService {
+  private syncInterval: NodeJS.Timeout | null
+  private syncIntervalMinutes: number
+  private isRunning: boolean
+
   constructor() {
     this.syncInterval = null
-    this.syncIntervalMinutes = process.env.MODEL_SYNC_INTERVAL || 60 // 默认60分钟
+    this.syncIntervalMinutes = parseInt(process.env.MODEL_SYNC_INTERVAL, 10) || 60 // 默认60分钟
     this.isRunning = false
   }
 
@@ -24,12 +28,9 @@ class ModelSyncService {
     this.syncAllModels()
 
     // 设置定时任务
-    this.syncInterval = setInterval(
-      () => {
-        this.syncAllModels()
-      },
-      this.syncIntervalMinutes * 60 * 1000
-    )
+    this.syncInterval = setInterval(() => {
+      this.syncAllModels()
+    }, this.syncIntervalMinutes * 60 * 1000)
   }
 
   /**
