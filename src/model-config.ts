@@ -98,6 +98,7 @@ class ModelConfig {
       'generation',
       'sora',
       'realtime',
+      'transcribe',
     ]
 
     // 高消耗模型模式 - 这些模型不能在分组中自动验证

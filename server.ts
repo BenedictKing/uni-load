@@ -16,7 +16,12 @@ import channelHealthMonitor from './src/channel-health'
 import channelCleanupService from './src/channel-cleanup'
 import threeLayerArchitecture from './src/three-layer-architecture'
 import siteConfigurationService from './src/services/site-configuration'
-import { initializeServices, validateServiceRegistration, cleanupServices, getService } from './src/services/service-factory'
+import {
+  initializeServices,
+  validateServiceRegistration,
+  cleanupServices,
+  getService,
+} from './src/services/service-factory'
 
 const app = express()
 const PORT: number = parseInt(process.env.PORT || '3002', 10)
@@ -113,7 +118,7 @@ app.post(
       if (manualModels && Array.isArray(manualModels) && manualModels.length > 0) {
         console.log(`🎯 使用手动指定的模型列表 (${manualModels.length} 个模型)`)
         allModels = manualModels
-        console.log('手动模型列表:', manualModels.map((m) => m.id || m).join(', '))
+        console.log('手动模型列表:', manualModels.join(', '))
       } else if (hasNewApiKeys) {
         // 有新密钥且未提供手动模型，尝试使用多实例获取模型
         console.log('获取模型列表...')
@@ -146,7 +151,7 @@ app.post(
         if (manualModels && Array.isArray(manualModels) && manualModels.length > 0) {
           console.log(`🎯 使用手动指定的模型列表 (${manualModels.length} 个模型)`)
           allModels = manualModels
-          console.log('手动模型列表:', manualModels.map((m) => m.id || m).join(', '))
+          console.log('手动模型列表:', manualModels.join(', '))
         } else {
           // 没有新密钥也没有手动模型，需要从现有渠道分组中获取密钥来获取模型
           console.log('尝试从现有渠道配置中获取API密钥...')

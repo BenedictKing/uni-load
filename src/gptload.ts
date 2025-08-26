@@ -242,20 +242,20 @@ class GptloadService {
   }
 
   /**
-   * 删除所有模型分组 (sort=10)
+   * 删除所有模型分组 (sort=10,15)
    */
   async deleteAllModelGroups() {
-    console.log('🚨 开始删除所有 sort=10 的模型分组...')
+    console.log('🚨 开始删除所有 sort=10 和 sort=15 的模型分组...')
 
     const allGroups = await this.getAllGroups()
-    const modelGroupsToDelete = allGroups.filter((group) => group.sort === 10)
+    const modelGroupsToDelete = allGroups.filter((group) => group.sort === 10 || group.sort === 15)
 
     if (modelGroupsToDelete.length === 0) {
       console.log('✅ 没有找到需要删除的模型分组')
       return {
         deleted: [],
         failed: [],
-        message: '没有找到 sort=10 的模型分组',
+        message: '没有找到 sort=10,15 的模型分组',
       }
     }
 

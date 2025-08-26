@@ -391,23 +391,30 @@ export class MultiGptloadManager {
       console.error(`  - 分组名称: ${groupData.name}`)
       console.error(`  - 错误状态码: ${error.response?.status}`)
       console.error(`  - 错误消息: ${error.message}`)
-      
+
       if (error.response?.data) {
         console.error(`  - 服务器响应:`, JSON.stringify(error.response.data, null, 2))
       }
-      
+
       if (error.response?.headers) {
         console.error(`  - 响应头:`, error.response.headers)
       }
-      
+
       if (error.config) {
         console.error(`  - 请求URL: ${error.config.method?.toUpperCase()} ${error.config.url}`)
         if (error.config.data) {
-          console.error(`  - 请求体:`, typeof error.config.data === 'string' ? error.config.data : JSON.stringify(JSON.parse(error.config.data), null, 2))
+          console.error(
+            `  - 请求体:`,
+            typeof error.config.data === 'string'
+              ? error.config.data
+              : JSON.stringify(JSON.parse(error.config.data), null, 2)
+          )
         }
       }
-      
-      throw new Error(`创建站点分组失败: ${error.response?.data?.message || error.response?.statusText || error.message}`)
+
+      throw new Error(
+        `创建站点分组失败: ${error.response?.data?.message || error.response?.statusText || error.message}`
+      )
     }
   }
 
@@ -436,9 +443,9 @@ export class MultiGptloadManager {
    */
   selectTestModel(availableModels: string[] | null, channelType: string): string {
     const defaultModels = {
-      openai: 'gpt-3.5-turbo',
-      anthropic: 'claude-3-haiku-20240307',
-      gemini: 'gemini-pro',
+      openai: 'gpt-4o-mini',
+      anthropic: 'claude-3-5-haiku-20241022',
+      gemini: 'gemini-2.5-flash',
     }
 
     if (availableModels && availableModels.length > 0) {
@@ -453,12 +460,9 @@ export class MultiGptloadManager {
    */
   async addApiKeysToGroup(instance: any, groupId: string, apiKeys: string[]): Promise<any> {
     try {
-      const response = await instance.apiClient.post('/keys', {
+      const response = await instance.apiClient.post('/keys/add-multiple', {
         group_id: groupId,
-        keys: apiKeys.map((key) => ({
-          key_value: key,
-          status: 'active',
-        })),
+        keys_text: apiKeys.join('\n'),
       })
 
       return response.data
@@ -486,27 +490,13 @@ export class MultiGptloadManager {
    */
   async deleteAllApiKeysFromGroup(instance: any, groupId: string): Promise<any> {
     try {
-      // 先获取分组的所有密钥
-      const response = await instance.apiClient.get('/keys', {
-        params: { group_id: groupId },
+      // 直接调用 /keys/clear-all 端点
+      const response = await instance.apiClient.post('/keys/clear-all', {
+        group_id: groupId,
       })
 
-      if (response.data && response.data.data && response.data.data.items) {
-        const keys = response.data.data.items
-
-        // 删除每个密钥
-        for (const keyItem of keys) {
-          try {
-            await instance.apiClient.delete(`/keys/${keyItem.id}`)
-          } catch (error) {
-            console.warn(`删除密钥 ${keyItem.id} 失败: ${error.message}`)
-          }
-        }
-
-        return { deleted: keys.length }
-      }
-
-      return { deleted: 0 }
+      console.log(`✅ 已通过 /keys/clear-all 清理分组 ${groupId} 的所有密钥`)
+      return response.data
     } catch (error) {
       console.error(`删除分组 ${groupId} 的所有密钥失败: ${error.message}`)
       throw error
@@ -516,33 +506,25 @@ export class MultiGptloadManager {
   /**
    * 切换分组API密钥状态
    */
-  async toggleApiKeysStatusForGroup(instance: any, groupId: string, status: string): Promise<any> {
+  async toggleApiKeysStatusForGroup(instance: any, groupId: string, status: 'active' | 'disabled'): Promise<any> {
     try {
-      // 先获取分组的所有密钥
-      const response = await instance.apiClient.get('/keys', {
-        params: { group_id: groupId },
-      })
-
-      if (response.data && response.data.data && response.data.data.items) {
-        const keys = response.data.data.items
-
-        // 更新每个密钥的状态
-        for (const keyItem of keys) {
-          try {
-            await instance.apiClient.put(`/keys/${keyItem.id}`, {
-              status: status,
-            })
-          } catch (error) {
-            console.warn(`更新密钥 ${keyItem.id} 状态失败: ${error.message}`)
-          }
-        }
-
-        return { updated: keys.length }
+      if (status === 'active') {
+        // 调用 restore-all-invalid 来恢复所有无效密钥
+        console.log(`🔄 正在恢复分组 ${groupId} 的所有无效密钥...`)
+        const response = await instance.apiClient.post('/keys/restore-all-invalid', {
+          group_id: groupId,
+        })
+        return response.data
+      } else if (status === 'disabled') {
+        // 调用 validate-group 来触发验证，从而"禁用"无效的密钥
+        console.log(`🔍 正在验证分组 ${groupId} 以禁用无效密钥...`)
+        const response = await instance.apiClient.post('/keys/validate-group', {
+          group_id: groupId,
+        })
+        return response.data
       }
-
-      return { updated: 0 }
     } catch (error) {
-      console.error(`切换分组 ${groupId} 密钥状态失败: ${error.message}`)
+      console.error(`切换分组 ${groupId} 密钥状态为 "${status}" 失败: ${error.message}`)
       throw error
     }
   }
