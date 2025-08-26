@@ -83,11 +83,14 @@ class ChannelHealthMonitor {
     console.log(`🩺 开始渠道健康检查 - ${new Date().toISOString()}`)
 
     try {
+      // 修改点：在此处获取一次分组信息
+      const allGroups = await gptloadService.getAllGroups();
+
       // 方法1: 通过API检查渠道状态
-      await this.checkChannelsByAPI()
+      await this.checkChannelsByAPI(allGroups)
 
       // 方法2: 通过日志API分析渠道健康状况
-      await this.checkChannelsByLogs()
+      await this.checkChannelsByLogs(allGroups)
 
       const duration = (Date.now() - startTime) / 1000
       console.log(`🏁 渠道健康检查完成，耗时 ${duration.toFixed(2)}s`)
@@ -103,9 +106,8 @@ class ChannelHealthMonitor {
    *
    * 优化：充分利用 gptload 的统计 API，减少不必要的验证
    */
-  async checkChannelsByAPI() {
+  async checkChannelsByAPI(allGroups) {
     try {
-      const allGroups = await gptloadService.getAllGroups()
       const siteGroups = this.filterSiteGroups(allGroups)
 
       console.log(`📊 检查 ${siteGroups.length} 个站点分组的健康状态`)
@@ -673,11 +675,10 @@ class ChannelHealthMonitor {
   /**
    * 通过 gptload 日志 API 分析渠道健康状况
    */
-  async checkChannelsByLogs() {
+  async checkChannelsByLogs(allGroups) {
     try {
       console.log('📊 开始通过日志 API 分析渠道健康状况')
 
-      const allGroups = await gptloadService.getAllGroups()
       const siteGroups = this.filterSiteGroups(allGroups)
 
       for (const siteGroup of siteGroups) {
