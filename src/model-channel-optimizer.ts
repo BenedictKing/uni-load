@@ -106,8 +106,7 @@ class ModelChannelOptimizer {
         // 跳过站点分组（sort=20）
         if (group.sort === 20) continue
 
-        // 从分组名称推断支持的模型
-        const models: string[] = this.extractModelsFromGroup(group)
+        const models = this.extractModelsFromGroup(group)
 
         for (const model of models) {
           if (!this.modelGroupMapping.has(model)) {
