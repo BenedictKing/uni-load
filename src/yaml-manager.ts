@@ -199,7 +199,7 @@ class YamlManager implements IYamlManager {
     try {
       // 优先使用本地实例的token
       const localInstance = Object.values(multiInstanceStatus.instances).find(
-        (instance) => instance.name && instance.name.includes('本地')
+        (instance: any) => instance.name && instance.name.includes('本地')
       )
 
       if (localInstance && this.multiGptloadManager) {
@@ -213,7 +213,7 @@ class YamlManager implements IYamlManager {
       // 如果本地实例没有token，使用第一个有token的健康实例
       if (this.multiGptloadManager) {
         for (const [instanceId, status] of Object.entries(multiInstanceStatus.instances)) {
-          if (status.healthy) {
+          if ((status as any).healthy) {
             const instance = this.multiGptloadManager.getInstance(instanceId)
             if (instance && instance.token) {
               console.log(`✅ 使用实例 ${instance.name} 的token`)
@@ -299,7 +299,7 @@ class YamlManager implements IYamlManager {
     const existingProviderIndex = config.providers.findIndex((provider) => provider.provider === providerName)
 
     // 构建 provider 配置
-    const providerConfig = {
+    const providerConfig: any = {
       provider: providerName,
       base_url: `${this.gptloadUrl}/proxy/${modelNameForUrl}${apiPath}`,
       api: gptloadToken, // 使用gpt-load的访问token

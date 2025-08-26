@@ -12,6 +12,7 @@
 
 const gptloadService = require('./gptload')
 const modelConfig = require('./model-config')
+import { IntelligentHealthCheckResult } from './types'
 
 class ModelChannelOptimizer {
   private modelGroupMapping: Map<string, any[]>
@@ -884,7 +885,7 @@ class ModelChannelOptimizer {
    *
    * 根据统计数据智能决定是否需要进行实际验证
    */
-  async intelligentHealthCheck(model) {
+  async intelligentHealthCheck(model): Promise<IntelligentHealthCheckResult> {
     console.log(`🧠 对模型 ${model} 进行智能健康检查...`)
 
     const groups = this.modelGroupMapping.get(model) || []
@@ -1537,18 +1538,20 @@ class ModelChannelOptimizer {
 
         const healthReport = await this.intelligentHealthCheck(model)
 
-        if (healthReport.overall_status === 'healthy') {
-          healthyModels++
-        } else if (healthReport.overall_status === 'critical') {
-          problematicModels.push({
-            model,
-            status: healthReport.overall_status,
-            criticalGroups: healthReport.summary.critical,
-          })
+        if ('overall_status' in healthReport) {
+          if (healthReport.overall_status === 'healthy') {
+            healthyModels++
+          } else if (healthReport.overall_status === 'critical') {
+            problematicModels.push({
+              model,
+              status: healthReport.overall_status,
+              criticalGroups: healthReport.summary.critical,
+            })
 
-          // 对有问题的模型立即进行优化
-          const groups = this.modelGroupMapping.get(model) || []
-          await this.optimizeModelGroups(model, groups)
+            // 对有问题的模型立即进行优化
+            const groups = this.modelGroupMapping.get(model) || []
+            await this.optimizeModelGroups(model, groups)
+          }
         }
       }
 

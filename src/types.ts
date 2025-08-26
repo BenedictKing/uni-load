@@ -202,3 +202,38 @@ export interface ProcessResult {
     cleanupResult?: any
   }
 }
+
+// 为健康报告中的分组详情创建一个类型
+export interface ModelHealthGroupDetail {
+  groupId: string
+  groupName: string
+  score: number
+  explanation: any
+  stats: any
+  needsAttention: boolean
+  recommendedAction: string
+}
+
+// 完整的健康报告类型
+export interface ModelHealthReport {
+  model: string
+  overall_status: 'healthy' | 'degraded' | 'critical' | 'warning'
+  groups: ModelHealthGroupDetail[]
+  summary: {
+    total: number
+    healthy: number
+    degraded: number
+    critical: number
+  }
+  needs_validation: boolean
+  timestamp: number
+}
+
+// 当找不到分组时的错误类型
+export interface ModelHealthError {
+  status: 'no_groups'
+  message: string
+}
+
+// 创建一个联合类型，代表所有可能的返回结果
+export type IntelligentHealthCheckResult = ModelHealthReport | ModelHealthError

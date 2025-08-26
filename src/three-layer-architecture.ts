@@ -24,6 +24,9 @@ class ThreeLayerArchitecture {
   recoverySchedule: Map<string, any>
   failureHistory: Map<string, any>
   weightCache: Map<string, any>
+  weightOptimizationTimer: any
+  emergencyOptimizationTimer: any
+  isRunning: boolean
 
   constructor() {
     // 使用外部配置
@@ -254,7 +257,9 @@ class ThreeLayerArchitecture {
           })
         } else {
           // 检查是否需要更新上游
-          const expectedUpstream = `${site._instance?.url || process.env.GPTLOAD_URL || 'http://localhost:3001'}/proxy/${site.name}`
+          const expectedUpstream = `${
+            site._instance?.url || process.env.GPTLOAD_URL || 'http://localhost:3001'
+          }/proxy/${site.name}`
           const hasCorrectUpstream = existingGroup.upstreams?.some((u) => u.url === expectedUpstream)
 
           if (!hasCorrectUpstream) {
@@ -284,10 +289,9 @@ class ThreeLayerArchitecture {
         // 检查聚合分组的上游是否完整
         const expectedUpstreams = supportingSites.map(
           (site) =>
-            `${site._instance?.url || process.env.GPTLOAD_URL || 'http://localhost:3001'}/proxy/${(modelConfig.constructor as any).generateModelChannelGroupName(
-              model,
-              site.name
-            )}`
+            `${site._instance?.url || process.env.GPTLOAD_URL || 'http://localhost:3001'}/proxy/${(
+              modelConfig.constructor as any
+            ).generateModelChannelGroupName(model, site.name)}`
         )
 
         const needsUpdate = expectedUpstreams.some(
@@ -410,6 +414,7 @@ class ThreeLayerArchitecture {
    * 创建单个模型-渠道分组
    */
   async createSingleModelChannelGroup(model, site, groupName) {
+    let groupData
     try {
       const instance = await gptloadService.manager.selectBestInstance(site.upstreams[0]?.url || '')
 
@@ -417,7 +422,7 @@ class ThreeLayerArchitecture {
         throw new Error('没有可用的 gptload 实例')
       }
 
-      const groupData = {
+      groupData = {
         name: groupName,
         display_name: `${model} @ ${site.name}`,
         description: `${model} 模型通过 ${site.name} 渠道的专用分组`,
@@ -446,7 +451,7 @@ class ThreeLayerArchitecture {
         validation_endpoint: groupData.validation_endpoint,
         test_model: groupData.test_model,
         upstreams: groupData.upstreams,
-        sort: groupData.sort
+        sort: groupData.sort,
       })
 
       const response = await instance.apiClient.post('/groups', groupData)
@@ -479,23 +484,30 @@ class ThreeLayerArchitecture {
       console.error(`  - 分组名称: ${groupData?.name}`)
       console.error(`  - 错误状态码: ${error.response?.status}`)
       console.error(`  - 错误消息: ${error.message}`)
-      
+
       if (error.response?.data) {
         console.error(`  - 服务器响应:`, JSON.stringify(error.response.data, null, 2))
       }
-      
+
       if (error.response?.headers) {
         console.error(`  - 响应头:`, error.response.headers)
       }
-      
+
       if (error.config) {
         console.error(`  - 请求URL: ${error.config.method?.toUpperCase()} ${error.config.url}`)
         if (error.config.data) {
-          console.error(`  - 请求体:`, typeof error.config.data === 'string' ? error.config.data : JSON.stringify(JSON.parse(error.config.data), null, 2))
+          console.error(
+            `  - 请求体:`,
+            typeof error.config.data === 'string'
+              ? error.config.data
+              : JSON.stringify(JSON.parse(error.config.data), null, 2)
+          )
         }
       }
-      
-      throw new Error(`创建模型-渠道分组失败: ${error.response?.data?.message || error.response?.statusText || error.message}`)
+
+      throw new Error(
+        `创建模型-渠道分组失败: ${error.response?.data?.message || error.response?.statusText || error.message}`
+      )
     }
   }
 
@@ -897,9 +909,10 @@ class ThreeLayerArchitecture {
       }
 
       // 获取密钥状态
-      const keyStats = await gptloadService.getGroupKeyStats(group.id)
+      const stats = await this.getGroupStats(group.id)
+      const keyStats = stats?.key_stats
 
-      if (keyStats.invalid_keys > 0) {
+      if (keyStats && keyStats.invalid_keys > 0) {
         // 恢复密钥
         await gptloadService.toggleApiKeysStatusForGroup(group.id, group._instance.id, 'active')
 
@@ -936,7 +949,7 @@ class ThreeLayerArchitecture {
       for (const group of allGroups) {
         if (group.tags?.includes('layer-2')) {
           // 检查第2层分组的统计
-          const stats = await gptloadService.getGroupStats(group.id)
+          const stats = await this.getGroupStats(group.id)
 
           if (stats && stats.hourly_stats) {
             const failureRate = stats.hourly_stats.failure_rate || 0
@@ -1042,7 +1055,7 @@ class ThreeLayerArchitecture {
 
       // 简单的负载计算：基于运行任务数和实例健康状况
       const healthyInstances = Object.values(gptloadService.getMultiInstanceStatus().instances).filter(
-        (inst) => inst.healthy
+        (inst: any) => inst.healthy
       ).length
 
       // 负载 = 运行任务数 / (健康实例数 + 1)，范围 0-1
@@ -1327,7 +1340,7 @@ class ThreeLayerArchitecture {
         validation_endpoint: groupData.validation_endpoint,
         sort: groupData.sort,
         upstreams: groupData.upstreams,
-        tags: groupData.tags
+        tags: groupData.tags,
       })
 
       const response = await instance.apiClient.post('/groups', groupData)

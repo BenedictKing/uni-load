@@ -97,6 +97,7 @@ class ModelConfig {
       'embed',
       'generation',
       'sora',
+      'realtime',
     ]
 
     // 高消耗模型模式 - 这些模型不能在分组中自动验证
@@ -417,15 +418,15 @@ class ModelConfig {
     // 2. 转换为小写
     safeName = safeName.toLowerCase()
 
-    // 3. 移除或替换其他不安全字符
+    // 3. 移除或替换其他不安全字符 (移除对 '.' 的允许)
     safeName = safeName
-      .replace(/[^a-z0-9-_.]/g, '-') // 替换非字母数字和安全符号的字符
+      .replace(/[^a-z0-9-_]/g, '-')
       .replace(/-+/g, '-') // 合并多个连字符
       .replace(/^-+|-+$/g, '') // 移除开头和结尾的连字符
 
-    // 4. 确保长度合理（gpt-load可能有长度限制）
-    if (safeName.length > 64) {
-      safeName = safeName.substring(0, 64).replace(/-+$/, '')
+    // 4. 确保长度合理（更新为100字符限制）
+    if (safeName.length > 100) {
+      safeName = safeName.substring(0, 100).replace(/-+$/, '')
     }
 
     return safeName
@@ -440,7 +441,14 @@ class ModelConfig {
   static generateModelChannelGroupName(modelName, channelName) {
     const safeModel = this.generateSafeGroupName(modelName)
     const safeChannel = this.generateSafeGroupName(channelName)
-    return `${safeModel}-via-${safeChannel}`.toLowerCase()
+    let combinedName = `${safeModel}-via-${safeChannel}`.toLowerCase()
+
+    // 再次确保最终组合的名称长度不超过100
+    if (combinedName.length > 100) {
+      combinedName = combinedName.substring(0, 100).replace(/-+$/, '')
+    }
+
+    return combinedName
   }
 
   /**

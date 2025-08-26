@@ -259,8 +259,28 @@ Content-Type: application/json
 
 #### 4.1 获取站点分组
 
+获取所有已配置的站点分组（第一层分组，`sort=20`）。
+
 ```http
 GET /api/channels/site-groups
+```
+
+**响应示例**:
+```json
+{
+  "siteGroups": [
+    {
+      "id": 123,
+      "name": "deepseek-openai",
+      "sort": 20,
+      "upstreams": [{"url": "https://api.deepseek.com/v1", "weight": 1}],
+      "_instance": {
+        "id": "local",
+        "name": "本地 gpt-load"
+      }
+    }
+  ]
+}
 ```
 
 #### 4.2 手动渠道健康检查
