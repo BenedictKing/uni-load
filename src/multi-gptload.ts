@@ -1,4 +1,5 @@
 import modelConfig from './model-config'
+import modelsService from './models'
 import instanceConfigManager, { GptloadInstance } from './services/instance-config-manager'
 import instanceHealthManager, { HealthResult, InstanceHealthStatus } from './services/instance-health-manager'
 
@@ -547,33 +548,61 @@ export class MultiGptloadManager {
     }
 
     for (const instance of healthyInstances) {
-      try {
-        console.log(`🔍 尝试通过实例 ${instance.name} 获取模型...`)
+      const tempGroupName = `temp-test-${Date.now()}`
+      let tempGroup: any = null
 
-        const response = await instance.apiClient.post('/models/fetch', {
-          baseUrl,
-          apiKey,
-          timeout: 30000,
+      try {
+        console.log(`🔍 尝试通过实例 ${instance.name} 创建临时渠道...`)
+
+        // 1. 创建临时分组
+        const groupData = {
+          name: tempGroupName,
+          upstreams: [{ url: baseUrl, weight: 1 }],
+          test_model: 'gpt-4o-mini', // 使用一个通用的小模型进行测试
+          channel_type: 'openai',
+          validation_endpoint: '/v1/models',
+        }
+        const createResponse = await instance.apiClient.post('/groups', groupData)
+        tempGroup = createResponse.data?.data || createResponse.data
+
+        // 将密钥添加到分组
+        await instance.apiClient.post('/keys/add-multiple', {
+          group_id: tempGroup.id,
+          keys_text: apiKey,
         })
 
-        let models = []
-        if (response.data && response.data.code === 0) {
-          models = response.data.data || []
-        } else if (Array.isArray(response.data)) {
-          models = response.data
-        }
+        console.log(`✅ 临时渠道 ${tempGroupName} 创建成功，现在获取模型...`)
 
-        if (models.length > 0) {
+        // 2. 通过临时分组的代理获取模型
+        const proxyBaseUrl = `${instance.url.replace(/\/$/, '')}/proxy/${tempGroupName}`
+        
+        // 使用实例的token（如果存在）来访问代理，而不是目标站点的apiKey
+        const authTokenForProxy = instance.token || apiKey
+        const models = await modelsService.getModels(proxyBaseUrl, authTokenForProxy, 1) // 测试时减少重试次数
+
+        if (models && models.length > 0) {
           console.log(`✅ 实例 ${instance.name} 成功获取 ${models.length} 个模型`)
           return {
             models,
             instanceId: instance.id,
             instanceName: instance.name,
           }
+        } else {
+          console.warn(`⚠️ 实例 ${instance.name} 获取到空模型列表。`)
         }
       } catch (error) {
         console.warn(`⚠️ 实例 ${instance.name} 获取模型失败: ${error.message}`)
-        continue
+        // 继续尝试下一个实例
+      } finally {
+        // 3. 无论成功与否，都删除临时分组
+        if (tempGroup && tempGroup.id) {
+          try {
+            await instance.apiClient.delete(`/groups/${tempGroup.id}`)
+            console.log(`🗑️ 已清理临时渠道: ${tempGroupName}`)
+          } catch (cleanupError) {
+            console.error(`🔴 清理临时渠道 ${tempGroupName} 失败: ${cleanupError.message}`)
+          }
+        }
       }
     }
 
@@ -591,6 +620,61 @@ export class MultiGptloadManager {
   // 公开访问器，保持向后兼容
   get siteAssignments() {
     return this._siteAssignments
+  }
+
+  /**
+   * 等待验证任务完成 (通用逻辑)
+   */
+  async waitForValidationTask(instance: any, groupId: string, timeoutMs: number = 180000): Promise<any> {
+    const startTime = Date.now()
+    const pollInterval = 5000 // 5 seconds
+
+    while (Date.now() - startTime < timeoutMs) {
+      await new Promise((resolve) => setTimeout(resolve, pollInterval))
+
+      try {
+        console.log(`⏳ 轮询分组 ${groupId} 的验证任务状态...`)
+        const response = await instance.apiClient.post('/keys/validate-group', {
+          group_id: groupId,
+        })
+
+        // 如果请求成功 (非 409), 意味着任务可能已完成
+        let result = response.data
+        if (response.data && typeof response.data.code === 'number') {
+          result = response.data.data
+        }
+
+        // 检查 is_running 标志，如果为 false 或不存在，则任务完成
+        if (!result || result.is_running !== true) {
+          console.log(`✅ 分组 ${groupId} 验证任务完成`)
+          return { success: result.valid === true, ...result }
+        }
+
+        // 如果 is_running 仍然为 true, 继续轮询
+        console.log(`⏳ 验证任务仍在进行中...`)
+      } catch (error) {
+        // 409 Conflict 表示任务仍在运行
+        if (error.response && error.response.status === 409) {
+          console.log(`⏳ 验证任务仍在运行 (收到 409)...`)
+          continue // 继续轮询
+        }
+
+        // 其他错误则终止轮询
+        console.error(`等待验证任务时发生错误: ${error.message}`)
+        return { success: false, error: `轮询失败: ${error.message}` }
+      }
+    }
+
+    console.error(`验证任务超时: ${groupId}`)
+    return { success: false, error: '验证任务超时' }
+  }
+
+  /**
+   * 等待一个已存在的验证任务完成
+   */
+  async waitForExistingValidationTask(instance: any, groupId: string, timeoutMs: number = 180000): Promise<any> {
+    console.log(`⏳ 等待一个已存在的验证任务完成: ${groupId}`)
+    return this.waitForValidationTask(instance, groupId, timeoutMs)
   }
 }
 

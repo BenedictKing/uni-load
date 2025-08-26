@@ -392,12 +392,22 @@ class ModelConfig {
     // 4. 通用日期格式简化
     // 移除各种日期格式：YYYYMMDD, YYYY-MM-DD, YYMMDD等
     normalized = normalized
-      .replace(/-\d{8}$/g, '') // 移除 -20241022 格式
-      .replace(/-\d{4}-\d{2}-\d{2}$/g, '') // 移除 -2024-10-22 格式
-      .replace(/-\d{6}$/g, '') // 移除 -241022 或 -250711 格式
-      .replace(/-\d{4}-?/g, '') // 移除 -0324和-0324- 格式
-      .replace(/-\d{2}-\d{2}-?/g, '') // 移除 -10-22和-10-22- 格式
+      .replace(/-\d{8}-?/g, '-') // 移除 -20241022 和 -20241022- 格式
+      .replace(/-\d{4}-\d{2}-\d{2}-?/g, '-') // 移除 -2024-10-22 和 -2024-10-22- 格式
+      .replace(/-\d{6}-?/g, '-') // 移除 -241022 和 -250711- 格式
+      .replace(/-\d{4}-?/g, '-') // 移除 -0324 和 -0324- 格式
+      .replace(/-\d{2}-\d{2}-?/g, '-') // 移除 -10-22 和 -10-22- 格式
 
+    // 5. 再次移除版本和状态后缀
+    normalized = normalized
+      .replace(/-latest$/g, '') // 移除 -latest 后缀
+      .replace(/-preview$/g, '') // 移除 -preview 后缀
+      .replace(/-alpha$/g, '') // 移除 -alpha 后缀
+      .replace(/-beta$/g, '') // 移除 -beta 后缀
+      .replace(/-rc\d*$/g, '') // 移除 -rc 后缀
+      .replace(/-instruct$/g, '') // 移除 -instruct 后缀
+
+    normalized = normalized.replace(/-{2,}/g, '-')
     return normalized
   }
 

@@ -416,10 +416,14 @@ class ThreeLayerArchitecture {
   async createSingleModelChannelGroup(model, site, groupName) {
     let groupData
     try {
-      const instance = await gptloadService.manager.selectBestInstance(site.upstreams[0]?.url || '')
+      // 选择第一个健康的实例用于二三层分组
+      const allInstances = gptloadService.manager.getAllInstances();
+      const instance = allInstances.find(inst =>
+        gptloadService.manager.healthStatus.get(inst.id)?.healthy
+      );
 
       if (!instance) {
-        throw new Error('没有可用的 gptload 实例')
+        throw new Error('没有健康的 gptload 实例可用于创建二三层分组');
       }
 
       groupData = {
@@ -642,11 +646,14 @@ class ThreeLayerArchitecture {
             continue
           }
 
-          // 选择合适的实例
-          const instance = await gptloadService.manager.selectBestInstance(site.upstreams[0]?.url || '')
+          // 选择第一个健康的实例用于二三层分组
+          const allInstances = gptloadService.manager.getAllInstances();
+          const instance = allInstances.find(inst =>
+            gptloadService.manager.healthStatus.get(inst.id)?.healthy
+          );
 
           if (!instance) {
-            throw new Error('没有可用的 gptload 实例')
+            throw new Error('没有健康的 gptload 实例可用于创建二三层分组');
           }
 
           // 创建分组数据
@@ -1311,9 +1318,14 @@ class ThreeLayerArchitecture {
       }
 
       // 直接创建第3层聚合分组，而不是通过 createSiteGroup
-      const instance = await gptloadService.manager.selectBestInstance('')
+      // 选择第一个健康的实例用于二三层分组
+      const allInstances = gptloadService.manager.getAllInstances();
+      const instance = allInstances.find(inst =>
+        gptloadService.manager.healthStatus.get(inst.id)?.healthy
+      );
+
       if (!instance) {
-        throw new Error('没有可用的 gptload 实例')
+        throw new Error('没有健康的 gptload 实例可用于创建二三层分组');
       }
 
       const groupData = {
