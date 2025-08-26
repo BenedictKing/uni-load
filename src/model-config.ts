@@ -395,8 +395,8 @@ class ModelConfig {
       .replace(/-\d{8}$/g, '') // 移除 -20241022 格式
       .replace(/-\d{4}-\d{2}-\d{2}$/g, '') // 移除 -2024-10-22 格式
       .replace(/-\d{6}$/g, '') // 移除 -241022 或 -250711 格式
-      .replace(/-\d{4}$/g, '') // 移除 -0324 格式
-      .replace(/-\d{2}-\d{2}$/g, '') // 移除 -10-22 格式
+      .replace(/-\d{4}-?/g, '') // 移除 -0324和-0324- 格式
+      .replace(/-\d{2}-\d{2}-?/g, '') // 移除 -10-22和-10-22- 格式
 
     return normalized
   }
@@ -482,6 +482,9 @@ class ModelConfig {
 
     // 2. 进一步标准化处理（小写化等）
     normalizedModel = this.normalizeModelName(withoutOrgModel)
+
+    // 3. 应用uni-api的重命名规则
+    normalizedModel = this.generateSafeGroupName(normalizedModel)
 
     return {
       normalizedModel,
