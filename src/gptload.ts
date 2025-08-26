@@ -452,14 +452,35 @@ class GptloadService {
       return null
     }
 
+    // 3. 根据模型名称过滤兼容的站点分组
+    const modelNameLower = originalModelName.toLowerCase()
+    const compatibleSiteGroups = siteGroups.filter(sg => {
+      if (sg.channel_type === 'anthropic') {
+        return modelNameLower.startsWith('claude-');
+      }
+      if (sg.channel_type === 'gemini') {
+        return modelNameLower.startsWith('gemini-');
+      }
+      if (sg.channel_type === 'openai') {
+        return true; // OpenAI 格式的渠道分组对所有模型开放
+      }
+      return false;
+    });
+
+    if (compatibleSiteGroups.length === 0) {
+      console.log(`⚠️ 模型 ${originalModelName} 没有找到兼容的站点分组，跳过创建。`)
+      return null
+    }
+
     console.log(`处理模型: ${originalModelName} (格式: ${channelType}) -> 分组名: ${groupName}`)
+    console.log(`📋 兼容的站点分组: ${compatibleSiteGroups.map(sg => `${sg.name}(${sg.channel_type})`).join(', ')}`)
 
     // 优化：检查模型分组是否已存在（从预加载的列表中查找）
     const existingGroup = allExistingGroups.find((group) => group.name === groupName)
 
     if (existingGroup) {
       console.log(`模型分组 ${groupName} 已存在，添加站点分组为上游...`)
-      return await this.addSiteGroupsToModelGroup(existingGroup, siteGroups)
+      return await this.addSiteGroupsToModelGroup(existingGroup, compatibleSiteGroups)
     }
 
     console.log(`创建模型分组: ${groupName} (原始模型: ${originalModelName})`)
@@ -483,8 +504,8 @@ class GptloadService {
 
     let groupData
     try {
-      // 为所有站点分组创建上游配置
-      const upstreams = siteGroups
+      // 为兼容的站点分组创建上游配置
+      const upstreams = compatibleSiteGroups
         .map((siteGroup) => {
           if (!siteGroup || !siteGroup.name) {
             console.error('站点分组数据不完整:', siteGroup)

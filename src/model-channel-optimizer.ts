@@ -950,7 +950,7 @@ class ModelChannelOptimizer {
     const degradedGroups = healthResults.filter((r) => r.score >= 20 && r.score < 60)
     const criticalGroups = healthResults.filter((r) => r.score < 20 || r.error)
 
-    let overallStatus = 'healthy'
+    let overallStatus: 'healthy' | 'degraded' | 'critical' | 'warning' = 'healthy'
     if (criticalGroups.length > 0) {
       overallStatus = 'critical'
     } else if (degradedGroups.length > healthyGroups.length) {
@@ -1094,7 +1094,7 @@ class ModelChannelOptimizer {
         continue
       }
 
-      const updates = {}
+      const updates: any = {}
       let adjustmentReason = []
 
       // 1. 基于评分进行调整
@@ -1306,7 +1306,8 @@ class ModelChannelOptimizer {
     for (const group of groups) {
       try {
         const stats = await this.getGroupStats(group.groupId, group.instanceId)
-        const score = this.calculateGroupScore(stats)
+        const scoreResult = this.calculateGroupScore(stats)
+        const score = typeof scoreResult === 'number' ? scoreResult : scoreResult.score
 
         let status = 'healthy'
         if (score < 30) status = 'failed'
