@@ -1386,8 +1386,11 @@ class ModelChannelOptimizer {
           // 获取模型的健康报告
           const healthReport = await this.intelligentHealthCheck(model)
 
-          // 如果有问题或需要优化，执行优化
-          if (healthReport.overall_status !== 'healthy' || healthReport.needs_validation) {
+          // 检查健康报告是否包含 overall_status 属性，如果有问题或需要优化，执行优化
+          if (
+            'overall_status' in healthReport &&
+            (healthReport.overall_status !== 'healthy' || healthReport.needs_validation)
+          ) {
             const optimizationSummary = await this.optimizeModelGroups(model, groups)
 
             if (optimizationSummary.adjustedGroups > 0) {
