@@ -153,9 +153,11 @@ export interface ValidationResult {
   success: boolean
   error?: string
   validationResult?: any
-  healthResult?: ChannelHealthResult
+  healthResult?: any  // 改为 any 类型以兼容多种健康结果格式
   models?: number
   details?: any
+  skipped?: boolean
+  reason?: string
 }
 
 export interface ChannelMetrics {

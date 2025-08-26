@@ -291,7 +291,7 @@ export class MultiGptloadManager {
    * 创建站点分组
    */
   async createSiteGroup(
-    siteName: string,
+    groupName: string, // 将 siteName 参数重命名为 groupName 以明确其用途
     baseUrl: string,
     apiKeys: string[],
     channelType: string = 'openai',
@@ -306,9 +306,9 @@ export class MultiGptloadManager {
 
     // 构建分组数据
     const groupData: any = {
-      name: siteName,
-      display_name: `${siteName} 渠道`,
-      description: `${siteName} 通过 ${channelType} 格式提供API服务`,
+      name: groupName, // 确保使用传入的完整 groupName
+      display_name: `${groupName} 渠道`,
+      description: `${groupName} 通过 ${channelType} 格式提供API服务`,
       upstreams: [
         {
           url: baseUrl,
@@ -326,10 +326,8 @@ export class MultiGptloadManager {
       },
     }
 
-    // 如果有可用模型列表，设置测试模型
-    if (availableModels && availableModels.length > 0) {
-      groupData.test_model = availableModels[0]
-    }
+    // 设置测试模型，使用智能选择逻辑
+    groupData.test_model = this.selectTestModel(availableModels, channelType)
 
     // 设置tags
     if (isModelGroup) {
@@ -443,17 +441,8 @@ export class MultiGptloadManager {
    * 选择测试模型
    */
   selectTestModel(availableModels: string[] | null, channelType: string): string {
-    const defaultModels = {
-      openai: 'gpt-4o-mini',
-      anthropic: 'claude-3-5-haiku-20241022',
-      gemini: 'gemini-2.5-flash',
-    }
-
-    if (availableModels && availableModels.length > 0) {
-      return availableModels[0]
-    }
-
-    return defaultModels[channelType] || defaultModels.openai
+    // 直接调用 modelConfig 中的智能选择逻辑
+    return modelConfig.selectTestModel(availableModels, channelType)
   }
 
   /**
@@ -575,7 +564,7 @@ export class MultiGptloadManager {
 
         // 2. 通过临时分组的代理获取模型
         const proxyBaseUrl = `${instance.url.replace(/\/$/, '')}/proxy/${tempGroupName}`
-        
+
         // 使用实例的token（如果存在）来访问代理，而不是目标站点的apiKey
         const authTokenForProxy = instance.token || apiKey
         const models = await modelsService.getModels(proxyBaseUrl, authTokenForProxy, 1) // 测试时减少重试次数
@@ -622,60 +611,6 @@ export class MultiGptloadManager {
     return this._siteAssignments
   }
 
-  /**
-   * 等待验证任务完成 (通用逻辑)
-   */
-  async waitForValidationTask(instance: any, groupId: string, timeoutMs: number = 180000): Promise<any> {
-    const startTime = Date.now()
-    const pollInterval = 5000 // 5 seconds
-
-    while (Date.now() - startTime < timeoutMs) {
-      await new Promise((resolve) => setTimeout(resolve, pollInterval))
-
-      try {
-        console.log(`⏳ 轮询分组 ${groupId} 的验证任务状态...`)
-        const response = await instance.apiClient.post('/keys/validate-group', {
-          group_id: groupId,
-        })
-
-        // 如果请求成功 (非 409), 意味着任务可能已完成
-        let result = response.data
-        if (response.data && typeof response.data.code === 'number') {
-          result = response.data.data
-        }
-
-        // 检查 is_running 标志，如果为 false 或不存在，则任务完成
-        if (!result || result.is_running !== true) {
-          console.log(`✅ 分组 ${groupId} 验证任务完成`)
-          return { success: result.valid === true, ...result }
-        }
-
-        // 如果 is_running 仍然为 true, 继续轮询
-        console.log(`⏳ 验证任务仍在进行中...`)
-      } catch (error) {
-        // 409 Conflict 表示任务仍在运行
-        if (error.response && error.response.status === 409) {
-          console.log(`⏳ 验证任务仍在运行 (收到 409)...`)
-          continue // 继续轮询
-        }
-
-        // 其他错误则终止轮询
-        console.error(`等待验证任务时发生错误: ${error.message}`)
-        return { success: false, error: `轮询失败: ${error.message}` }
-      }
-    }
-
-    console.error(`验证任务超时: ${groupId}`)
-    return { success: false, error: '验证任务超时' }
-  }
-
-  /**
-   * 等待一个已存在的验证任务完成
-   */
-  async waitForExistingValidationTask(instance: any, groupId: string, timeoutMs: number = 180000): Promise<any> {
-    console.log(`⏳ 等待一个已存在的验证任务完成: ${groupId}`)
-    return this.waitForValidationTask(instance, groupId, timeoutMs)
-  }
 }
 
 export default MultiGptloadManager

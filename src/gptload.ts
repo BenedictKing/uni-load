@@ -1,5 +1,6 @@
 import MultiGptloadManager from './multi-gptload'
 import modelConfig from './model-config'
+import { layerConfigs } from './layer-configs'
 
 const multiGptloadManager = new MultiGptloadManager()
 
@@ -66,16 +67,34 @@ class GptloadService {
     availableModels = null,
     isModelGroup = false
   ) {
-    console.log(`🔄 开始创建站点分组: ${siteName}, 基础URL: ${baseUrl}, 格式: ${channelType}`)
-    return await this.manager.createSiteGroup(
-      siteName,
-      baseUrl,
-      apiKeys,
-      channelType,
-      customValidationEndpoints,
-      availableModels,
-      isModelGroup
-    )
+    // 构造唯一的分组名称，例如 "deepseek-openai"
+    const groupName = `${siteName}-${channelType}`
+    const existingGroup = await this.checkGroupExists(groupName)
+
+    if (existingGroup) {
+      console.log(`ℹ️ 站点分组 ${groupName} 已存在，将进行更新...`)
+      return await this.updateSiteGroup(
+        existingGroup,
+        baseUrl,
+        apiKeys,
+        channelType,
+        customValidationEndpoints,
+        availableModels,
+        isModelGroup
+      )
+    } else {
+      console.log(`🔄 开始创建站点分组: ${groupName}, 基础URL: ${baseUrl}`)
+      // 将拼接好的、唯一的分组名称传递给管理器
+      return await this.manager.createSiteGroup(
+        groupName,
+        baseUrl,
+        apiKeys,
+        channelType,
+        customValidationEndpoints,
+        availableModels,
+        isModelGroup
+      )
+    }
   }
 
   /**
@@ -130,7 +149,7 @@ class GptloadService {
         sort: 20, // 渠道分组的排序号为20
         param_overrides: {},
         config: {
-          blacklist_threshold: require('./model-config').getSiteGroupConfig().blacklist_threshold,
+          blacklist_threshold: layerConfigs.siteGroup.blacklist_threshold,
         },
       }
 

@@ -20,10 +20,11 @@ class ModelConfig {
       // OpenAI
       'gpt-',
       'chatgpt-',
+      'openai-gpt-',
 
       // Google
       'gemini-2.5-', // 仅支持 2.5 及以上版本
-      'gemma-',
+      // 'gemma-',
 
       // Anthropic
       'claude-opus',
@@ -245,36 +246,38 @@ class ModelConfig {
       return defaultModel
     }
 
-    // 将可用模型转换为小写以便比较
-    const availableModelsLower = availableModels.map((model) => model.toLowerCase())
-
     // 优先从小模型列表中选择
     for (const preferredModel of this.preferredTestModels) {
       const preferredLower = preferredModel.toLowerCase()
 
-      // 精确匹配
+      // 1. 精确匹配 (忽略大小写)
       const exactMatch = availableModels.find((model) => model.toLowerCase() === preferredLower)
       if (exactMatch) {
-        console.log(`✅ 选择优先小模型作为测试模型: ${exactMatch}`)
+        console.log(`✅ 选择优先小模型作为测试模型 (精确匹配): ${exactMatch}`)
         return exactMatch
       }
 
-      // 模糊匹配（包含关系）
-      const fuzzyMatch = availableModels.find((model) => {
-        const modelLower = model.toLowerCase()
-        // 检查是否包含小模型的关键部分
-        const preferredParts = preferredLower.split('-')
-        return preferredParts.every((part) => modelLower.includes(part))
-      })
-      if (fuzzyMatch) {
-        console.log(`✅ 选择匹配的小模型作为测试模型: ${fuzzyMatch} (匹配 ${preferredModel})`)
-        return fuzzyMatch
+      // 2. 包含匹配 (处理 "org/model-name-version" 等情况)
+      const partialMatch = availableModels.find((model) => model.toLowerCase().includes(preferredLower))
+      if (partialMatch) {
+        console.log(`✅ 选择优先小模型作为测试模型 (包含匹配): ${partialMatch}`)
+        return partialMatch
       }
     }
 
-    // 如果小模型列表中没有匹配的，选择第一个可用模型
-    const fallbackModel = availableModels[0]
-    console.log(`⚠️ 小模型列表中无匹配模型，使用第一个可用模型作为测试模型: ${fallbackModel}`)
+    // 3. 如果优先列表没有匹配，则根据关键词在剩余模型中寻找小模型
+    const smallModelKeywords = ['nano', 'mini', 'flash', 'haiku', 'lite', 'air', 'lightning']
+    for (const keyword of smallModelKeywords) {
+      const keywordMatch = availableModels.find((model) => model.toLowerCase().includes(keyword))
+      if (keywordMatch) {
+        console.log(`✅ 未在优先列表找到匹配，但根据关键词 '${keyword}' 选择了小模型: ${keywordMatch}`)
+        return keywordMatch
+      }
+    }
+
+    // 4. 最终回退策略：选择名称最短的模型，通常是基础或小型号
+    const fallbackModel = [...availableModels].sort((a, b) => a.length - b.length)[0]
+    console.log(`⚠️ 优先列表和关键词均无匹配，回退选择名称最短的模型: ${fallbackModel}`)
     return fallbackModel
   }
 
@@ -377,8 +380,11 @@ class ModelConfig {
       normalized = parts[parts.length - 1] // 取最后一部分
     }
 
-    // 2. 转换为小写
+    // 2. 转换为小写并进行特定前缀替换
     normalized = normalized.toLowerCase()
+    if (normalized.startsWith('openai-gpt-')) {
+      normalized = normalized.replace(/^openai-gpt-/, 'gpt-')
+    }
 
     // 3. 移除版本和状态后缀
     normalized = normalized

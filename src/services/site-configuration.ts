@@ -213,16 +213,28 @@ class SiteConfigurationService {
     }
 
     try {
-      const result = await gptloadService.manager.getModelsViaMultiInstance(
-        request.baseUrl,
-        existingKeys[0]
-      )
+      const instance = gptloadService.manager.getInstance(existingChannel._instance.id)
+      if (!instance) {
+        throw new Error(`找不到实例: ${existingChannel._instance.id}`)
+      }
+
+      const proxyUrl = `${instance.url}/proxy/${existingChannel.name}`
+      console.log(`- 直接通过现有渠道代理获取模型: ${proxyUrl}`)
+
+      // 访问 gpt-load 代理需要使用 gpt-load 实例的 token 进行认证
+      // 如果实例没有 token，则回退使用渠道的密钥，gpt-load 会用这个密钥去请求上游
+      const authToken = instance.token || existingKeys[0]
+
+      const models = await modelsService.getModels(proxyUrl, authToken, 3)
       return {
-        models: result.models,
-        successfulInstance: result.instanceId,
-        instanceName: result.instanceName
+        models,
+        successfulInstance: instance.id,
+        instanceName: instance.name
       }
     } catch (error) {
+      console.error(`- 通过现有渠道代理获取模型失败: ${error.message}`)
+      console.log('- 代理获取失败，回退到直接访问原始URL...')
+      // 如果通过代理失败（例如 gpt-load 配置问题），回退到直接访问原始 URL
       const models = await modelsService.getModels(request.baseUrl, existingKeys[0], 3)
       return { models }
     }

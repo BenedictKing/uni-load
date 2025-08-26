@@ -245,6 +245,11 @@ class ChannelHealthMonitor {
       // 优先使用 gptload 的分组验证接口
       const validationResult = await this.validateGroupHealth(siteGroup)
 
+      if (validationResult.skipped) {
+        console.log(`ℹ️ 分组 ${groupName} 验证被跳过: ${validationResult.reason}`)
+        return { skipped: true, reason: validationResult.reason }
+      }
+
       if (validationResult.success) {
         // 验证成功，渠道健康
         if (this.channelFailures.has(groupName)) {
@@ -307,7 +312,7 @@ class ChannelHealthMonitor {
   /**
    * 使用 gptload 的 validate-group 接口验证分组健康状况
    */
-  async validateGroupHealth(siteGroup) {
+  async validateGroupHealth(siteGroup): Promise<ValidationResult> {
     const instance = gptloadService.manager.getInstance(siteGroup._instance.id)
 
     if (!instance) {
@@ -378,37 +383,6 @@ class ChannelHealthMonitor {
             validationResult: result,
           }
         }
-      } else if (result && result.is_running === true) {
-        // 验证任务正在运行，需要等待完成
-        console.log(`⏳ 分组 ${siteGroup.name} 的验证任务正在运行中，等待完成...`)
-        console.log(`📝 任务详情: ${JSON.stringify(result)}`)
-
-        // 等待任务完成
-        const waitResult = await gptloadService.manager.waitForValidationTask(instance, siteGroup.id)
-
-        if (waitResult.success) {
-          console.log(`✅ 分组 ${siteGroup.name} 验证任务完成`)
-          return {
-            success: true,
-            validationResult: waitResult,
-          }
-        } else {
-          // 检查是否有 valid 字段来更准确地判断
-          const isValid = waitResult.valid === true
-          const error = waitResult.error || (isValid ? null : '验证失败')
-
-          console.log(
-            `${isValid ? '✅' : '❌'} 分组 ${siteGroup.name} 验证${isValid ? '成功' : '失败'}${
-              error ? ': ' + error : ''
-            }`
-          )
-
-          return {
-            success: isValid,
-            error: error,
-            validationResult: waitResult,
-          }
-        }
       } else {
         // 未知的响应格式
         const error = result?.error || result?.message || '分组验证失败'
@@ -442,20 +416,12 @@ class ChannelHealthMonitor {
 
       // 409 错误特殊处理：任务已在运行
       if (error.response && error.response.status === 409) {
-        console.log(`⚠️ 分组 ${siteGroup.name} 的验证任务已在运行中，等待完成...`)
-
-        // 调用 multi-gptload 中的方法
-        const waitResult = await gptloadService.manager.waitForExistingValidationTask(instance, siteGroup.id)
-
-        if (waitResult.success) {
-          console.log(`✅ 分组 ${siteGroup.name} 现有验证任务完成`)
-          return waitResult
-        } else {
-          return {
-            success: false,
-            error: `验证任务超时或失败: ${waitResult.error}`,
-          }
-        }
+        console.log(`⚠️ 分组 ${siteGroup.name} 的验证任务已在运行中，本次跳过。`)
+        return {
+          success: true, // 返回成功以避免增加失败计数
+          skipped: true,
+          reason: 'validation_in_progress'
+        };
       }
 
       // 如果验证接口不可用，回退到原有的检查方法
@@ -475,7 +441,7 @@ class ChannelHealthMonitor {
   /**
    * 回退的健康检查方法（原有逻辑）
    */
-  async performHealthCheckFallback(siteGroup) {
+  async performHealthCheckFallback(siteGroup): Promise<ValidationResult> {
     try {
       // 使用 gptload 的日志接口进行健康检查
       const healthResult = await gptloadService.analyzeChannelHealth(
@@ -511,7 +477,7 @@ class ChannelHealthMonitor {
   /**
    * 直接健康检查（当日志不可用时）
    */
-  async directHealthCheck(siteGroup) {
+  async directHealthCheck(siteGroup): Promise<ValidationResult> {
     try {
       const baseUrl = siteGroup.upstreams[0]?.url
       if (!baseUrl) {
