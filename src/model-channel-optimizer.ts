@@ -18,6 +18,10 @@ class ModelChannelOptimizer {
   private groupMetricsCache: Map<string, any>
   private optimizationInterval: number
   private _previousScores: Map<any, any>
+  private _optimizationTimer: any
+  private _healthCheckTimer: any
+  private _smartOptimizationTimer: any
+  private _statusChangeTimer: any
 
   constructor() {
     // 模型到分组的映射
