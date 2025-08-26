@@ -1294,6 +1294,7 @@ class ModelChannelOptimizer {
 
     const report = {
       model,
+      status: 'unknown' as string,
       groups: [],
       healthyGroups: 0,
       degradedGroups: 0,
