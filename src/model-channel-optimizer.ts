@@ -134,8 +134,8 @@ class ModelChannelOptimizer {
   /**
    * 从分组信息中提取支持的模型
    */
-  extractModelsFromGroup(group) {
-    const models = new Set()
+  extractModelsFromGroup(group): string[] {
+    const models = new Set<string>()
 
     // 方法1：从分组名称提取（如 "gpt-4-turbo-group", "claude-3-5-sonnet"）
     const namePatterns = [
