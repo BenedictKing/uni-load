@@ -135,15 +135,9 @@ class ChannelHealthMonitor {
               this.channelFailures.delete(siteGroup.name)
             }
           }
-          continue
-        }
-
-        // 统计数据不足，执行实际验证
-        const result = await this.testSiteGroupHealth(siteGroup)
-        if (result && result.skipped) {
-          skippedCount++
         } else {
-          checkedCount++
+          // 统计数据不足，跳过主动验证
+          skippedCount++
         }
       }
 

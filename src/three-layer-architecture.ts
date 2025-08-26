@@ -916,7 +916,7 @@ class ThreeLayerArchitecture {
       }
 
       // 获取密钥状态
-      const stats = await this.getGroupStats(group.id)
+      const stats = await this.getGroupStats(group)
       const keyStats = stats?.key_stats
 
       if (keyStats && keyStats.invalid_keys > 0) {
@@ -956,7 +956,7 @@ class ThreeLayerArchitecture {
       for (const group of allGroups) {
         if (group.tags?.includes('layer-2')) {
           // 检查第2层分组的统计
-          const stats = await this.getGroupStats(group.id)
+          const stats = await this.getGroupStats(group)
 
           if (stats && stats.hourly_stats) {
             const failureRate = stats.hourly_stats.failure_rate || 0
@@ -1017,7 +1017,7 @@ class ThreeLayerArchitecture {
       for (const group of aggregateGroups.slice(0, 5)) {
         // 只检查前5个以控制负载
         try {
-          const stats = await this.getGroupStats(group.id)
+          const stats = await this.getGroupStats(group)
           if (stats && stats.hourly_stats) {
             const failureRate = stats.hourly_stats.failure_rate || 0
             const zeroWeightUpstreams = group.upstreams?.filter((u) => u.weight === 0).length || 0
@@ -1120,7 +1120,7 @@ class ThreeLayerArchitecture {
             }
 
             try {
-              const stats = await this.getGroupStats(upstreamGroup.id)
+              const stats = await this.getGroupStats(upstreamGroup)
 
               let weight = 1
               if (stats && stats.hourly_stats) {
@@ -1206,29 +1206,25 @@ class ThreeLayerArchitecture {
   /**
    * 获取分组的统计信息
    */
-  async getGroupStats(groupId) {
+  async getGroupStats(group) {
+    if (!group) {
+        return null;
+    }
     try {
-      const allGroups = await gptloadService.getAllGroups()
-      const group = allGroups.find((g) => g.id === groupId)
-
-      if (!group) {
-        return null
-      }
-
       // 使用 gptload 内置的统计接口
       const instance = gptloadService.manager.getInstance(group._instance.id)
       if (!instance) {
         return null
       }
 
-      const response = await instance.apiClient.get(`/groups/${groupId}/stats`)
+      const response = await instance.apiClient.get(`/groups/${group.id}/stats`)
 
       if (response.data && typeof response.data.code === 'number') {
         return response.data.data
       }
       return response.data
     } catch (error) {
-      console.error(`获取分组 ${groupId} 统计信息失败:`, error.message)
+      console.error(`获取分组 ${group.name} 统计信息失败:`, error.message)
       return null
     }
   }
