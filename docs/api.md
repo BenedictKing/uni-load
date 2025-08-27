@@ -36,7 +36,10 @@ Content-Type: application/json
 
 #### 1.2 处理 AI 站点配置
 
-核心接口，由 `SiteConfigurationService` 处理，用于自动配置 AI 站点到 gpt-load 和 uni-api。该接口协调多个服务（GptloadService、ModelsService、YamlManager）来完成完整的站点配置流程。
+核心接口，由 `SiteConfigurationService` 统一处理，用于自动配置 AI 站点。**此接口智能地处理创建和更新两种场景**：
+
+* **如果站点不存在**：它会执行完整的创建流程，包括选择最佳实例、获取模型、创建多层分组等。
+* **如果站点已存在**：它会执行更新流程，例如添加新的 API 密钥，并通过已存在的渠道代理高效地刷新模型列表，而不会创建临时分组。
 
 ```http
 POST /api/process-ai-site

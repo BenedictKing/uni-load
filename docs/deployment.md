@@ -166,6 +166,15 @@ cp gptload-instances.json.example gptload-instances.json
 - 对于成本较高的模型，系统会跳过自动验证
 - 高消耗模型模式：`['o3-', 'o4-']`
 
+**非标准模型名称支持**:
+系统支持多种模型名称格式，包括带有组织前缀的名称（如 `deepseek-ai/DeepSeek-V3`）以及非标准的 `OpenAI-GPT-` 前缀。这些名称在处理时会被自动标准化，以确保兼容性：
+
+- **组织前缀**: `deepseek-ai/DeepSeek-V3` → `deepseek-v3`
+- **OpenAI-GPT前缀**: `OpenAI-GPT-4o` → `gpt-4o`  
+- **标准化处理**: 自动移除特殊字符，转换为小写，统一命名规范
+
+这确保了不同来源的模型名称都能被正确识别和处理。
+
 **自定义模型过滤**:
 ```bash
 # 修改模型配置文件

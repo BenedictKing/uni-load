@@ -153,34 +153,47 @@ class SiteConfigurationService {
     successfulInstance?: string
     instanceName?: string
   }> {
-    // 如果提供了手动模型列表
+    // 如果提供了手动模型列表，则优先使用
     if (request.models && Array.isArray(request.models) && request.models.length > 0) {
       console.log(`🎯 使用手动指定的模型列表 (${request.models.length} 个模型)`)
       return { models: request.models }
     }
 
-    // 如果有新密钥，通过多实例获取模型
-    if (request.apiKeys && request.apiKeys.length > 0) {
-      try {
-        const result = await gptloadService.manager.getModelsViaMultiInstance(
-          request.baseUrl,
-          request.apiKeys[0]
-        )
-        return {
-          models: result.models,
-          successfulInstance: result.instanceId,
-          instanceName: result.instanceName
-        }
-      } catch (error) {
-        // 回退到直接调用
-        console.log('多实例获取失败，回退到直接调用...')
-        const models = await modelsService.getModels(request.baseUrl, request.apiKeys[0], 3)
-        return { models }
-      }
+    // 检查是否已存在渠道分组
+    const siteName = this.generateSiteNameFromUrl(request.baseUrl)
+    const allGroups = await gptloadService.getAllGroups()
+    const channelName = `${siteName}-${request.channelTypes![0]}`
+    const existingChannel = this.findExistingChannel(allGroups, channelName, siteName, request.channelTypes![0])
+
+    // 如果渠道已存在，则通过其代理获取模型
+    if (existingChannel) {
+      console.log('ℹ️ 检测到现有渠道，将通过其代理获取模型...')
+      return await this.getModelsFromExistingChannel(request)
     }
 
-    // 尝试从现有渠道获取密钥
-    return await this.getModelsFromExistingChannel(request)
+    // 如果渠道不存在，则作为新站点处理，此时必须提供API密钥
+    console.log('ℹ️ 未找到现有渠道，作为新站点处理...')
+    if (!request.apiKeys || request.apiKeys.length === 0) {
+      throw new Error('首次配置渠道时必须提供API密钥')
+    }
+
+    // 对于新站点，使用多实例临时分组的方式获取模型
+    try {
+      const result = await gptloadService.manager.getModelsViaMultiInstance(
+        request.baseUrl,
+        request.apiKeys[0]
+      )
+      return {
+        models: result.models,
+        successfulInstance: result.instanceId,
+        instanceName: result.instanceName,
+      }
+    } catch (error) {
+      // 如果多实例方式失败，回退到直接调用
+      console.log('多实例获取失败，回退到直接调用...')
+      const models = await modelsService.getModels(request.baseUrl, request.apiKeys[0], 3)
+      return { models }
+    }
   }
 
   /**
@@ -243,7 +256,7 @@ class SiteConfigurationService {
   /**
    * 查找现有渠道
    */
-  private findExistingChannel(allGroups: any[], channelName: string, siteName: string, channelType: string) {
+  findExistingChannel(allGroups: any[], channelName: string, siteName: string, channelType: string) {
     // 精确匹配
     let existingChannel = allGroups.find(g => g.name === channelName)
 
