@@ -564,6 +564,14 @@ validateConfig(config: UniApiConfig): boolean {
 
 **职责**: 维护和优化三层分组架构
 
+#### 性能优化
+
+**解决 N+1 查询问题**: v2.1 版本对三层架构管理器进行了重要的性能优化，解决了统计信息获取中的 N+1 查询问题：
+
+- **优化前**: `getGroupStats` 方法每次调用都会执行 `getAllGroups()` 来根据 ID 查找分组，导致 `analyzeRecentLogs` 每分钟执行 1 + N 次 API 调用
+- **优化后**: `getGroupStats` 直接接收分组对象作为参数，避免重复的分组查询
+- **效果**: 大幅减少对 gpt-load 的 `/api/groups` 请求频率，提升系统整体性能
+
 #### 架构设计
 
 ```typescript
@@ -769,6 +777,19 @@ private calculateModelDiff(current: Model[], latest: Model[]): ModelDiff {
 
 **职责**: 监控渠道健康状态，检测和报告异常
 
+#### 性能优化
+
+**减少重复 API 调用**: v2.1 版本优化了健康检查流程，大幅减少对 gpt-load 的请求频率：
+
+- **优化前**: `checkChannelHealth` 中的 `checkChannelsByAPI` 和 `checkChannelsByLogs` 各自调用 `getAllGroups()`，每次健康检查产生 2 次 API 调用
+- **优化后**: 在 `checkChannelHealth` 开始时获取一次分组信息，传递给子方法使用
+- **效果**: 每次健康检查的 `/api/groups` 调用从 2 次减少到 1 次，降低系统负载
+
+**被动优先策略**: 避免对低流量渠道进行不必要的主动验证：
+
+- **统计数据充分**: 基于 gpt-load 统计数据判断健康状态，无需额外 API 调用
+- **统计数据不足**: 直接跳过检查，不进行主动 API 验证，避免对低流量渠道的干扰
+
 #### 监控架构
 
 ```typescript
@@ -796,69 +817,18 @@ class ChannelHealthMonitor {
 ##### 8.1 批量健康检查
 ```typescript
 async checkChannelHealth(): Promise<HealthCheckResult> {
-  const result = {
-    totalChannels: 0,
-    healthyChannels: 0,
-    failedChannels: 0,
-    newFailures: [],
-    recoveredChannels: []
-  };
-  
-  try {
-    // 1. 获取所有需要检查的渠道
-    const channels = await this.getMonitorableChannels();
-    result.totalChannels = channels.length;
-    
-    // 2. 并发执行健康检查
-    const healthChecks = channels.map(channel => 
-      this.checkSingleChannel(channel).catch(error => ({
-        channel: channel.name,
-        healthy: false,
-        error: error.message
-      }))
-    );
-    
-    const results = await Promise.allSettled(healthChecks);
-    
-    // 3. 分析检查结果
-    for (let i = 0; i < results.length; i++) {
-      const result = results[i];
-      const channel = channels[i];
-      
-      if (result.status === 'fulfilled') {
-        const checkResult = result.value;
-        
-        if (checkResult.healthy) {
-          result.healthyChannels++;
-          
-          // 检查是否从故障中恢复
-          if (this.channelFailures.has(channel.name)) {
-            result.recoveredChannels.push(channel.name);
-            this.channelFailures.delete(channel.name);
-          }
-          
-        } else {
-          result.failedChannels++;
-          this.recordChannelFailure(channel.name, checkResult.error);
-          
-          // 检查是否是新故障
-          const failureInfo = this.channelFailures.get(channel.name);
-          if (failureInfo && failureInfo.failureCount === 1) {
-            result.newFailures.push(channel.name);
-          }
-        }
-      }
-    }
-    
-  } catch (error) {
-    console.error('健康检查执行失败:', error);
-  }
-  
-  return result;
+  // ...
 }
 ```
 
-**冲突处理**：在调用 `gpt-load` 的验证接口时，如果收到 `409 Conflict` 响应（表示一个验证任务已在运行），系统会跳过本次检查，而不是等待或重试。这种策略可以防止重复验证导致的超时和不必要的系统负载，并在下一个检查周期重新评估渠道健康状况。
+该方法是健康检查的入口点。为了提高效率，它会在开始时获取一次所有分组的信息，然后将这份数据传递给后续的检查函数，避免了重复的 API 调用。
+
+检查流程分为两个阶段：
+
+1. **基于统计的API检查**：系统首先会检查每个渠道分组在 gpt-load 中的近期统计数据。只有当统计数据足够（例如，近期有超过10次请求）且显示性能不佳（如失败率过高）时，才会记录一次失败。如果统计数据不足，系统会直接跳过，而不是发起主动的 API 验证。
+2. **基于日志的分析**：系统会分析 gpt-load 的历史日志，找出失败率或响应时间异常的渠道，并记录失败。
+
+这种"被动优先"的策略大大减少了对 gpt-load 的请求次数，并避免了对低流量渠道进行不必要的健康检查。
 
 ##### 8.2 单个渠道检查
 ```typescript
@@ -1277,4 +1247,18 @@ class ModelSyncService {
 
 ## 总结
 
-uni-load 的模块化设计遵循了软件工程的最佳实践，通过清晰的分层架构、明确的职责划分和灵活的扩展机制，实现了一个高质量、可维护、可扩展的系统。每个模块都有明确的边界和接口，便于独立开发、测试和部署。
+uni-load v2.1 的模块化设计遵循了软件工程的最佳实践，通过清晰的分层架构、明确的职责划分和灵活的扩展机制，实现了一个高质量、可维护、可扩展的系统。每个模块都有明确的边界和接口，便于独立开发、测试和部署。
+
+### v2.1 版本的重要性能优化
+
+**解决 N+1 查询问题**:
+- **三层架构管理器**: 优化了 `getGroupStats` 方法，避免重复的 `getAllGroups()` 调用
+- **渠道健康监控**: 重构健康检查流程，每次检查的 API 调用减少 50%
+- **整体效果**: 显著降低对 gpt-load 的请求频率，提升系统性能和稳定性
+
+**智能被动监控策略**:
+- 基于统计数据进行健康判断，减少主动 API 验证
+- 对低流量渠道跳过不必要的健康检查，避免资源浪费
+- 保持监控准确性的同时，大幅降低系统负载
+
+这些优化使得 uni-load v2.1 在保持功能完整性的同时，具有更高的性能和更低的资源消耗。
