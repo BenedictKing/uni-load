@@ -246,39 +246,60 @@ class ModelConfig {
       return defaultModel
     }
 
+    // 新增：首先根据渠道类型筛选可用模型
+    const channelCompatibleModels = availableModels.filter(model => {
+        const modelLower = model.toLowerCase();
+        if (channelType === 'anthropic') return modelLower.startsWith('claude-');
+        if (channelType === 'gemini') return modelLower.startsWith('gemini-');
+        // openai 格式可以接受任何模型，但优先排除专有格式以避免混淆
+        if (channelType === 'openai') {
+            return !modelLower.startsWith('claude-') && !modelLower.startsWith('gemini-');
+        }
+        return true;
+    });
+
+    // 如果特定格式没有兼容模型，但渠道是openai，则允许使用所有模型
+    const modelsToSearch = channelCompatibleModels.length > 0 ? channelCompatibleModels : (channelType === 'openai' ? availableModels : []);
+
+    if (modelsToSearch.length === 0) {
+        // 如果真的没有任何模型可选，返回一个最通用的默认值
+        console.log(`⚠️ 渠道类型 ${channelType} 没有找到任何兼容的测试模型，返回默认值 gpt-4o-mini`);
+        return 'gpt-4o-mini';
+    }
+
     // 优先从小模型列表中选择
     for (const preferredModel of this.preferredTestModels) {
       const preferredLower = preferredModel.toLowerCase()
 
       // 1. 精确匹配 (忽略大小写)
-      const exactMatch = availableModels.find((model) => model.toLowerCase() === preferredLower)
+      const exactMatch = modelsToSearch.find((model) => model.toLowerCase() === preferredLower)
       if (exactMatch) {
         console.log(`✅ 选择优先小模型作为测试模型 (精确匹配): ${exactMatch}`)
         return exactMatch
       }
 
       // 2. 包含匹配 (处理 "org/model-name-version" 等情况)
-      const partialMatch = availableModels.find((model) => model.toLowerCase().includes(preferredLower))
+      const partialMatch = modelsToSearch.find(model => model.toLowerCase().includes(preferredLower));
       if (partialMatch) {
-        console.log(`✅ 选择优先小模型作为测试模型 (包含匹配): ${partialMatch}`)
-        return partialMatch
+          console.log(`✅ 选择优先小模型作为测试模型 (包含匹配): ${partialMatch}`);
+          return partialMatch;
       }
     }
 
     // 3. 如果优先列表没有匹配，则根据关键词在剩余模型中寻找小模型
-    const smallModelKeywords = ['nano', 'mini', 'flash', 'haiku', 'lite', 'air', 'lightning']
+    const smallModelKeywords = ['mini', 'flash', 'haiku', 'nano', 'core', 'lite', 'air', 'lightning'];
     for (const keyword of smallModelKeywords) {
-      const keywordMatch = availableModels.find((model) => model.toLowerCase().includes(keyword))
-      if (keywordMatch) {
-        console.log(`✅ 未在优先列表找到匹配，但根据关键词 '${keyword}' 选择了小模型: ${keywordMatch}`)
-        return keywordMatch
-      }
+        const keywordMatch = modelsToSearch.find(model => model.toLowerCase().includes(keyword));
+        if (keywordMatch) {
+            console.log(`✅ 未在优先列表找到匹配，但根据关键词 '${keyword}' 选择了小模型: ${keywordMatch}`);
+            return keywordMatch;
+        }
     }
 
     // 4. 最终回退策略：选择名称最短的模型，通常是基础或小型号
-    const fallbackModel = [...availableModels].sort((a, b) => a.length - b.length)[0]
-    console.log(`⚠️ 优先列表和关键词均无匹配，回退选择名称最短的模型: ${fallbackModel}`)
-    return fallbackModel
+    const fallbackModel = [...modelsToSearch].sort((a, b) => a.length - b.length)[0];
+    console.log(`⚠️ 优先列表和关键词均无匹配，回退选择名称最短的模型: ${fallbackModel}`);
+    return fallbackModel;
   }
 
   /**

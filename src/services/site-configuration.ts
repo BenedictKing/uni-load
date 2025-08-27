@@ -276,6 +276,33 @@ class SiteConfigurationService {
   }
 
   /**
+   * 根据渠道类型过滤模型
+   */
+  private filterModelsByChannelType(models: string[], channelTypes: string[]): string[] {
+    const compatibleModelSet = new Set<string>()
+    
+    models.forEach(model => {
+      const modelLower = model.toLowerCase()
+      for (const type of channelTypes) {
+        if (type === 'openai') {
+          compatibleModelSet.add(model)
+          break // 已添加，无需再检查此模型的其他类型
+        }
+        if (type === 'anthropic' && modelLower.startsWith('claude-')) {
+          compatibleModelSet.add(model)
+          break
+        }
+        if (type === 'gemini' && modelLower.startsWith('gemini-')) {
+          compatibleModelSet.add(model)
+          break
+        }
+      }
+    })
+    
+    return Array.from(compatibleModelSet)
+  }
+
+  /**
    * 处理空模型列表情况
    */
   async handleEmptyModelList(siteName: string, channelTypes: string[]): Promise<ProcessResult> {
@@ -323,15 +350,19 @@ class SiteConfigurationService {
 
     // 4. 应用模型过滤
     const filteredModels = modelsService.filterModels(modelResult.models)
-    if (filteredModels.length === 0) {
-      throw new Error('白名单过滤后没有可用模型')
+    
+    // 新增：根据渠道类型再次过滤
+    const compatibleModels = this.filterModelsByChannelType(filteredModels, processedRequest.channelTypes!)
+
+    if (compatibleModels.length === 0) {
+      throw new Error('白名单和渠道类型过滤后没有可用模型')
     }
 
     // 5. 创建站点分组
     const siteGroups = await this.createSiteGroups(
       siteName, 
       processedRequest, 
-      filteredModels, 
+      compatibleModels, // 使用兼容模型列表
       modelResult.successfulInstance
     )
 
@@ -340,7 +371,7 @@ class SiteConfigurationService {
     }
 
     // 6. 创建模型分组
-    const modelGroups = await gptloadService.createOrUpdateModelGroups(filteredModels, siteGroups)
+    const modelGroups = await gptloadService.createOrUpdateModelGroups(compatibleModels, siteGroups) // 使用兼容模型列表
 
     // 7. 更新uni-api配置
     await yamlManager.updateUniApiConfig(modelGroups)
@@ -353,8 +384,8 @@ class SiteConfigurationService {
         baseUrl: processedRequest.baseUrl,
         channelTypes: processedRequest.channelTypes!,
         groupsCreated: siteGroups.length,
-        modelsCount: filteredModels.length,
-        models: filteredModels,
+        modelsCount: compatibleModels.length, // 使用兼容模型列表
+        models: compatibleModels, // 使用兼容模型列表
         siteGroups,
         modelGroups: modelGroups.length,
         usingManualModels: !!(processedRequest.models && processedRequest.models.length > 0),
