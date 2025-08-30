@@ -441,28 +441,35 @@ class GptloadService {
    * 创建或更新单个模型分组
    */
   async createOrUpdateModelGroup(originalModelName, siteGroups, allExistingGroups) {
-    // 新增 allExistingGroups 参数
-    // 1. 根据模型名称确定渠道类型，并考虑可用站点格式
-    const preferredChannelType = this.getChannelTypeForModel(originalModelName)
-    const isPreferredTypeAvailable = siteGroups.some((sg) => sg.channel_type === preferredChannelType)
-
-    let channelType
-    if (isPreferredTypeAvailable) {
-      // 如果站点提供了模型原生的API格式，则使用该格式
-      channelType = preferredChannelType
-      console.log(`✅ 找到匹配的模型原生格式 [${preferredChannelType.toUpperCase()}] 的站点分组`)
-    } else {
-      // 否则，回退到第一个可用的站点分组格式
-      const fallbackType = siteGroups[0]?.channel_type || 'openai'
-      if (preferredChannelType !== fallbackType) {
-        console.log(
-          `⚠️ 未找到模型原生格式 [${preferredChannelType.toUpperCase()}] 的站点分组，将回退使用 [${fallbackType.toUpperCase()}] 格式`
-        )
+    // 1. 根据模型名称过滤出所有兼容的站点分组
+    const modelNameLower = originalModelName.toLowerCase()
+    const compatibleSiteGroups = siteGroups.filter((sg) => {
+      if (sg.channel_type === 'anthropic') {
+        return modelNameLower.startsWith('claude-')
       }
-      channelType = fallbackType
+      if (sg.channel_type === 'gemini') {
+        return modelNameLower.startsWith('gemini-')
+      }
+      if (sg.channel_type === 'openai') {
+        return true // OpenAI 格式的渠道分组对所有模型开放
+      }
+      return false
+    })
+
+    // 2. 如果没有找到任何兼容的站点分组，则直接跳过此模型
+    if (compatibleSiteGroups.length === 0) {
+      console.log(`⚠️ 模型 ${originalModelName} 没有找到兼容的站点分组，跳过创建。`)
+      return null
     }
 
-    // 2. 使用模型名和最终确定的渠道类型生成安全的分组名称
+    // 3. 确定用于分组命名的 channelType
+    // 优先使用模型原生格式，如果存在对应的兼容站点分组
+    const preferredChannelType = this.getChannelTypeForModel(originalModelName)
+    const isPreferredTypeAvailable = compatibleSiteGroups.some((sg) => sg.channel_type === preferredChannelType)
+
+    const channelType = isPreferredTypeAvailable ? preferredChannelType : 'openai'
+
+    // 4. 使用模型名和最终确定的渠道类型生成安全的分组名称
     const groupName = this.generateSafeGroupName(originalModelName, channelType)
 
     // 如果分组名无法生成（太长），跳过这个模型
@@ -471,28 +478,8 @@ class GptloadService {
       return null
     }
 
-    // 3. 根据模型名称过滤兼容的站点分组
-    const modelNameLower = originalModelName.toLowerCase()
-    const compatibleSiteGroups = siteGroups.filter(sg => {
-      if (sg.channel_type === 'anthropic') {
-        return modelNameLower.startsWith('claude-');
-      }
-      if (sg.channel_type === 'gemini') {
-        return modelNameLower.startsWith('gemini-');
-      }
-      if (sg.channel_type === 'openai') {
-        return true; // OpenAI 格式的渠道分组对所有模型开放
-      }
-      return false;
-    });
-
-    if (compatibleSiteGroups.length === 0) {
-      console.log(`⚠️ 模型 ${originalModelName} 没有找到兼容的站点分组，跳过创建。`)
-      return null
-    }
-
     console.log(`处理模型: ${originalModelName} (格式: ${channelType}) -> 分组名: ${groupName}`)
-    console.log(`📋 兼容的站点分组: ${compatibleSiteGroups.map(sg => `${sg.name}(${sg.channel_type})`).join(', ')}`)
+    console.log(`📋 兼容的站点分组: ${compatibleSiteGroups.map((sg) => `${sg.name}(${sg.channel_type})`).join(', ')}`)
 
     // 优化：检查模型分组是否已存在（从预加载的列表中查找）
     const existingGroup = allExistingGroups.find((group) => group.name === groupName)
