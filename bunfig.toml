@@ -1,5 +1,8 @@
 # Bun 配置文件
 [install]
+# 使用淘宝 npm 镜像源
+registry = "https://registry.npmmirror.com/"
+
 # 使用更快的包解析
 cache = true
 exact = false
