@@ -63,14 +63,11 @@ done
 echo "🌐 启动 uni-api..."
 cd /uni-api
 
-# 初始化变量
-EXISTING_UNI_API_KEY=""
-
 # 检查 api.yaml 是否存在，如果不存在则创建
 if [ ! -f "/uni-api/api.yaml" ]; then
     echo "📄 检测到 api.yaml 不存在，正在生成新的配置和密钥..."
     # 为 uni-api 生成一个随机的64位密钥
-    UNI_API_AUTH_KEY=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 64 | head -n 1)
+    UNI_API_AUTH_KEY=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 48 | head -n 1)
     echo "  - uni-api 新增 AUTH_KEY: sk-${UNI_API_AUTH_KEY}"
     # 将生成的密钥写入 uni-api 的 api.yaml 配置文件
     cat <<EOF > /uni-api/api.yaml
@@ -81,11 +78,8 @@ api_keys:
     preferences:
       SCHEDULING_ALGORITHM: round_robin
 EOF
-else
-    echo "📄 检测到已存在的 api.yaml，将使用现有配置。"
-    # 尝试读取第一个api_key用于提示
-    EXISTING_UNI_API_KEY=$(grep -m 1 'api:' /uni-api/api.yaml | awk '{print $2}')
 fi
+EXISTING_UNI_API_KEY=$(grep -m 1 'api:' /uni-api/api.yaml | awk '{print $2}')
 
 # 按照uni-api的Dockerfile ENTRYPOINT启动
 python -m uvicorn main:app --host 0.0.0.0 --port 8000 &
@@ -123,7 +117,7 @@ echo "  - uni-load:  http://localhost:3002"
 
 # 如果存在从 api.yaml 读取的密钥，则提示用户
 if [ -n "$EXISTING_UNI_API_KEY" ]; then
-    echo "🔑 uni-api 使用现有密钥: $EXISTING_UNI_API_KEY"
+    echo "🔑 uni-api 访问密钥: $EXISTING_UNI_API_KEY"
 fi
 
 # 监控所有进程，如果任何一个退出，则关闭所有服务
