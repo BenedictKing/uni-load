@@ -19,15 +19,14 @@ export interface GptloadInstance {
 }
 
 export class InstanceConfigManager {
-  private configFiles = [
-    'gptload-instances.local.json', // 本地配置（优先级最高）
-    'gptload-instances.json', // 生产配置
-  ]
-
   /**
    * 加载gpt-load实例配置
    */
   async loadInstancesConfig(): Promise<GptloadInstance[]> {
+    const configFiles = [
+      'gptload-instances.local.json', // 本地配置（优先级最高）
+      'gptload-instances.json', // 生产配置
+    ]
     const customPath = process.env.GPTLOAD_INSTANCES_FILE
     let configPath: string | null = null
 
@@ -46,7 +45,7 @@ export class InstanceConfigManager {
       }
     } else {
       // 如果没有自定义路径，则按优先级查找默认文件
-      for (const fileName of this.configFiles) {
+      for (const fileName of configFiles) {
         if (fs.existsSync(fileName)) {
           configPath = fileName
           console.log(`📁 使用默认配置文件: ${fileName}`)
@@ -59,7 +58,7 @@ export class InstanceConfigManager {
       // 仅当未提供自定义路径且未找到任何默认文件时，才会触发此错误
       throw new Error(
         `未找到 gpt-load 实例配置文件。请创建以下文件之一：\n` +
-          this.configFiles.map((f) => `  - ${f}`).join('\n') +
+          configFiles.map((f) => `  - ${f}`).join('\n') +
           `\n\n示例：cp gpt-load-instances.json.example gpt-load-instances.json`
       )
     }
