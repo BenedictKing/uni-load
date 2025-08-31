@@ -3,30 +3,17 @@ import path from 'path'
 import YAML from 'yaml'
 import modelConfig from './model-config'
 import { IGptloadService, IMultiGptloadManager, IYamlManager } from './interfaces'
+import { getService } from './services/service-factory'
 
 class YamlManager implements IYamlManager {
-  private gptloadService: IGptloadService | null = null
-  private multiGptloadManager: IMultiGptloadManager | null = null
   private uniApiPath: string
   private yamlPath: string
   private gptloadUrl: string
 
-  constructor(gptloadService?: IGptloadService, multiGptloadManager?: IMultiGptloadManager) {
+  constructor() {
     this.uniApiPath = process.env.UNI_API_PATH || '../uni-api'
     this.yamlPath = process.env.UNI_API_YAML_PATH || path.join(this.uniApiPath, 'api.yaml')
     this.gptloadUrl = process.env.GPTLOAD_URL || 'http://localhost:3001'
-    
-    // 依赖注入，支持延迟注入
-    if (gptloadService) this.gptloadService = gptloadService
-    if (multiGptloadManager) this.multiGptloadManager = multiGptloadManager
-  }
-
-  /**
-   * 设置依赖服务（支持延迟注入）
-   */
-  setDependencies(gptloadService: IGptloadService, multiGptloadManager: IMultiGptloadManager): void {
-    this.gptloadService = gptloadService
-    this.multiGptloadManager = multiGptloadManager
   }
 
   /**
@@ -158,12 +145,13 @@ class YamlManager implements IYamlManager {
         config.providers = []
       }
 
-      // 使用注入的依赖获取token
-      if (!this.gptloadService) {
-        throw new Error('GptloadService 未注入，无法获取实例状态')
+      // 使用服务工厂获取依赖
+      const gptloadService = getService<IGptloadService>('GptloadService')
+      if (!gptloadService) {
+        throw new Error('无法从服务工厂获取 GptloadService')
       }
 
-      const multiInstanceStatus = this.gptloadService.getMultiInstanceStatus()
+      const multiInstanceStatus = gptloadService.getMultiInstanceStatus()
       const gptloadToken = await this.getGptloadToken(multiInstanceStatus)
 
       // 为每个模型添加或更新 provider
@@ -202,8 +190,10 @@ class YamlManager implements IYamlManager {
         (instance: any) => instance.name && instance.name.includes('本地')
       )
 
-      if (localInstance && this.multiGptloadManager) {
-        const instance = this.multiGptloadManager.getInstance('local')
+      const multiGptloadManager = getService<IMultiGptloadManager>('MultiGptloadManager')
+
+      if (localInstance && multiGptloadManager) {
+        const instance = multiGptloadManager.getInstance('local')
         if (instance && instance.token) {
           console.log('✅ 使用本地gpt-load实例的token')
           return instance.token
@@ -211,10 +201,10 @@ class YamlManager implements IYamlManager {
       }
 
       // 如果本地实例没有token，使用第一个有token的健康实例
-      if (this.multiGptloadManager) {
+      if (multiGptloadManager) {
         for (const [instanceId, status] of Object.entries(multiInstanceStatus.instances)) {
           if ((status as any).healthy) {
-            const instance = this.multiGptloadManager.getInstance(instanceId)
+            const instance = multiGptloadManager.getInstance(instanceId)
             if (instance && instance.token) {
               console.log(`✅ 使用实例 ${instance.name} 的token`)
               return instance.token
