@@ -108,6 +108,7 @@ COPY --from=uni-load-builder /src/dist /uni-load/dist
 COPY --from=uni-load-builder /src/public /uni-load/public
 COPY --from=uni-load-builder /src/.env.example /uni-load/.env
 COPY --from=uni-load-builder /src/package.json /uni-load/package.json
+COPY --from=uni-load-builder /src/node_modules /uni-load/node_modules
 COPY --from=uni-load-builder /src/start.sh /start.sh
 
 # 按照uni-api的Dockerfile构建（使用项目自己的pyproject.toml）
