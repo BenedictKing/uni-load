@@ -336,6 +336,8 @@ Content-Type: application/json
 
 #### 4.6 删除渠道
 
+彻底删除一个渠道及其所有相关配置。
+
 ```http
 DELETE /api/channels/{channelName}
 ```
@@ -467,6 +469,31 @@ Content-Type: application/json
 
 ```http
 POST /api/maintenance/delete-model-groups
+```
+
+### 9. 临时分组管理
+
+#### 9.1 获取临时分组统计
+
+```http
+GET /api/temp-groups/stats
+```
+
+#### 9.2 清理所有临时分组
+
+```http
+POST /api/temp-groups/cleanup
+```
+
+#### 9.3 清理过期临时分组
+
+```http
+POST /api/temp-groups/cleanup-old
+Content-Type: application/json
+
+{
+  "hoursOld": 24
+}
 ```
 
 ### 9. 临时分组管理

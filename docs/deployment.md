@@ -310,12 +310,14 @@ bun run dev:build
 #### 2.1 编译构建
 
 ```bash
-# 编译 TypeScript 到 JavaScript
+# 使用 bun 内置的打包器进行构建
 bun run build
 
 # 验证构建结果
 ls -la dist/
 ```
+
+此命令会调用 `bun build ./server.ts --outdir ./dist --target=node`，它将整个应用（包括所有依赖）打包成一个优化的 JavaScript 文件，有效避免了 TypeScript 路径别名和 ES Modules 导入的常见问题。
 
 #### 2.2 直接运行
 
@@ -390,58 +392,138 @@ pm2 stop uni-load
 #### 3.1 创建 Dockerfile
 
 ```dockerfile
-# 多阶段构建优化 Dockerfile
-FROM oven/bun:1-alpine as builder
+# --- 阶段 1: 构建 gpt-load ---
+FROM docker.1ms.run/golang:1.24.6-bookworm AS gpt-load-builder
 
-# 设置工作目录
-WORKDIR /app
+# 复制bun从官方容器
+COPY --from=docker.1ms.run/oven/bun:latest /usr/local/bin/bun /usr/local/bin/bun
 
-# 复制依赖文件
-COPY package.json bun.lock* ./
+# 设置bun环境变量和node符号链接
+ENV PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/bun-node-fallback-bin"
+RUN mkdir -p /usr/local/bun-node-fallback-bin && \
+    ln -s /usr/local/bin/bun /usr/local/bun-node-fallback-bin/node
+ENV PATH="/usr/local/go/bin:${PATH}"
+ENV GOPATH="/go"
+ENV PATH="${GOPATH}/bin:${PATH}"
+ENV GOROOT="/usr/local/go"
 
-# 安装依赖（仅生产依赖）
-RUN bun install --frozen-lockfile --production
+# 设置Go代理为中国镜像
+ENV GO111MODULE=on
+ENV GOPROXY=https://mirrors.aliyun.com/goproxy/
+ENV GOSUMDB=sum.golang.google.cn
+# 禁用Go自动下载更新
+ENV GOTOOLCHAIN=local
 
-# 复制源代码
-COPY . .
+WORKDIR /src
 
-# 编译 TypeScript
+# 使用ghfast.top GitHub加速镜像
+RUN git clone https://ghfast.top/https://github.com/tbphp/gpt-load.git . || \
+    git clone https://github.com/tbphp/gpt-load.git .
+
+# 修改 gpt-load 的 group_handler.go 文件：将 3(.*)30 替换为 3($1)100
+RUN sed -i 's/3\(.*\)30/3\1100/g' internal/handler/group_handler.go
+
+# 使用bun构建前端
+RUN cd web && \
+    rm -f package-lock.json yarn.lock pnpm-lock.yaml bun.lock && \
+    echo '[install]\nregistry = "https://registry.npmmirror.com/"' > ./bunfig.toml
+RUN cd web && bun install
+RUN cd web && bun vite build
+
+# 先下载go模块依赖
+RUN go mod download && go mod verify
+
+# 然后编译
+RUN CGO_ENABLED=0 GOOS=linux go build -o /app/gpt-load .
+
+# --- 阶段 2: 构建 uni-api (使用其自己的Dockerfile) ---
+FROM docker.1ms.run/python:3.11.13-bookworm AS uni-api-builder
+
+WORKDIR /src
+
+# 克隆uni-api项目
+RUN git clone https://ghfast.top/https://github.com/yym68686/uni-api.git . || \
+    git clone https://github.com/yym68686/uni-api.git .
+
+# 克隆uni-api-core项目
+RUN git clone https://ghfast.top/https://github.com/yym68686/uni-api-core.git core || \
+git clone https://github.com/yym68686/uni-api-core.git core
+
+# --- 阶段 3: 构建 uni-load (本项目) ---
+FROM docker.1ms.run/oven/bun:latest AS uni-load-builder
+
+WORKDIR /src
+COPY package.json ./
+
+# 使用淘宝npm镜像
+RUN echo '[install]\nregistry = "https://registry.npmmirror.com/"' > ./bunfig.toml
+RUN bun install
+COPY . ./
 RUN bun run build
 
-# 生产运行时镜像
-FROM oven/bun:1-alpine
+# --- 最终阶段: 组合所有服务 ---
+FROM docker.1ms.run/node:18-slim
 
-# 安装必要的系统包
-RUN apk add --no-cache curl
+# 复制Python和uv
+COPY --from=docker.1ms.run/python:3.11.13-bookworm /usr/local/bin/python* /usr/local/bin/
+COPY --from=docker.1ms.run/python:3.11.13-bookworm /usr/local/lib/python3.11 /usr/local/lib/python3.11
+COPY --from=docker.1ms.run/python:3.11.13-bookworm /usr/local/lib/libpython* /usr/local/lib/
+COPY --from=docker.1ms.run/astral/uv /uv /uvx /bin/
 
-# 创建非 root 用户
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nextjs -u 1001
+# 中国网络优化：使用阿里云镜像源
+RUN if [ -f /etc/apt/sources.list ]; then \
+        sed -i 's#deb.debian.org#mirrors.aliyun.com#g' /etc/apt/sources.list && \
+        sed -i 's#security.debian.org#mirrors.aliyun.com#g' /etc/apt/sources.list; \
+    elif [ -f /etc/apt/sources.list.d/debian.sources ]; then \
+        sed -i 's#deb.debian.org#mirrors.aliyun.com#g' /etc/apt/sources.list.d/debian.sources && \
+        sed -i 's#security.debian.org#mirrors.aliyun.com#g' /etc/apt/sources.list.d/debian.sources; \
+    else \
+        echo "deb https://mirrors.aliyun.com/debian/ bookworm main" > /etc/apt/sources.list && \
+        echo "deb https://mirrors.aliyun.com/debian-security/ bookworm-security main" >> /etc/apt/sources.list && \
+        echo "deb https://mirrors.aliyun.com/debian/ bookworm-updates main" >> /etc/apt/sources.list; \
+    fi
 
-# 设置工作目录
-WORKDIR /app
+# 安装必要的运行时依赖（已有node，只需要bash和curl）
+RUN apt-get update && apt-get install -y bash curl && rm -rf /var/lib/apt/lists/*
 
-# 从构建阶段复制文件
-COPY --from=builder --chown=nextjs:nodejs /app/dist ./dist
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+# 设置Python符号链接
+RUN ln -sf /usr/local/bin/python3.11 /usr/local/bin/python3 && \
+    ln -sf /usr/local/bin/python3 /usr/local/bin/python
 
-# 创建日志目录
-RUN mkdir -p logs && chown nextjs:nodejs logs
+# 创建根目录下的三个服务目录
+RUN mkdir -p /gpt-load /uni-api /uni-load
 
-# 切换到非 root 用户
-USER nextjs
+# 从各构建阶段复制编译好的产物
+COPY --from=gpt-load-builder /app/gpt-load /gpt-load/gpt-load
+COPY --from=gpt-load-builder /src/web/dist /gpt-load/web/dist
+COPY --from=gpt-load-builder /src/.env.example /gpt-load/.env.example
+
+COPY --from=uni-load-builder /src/dist /uni-load/dist
+COPY --from=uni-load-builder /src/public /uni-load/public
+COPY --from=uni-load-builder /src/.env.example /uni-load/.env.example
+COPY --from=uni-load-builder /src/package.json /uni-load/package.json
+COPY --from=uni-load-builder /src/node_modules /uni-load/node_modules
+COPY --from=uni-load-builder /src/start.sh /start.sh
+
+# 按照uni-api的Dockerfile构建（使用项目自己的pyproject.toml）
+COPY --from=uni-api-builder /src/pyproject.toml /uni-api/
+# RUN cd /uni-api && uv sync -i https://mirrors.aliyun.com/pypi/simple/
+RUN cd /uni-api && uv pip install --system --no-cache-dir . -i https://mirrors.aliyun.com/pypi/simple/
+COPY --from=uni-api-builder /src /uni-api
+# ENV PATH="/uni-api/.venv/bin:$PATH"
+
+# 赋予启动脚本执行权限
+RUN chmod +x /start.sh
 
 # 暴露端口
-EXPOSE 3002
+EXPOSE 3001 3002 3003
 
 # 健康检查
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:3002/api/health || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:3002/api/health || exit 1
 
-# 启动命令
-CMD ["bun", "start"]
+# 设置启动命令
+CMD ["/start.sh"]
 ```
 
 #### 3.2 创建 docker-compose.yml
@@ -974,6 +1056,10 @@ sudo systemctl start uni-load
 # 验证服务状态
 curl http://localhost:3002/api/health
 ```
+
+#### 6. Web 界面显示 "Cannot GET /"
+- **原因**: Node.js 在 ES Module 模式下运行时，`__dirname` 变量不可用，导致 Express 无法找到静态前端文件的正确路径。
+- **解决**: 此问题已在代码中通过使用 `import.meta.url` 和 `path.dirname` 来正确构造 `__dirname` 修复。如果遇到类似问题，请检查静态文件服务的路径是否正确指向 `public` 目录。
 
 ## 总结
 

@@ -257,6 +257,9 @@ vim gptload-instances.json  # gpt-load 实例配置
 - 🔍 **自动模型发现** - 支持标准 OpenAI API 格式
 - 🏗️ **三层分组架构** - 灵活的负载均衡策略
 - 🔄 **多实例支持** - 支持多个 gpt-load 实例协调工作
+- 🔄 **模型自动同步** - 定期同步模型列表，保持配置最新
+- 🧹 **临时资源清理** - 自动和手动清理测试过程中产生的临时分组
+- 🩺 **渠道健康监控** - 监控站点渠道健康，自动处理故障
 - 📊 **实时监控** - 健康检查和状态监控
 - 🔧 **自动化运维** - 模型同步、故障恢复
 
@@ -272,8 +275,11 @@ vim gptload-instances.json  # gpt-load 实例配置
 # 开发模式（热重载）
 bun dev
 
-# 生产构建和启动
-bun run build && bun start
+# 生产构建
+bun run build
+
+# 启动生产服务
+bun start
 
 # 健康检查
 curl http://localhost:3002/api/health
