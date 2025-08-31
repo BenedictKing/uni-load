@@ -129,7 +129,7 @@ echo "uni-api PID: $PID_UNI_API"
 echo "⏳ 等待 uni-api 启动..."
 sleep 5
 for i in {1..24}; do
-    if curl -f http://localhost:3003/api/health > /dev/null 2>&1 || curl -f http://localhost:3003/ > /dev/null 2>&1; then
+    if curl -f http://localhost:3003/v1/generate-api-key > /dev/null 2>&1; then
         echo "✅ uni-api 启动成功"
         break
     fi
