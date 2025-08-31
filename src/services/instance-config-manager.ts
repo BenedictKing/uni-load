@@ -1,6 +1,6 @@
 /**
  * 实例配置管理器
- * 
+ *
  * 职责：专门负责gpt-load实例配置的加载、验证和管理
  * 从 multi-gptload.ts 中分离的配置管理逻辑
  */
@@ -20,8 +20,8 @@ export interface GptloadInstance {
 
 export class InstanceConfigManager {
   private configFiles = [
-    'gptload-instances.local.json',  // 本地配置（优先级最高）
-    'gptload-instances.json',        // 生产配置
+    'gptload-instances.local.json', // 本地配置（优先级最高）
+    'gptload-instances.json', // 生产配置
   ]
 
   /**
@@ -54,8 +54,8 @@ export class InstanceConfigManager {
     if (!configPath) {
       throw new Error(
         `未找到 gpt-load 实例配置文件。请创建以下文件之一：\n` +
-        this.configFiles.map(f => `  - ${f}`).join('\n') +
-        `\n\n示例：cp gptload-instances.json.example gptload-instances.json`
+          this.configFiles.map((f) => `  - ${f}`).join('\n') +
+          `\n\n示例：cp gpt-load-instances.json.example gpt-load-instances.json`
       )
     }
 
@@ -71,7 +71,8 @@ export class InstanceConfigManager {
   /**
    * 验证配置格式
    */
-  private async validateConfig(instances: GptloadInstance[]): Promise<void> { // 改动：添加 async 和 Promise<void>
+  private async validateConfig(instances: GptloadInstance[]): Promise<void> {
+    // 改动：添加 async 和 Promise<void>
     if (!Array.isArray(instances)) {
       throw new Error('配置文件格式错误：应该是实例数组')
     }
@@ -110,13 +111,13 @@ export class InstanceConfigManager {
     }
 
     // 验证唯一性
-    const ids = instances.map(i => i.id)
+    const ids = instances.map((i) => i.id)
     const duplicateIds = ids.filter((id, index) => ids.indexOf(id) !== index)
     if (duplicateIds.length > 0) {
       throw new Error(`重复的实例ID: ${duplicateIds.join(', ')}`)
     }
 
-    const urls = instances.map(i => i.url)
+    const urls = instances.map((i) => i.url)
     const duplicateUrls = urls.filter((url, index) => urls.indexOf(url) !== index)
     if (duplicateUrls.length > 0) {
       throw new Error(`重复的实例URL: ${duplicateUrls.join(', ')}`)
@@ -124,10 +125,11 @@ export class InstanceConfigManager {
 
     // 验证上游地址
     const validationResult = await this.validateUpstreamAddresses(instances) // 改动：添加 await
-    if (!validationResult.valid) { // 改动：检查 validationResult.valid
+    if (!validationResult.valid) {
+      // 改动：检查 validationResult.valid
       throw new Error(
         `上游地址配置错误:\n${validationResult.issues.join('\n')}\n\n` + // 改动：使用 validationResult.issues
-        `规则：实例只能使用序号更大的实例作为上游地址，以避免循环依赖和访问失败`
+          `规则：实例只能使用序号更大的实例作为上游地址，以避免循环依赖和访问失败`
       )
     }
   }
@@ -135,34 +137,35 @@ export class InstanceConfigManager {
   /**
    * 验证上游地址配置
    */
-  async validateUpstreamAddresses(instances: GptloadInstance[]): Promise<{ valid: boolean; issues: string[] }> { // 改动：方法签名
+  async validateUpstreamAddresses(instances: GptloadInstance[]): Promise<{ valid: boolean; issues: string[] }> {
+    // 改动：方法签名
     const errors: string[] = []
-    
+
     for (let i = 0; i < instances.length; i++) {
       const instance = instances[i]
-      
+
       if (!instance.upstream_addresses || !Array.isArray(instance.upstream_addresses)) {
         continue
       }
-      
+
       const currentInstanceName = instance.name
-      
+
       for (const upstreamAddr of instance.upstream_addresses) {
         // 检查是否引用了序号更小或相等的实例
         for (let j = 0; j <= i; j++) {
           const otherInstance = instances[j]
-          
+
           // 比较URL（忽略协议和端口差异）
           if (this.normalizeUrl(upstreamAddr) === this.normalizeUrl(otherInstance.url)) {
             errors.push(
               `实例 '${currentInstanceName}' (序号 ${i}) 不能使用序号更小或相等的实例 ` +
-              `'${otherInstance.name}' (序号 ${j}, ${otherInstance.url}) 作为上游地址`
+                `'${otherInstance.name}' (序号 ${j}, ${otherInstance.url}) 作为上游地址`
             )
           }
         }
       }
     }
-    
+
     return { valid: errors.length === 0, issues: errors } // 改动：返回对象
   }
 
@@ -201,17 +204,19 @@ export class InstanceConfigManager {
     try {
       // 验证URL可达性（基础检查）
       const url = new URL(instance.url)
-      
+
       // 检查必要的配置项
       if (!instance.id || !instance.name) {
         return false
       }
 
       // 检查远程实例是否有token
-      if (instance.url.includes('://') && 
-          !instance.url.startsWith('http://localhost') && 
-          !instance.url.startsWith('http://127.0.0.1') &&
-          !instance.token) {
+      if (
+        instance.url.includes('://') &&
+        !instance.url.startsWith('http://localhost') &&
+        !instance.url.startsWith('http://127.0.0.1') &&
+        !instance.token
+      ) {
         console.warn(`⚠️ 远程实例 ${instance.name} 未配置token，可能导致认证失败`)
       }
 
@@ -232,7 +237,7 @@ export class InstanceConfigManager {
         name: '本地 gpt-load',
         url: 'http://localhost:3001',
         priority: 1,
-        description: '本地服务，优先使用'
+        description: '本地服务，优先使用',
       },
       {
         id: 'us-proxy',
@@ -241,7 +246,7 @@ export class InstanceConfigManager {
         token: 'your-token-here',
         priority: 2,
         description: '用于本地不易访问的站点',
-        upstream_addresses: ['https://eu.gpt-load.example.com']
+        upstream_addresses: ['https://eu.gpt-load.example.com'],
       },
       {
         id: 'eu-proxy',
@@ -249,8 +254,8 @@ export class InstanceConfigManager {
         url: 'https://eu.gpt-load.example.com',
         token: 'your-token-here',
         priority: 3,
-        description: '欧洲服务器，最后备选'
-      }
+        description: '欧洲服务器，最后备选',
+      },
     ]
   }
 
@@ -259,12 +264,12 @@ export class InstanceConfigManager {
    */
   async exportConfig(instances: GptloadInstance[], outputPath?: string): Promise<string> {
     const configData = JSON.stringify(instances, null, 2)
-    
+
     if (outputPath) {
       fs.writeFileSync(outputPath, configData, 'utf8')
       console.log(`📁 配置已导出到: ${outputPath}`)
     }
-    
+
     return configData
   }
 }
