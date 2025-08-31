@@ -74,7 +74,7 @@ echo "gpt-load PID: $PID_GPT_LOAD"
 
 # 等待 gpt-load 启动
 echo "⏳ 等待 gpt-load 启动..."
-sleep 5
+sleep 3
 for i in {1..24}; do
     if curl -f http://localhost:3001/health > /dev/null 2>&1; then
         echo "✅ gpt-load 启动成功"
@@ -85,7 +85,7 @@ for i in {1..24}; do
         exit 1
     fi
     echo "等待 gpt-load 响应... ($i/24)"
-    sleep 5
+    sleep 3
 done
 
 # 2. 启动 uni-api  
@@ -127,7 +127,7 @@ echo "uni-api PID: $PID_UNI_API"
 
 # 等待 uni-api 启动
 echo "⏳ 等待 uni-api 启动..."
-sleep 5
+sleep 3
 for i in {1..24}; do
     if curl -f -H "Authorization: Bearer $EXISTING_UNI_API_KEY" http://localhost:3003/v1/generate-api-key > /dev/null 2>&1; then
         echo "✅ uni-api 启动成功"
@@ -138,7 +138,7 @@ for i in {1..24}; do
         exit 1
     fi
     echo "等待 uni-api 响应... ($i/24)"
-    sleep 5
+    sleep 3
 done
 
 # 3. 启动 uni-load
