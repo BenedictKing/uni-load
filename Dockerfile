@@ -1,15 +1,13 @@
 # --- 阶段 1: 构建 gpt-load ---
-FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/oven/bun:1.2.15 AS gpt-load-builder
+FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/library/golang:1.24.4 AS gpt-load-builder
 
-# 输出架构信息
-RUN echo "=== gpt-load-builder 架构信息 ===" && \
-    uname -a && \
-    echo "Architecture: $(uname -m)" && \
-    echo "Platform: $(uname -s)-$(uname -m)" && \
-    echo "================================"
+# 复制bun从官方容器
+COPY --from=swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/oven/bun:1.2.15 /usr/local/bin/bun /usr/local/bin/bun
 
-# 复制Go运行时
-COPY --from=swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/library/golang:1.24.2-alpine /usr/local/go /usr/local/go
+# 设置bun环境变量和node符号链接
+ENV PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/bun-node-fallback-bin"
+RUN mkdir -p /usr/local/bun-node-fallback-bin && \
+    ln -s /usr/local/bin/bun /usr/local/bun-node-fallback-bin/node
 ENV PATH="/usr/local/go/bin:${PATH}"
 ENV GOPATH="/go"
 ENV PATH="${GOPATH}/bin:${PATH}"
@@ -21,22 +19,6 @@ ENV GOPROXY=https://mirrors.aliyun.com/goproxy/
 ENV GOSUMDB=sum.golang.google.cn
 # 禁用Go自动下载更新
 ENV GOTOOLCHAIN=local
-
-# 中国网络优化：使用阿里云镜像源
-RUN if [ -f /etc/apt/sources.list ]; then \
-        sed -i 's#deb.debian.org#mirrors.aliyun.com#g' /etc/apt/sources.list && \
-        sed -i 's#security.debian.org#mirrors.aliyun.com#g' /etc/apt/sources.list; \
-    elif [ -f /etc/apt/sources.list.d/debian.sources ]; then \
-        sed -i 's#deb.debian.org#mirrors.aliyun.com#g' /etc/apt/sources.list.d/debian.sources && \
-        sed -i 's#security.debian.org#mirrors.aliyun.com#g' /etc/apt/sources.list.d/debian.sources; \
-    else \
-        echo "deb https://mirrors.aliyun.com/debian/ bookworm main" > /etc/apt/sources.list && \
-        echo "deb https://mirrors.aliyun.com/debian-security/ bookworm-security main" >> /etc/apt/sources.list && \
-        echo "deb https://mirrors.aliyun.com/debian/ bookworm-updates main" >> /etc/apt/sources.list; \
-    fi
-
-# 快速安装git（只安装必要的包，不更新索引）
-RUN apt-get update -qq && apt-get install -y --no-install-recommends git ca-certificates && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /src
 
@@ -62,13 +44,6 @@ RUN CGO_ENABLED=0 go build -o gpt-load .
 
 # --- 阶段 2: 构建 uni-api (使用其自己的Dockerfile) ---
 FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/python:3.11-slim AS uni-api-builder
-
-# 输出架构信息
-RUN echo "=== uni-api-builder 架构信息 ===" && \
-    uname -a && \
-    echo "Architecture: $(uname -m)" && \
-    echo "Platform: $(uname -s)-$(uname -m)" && \
-    echo "================================"
 
 # 复制uni-api的Dockerfile构建逻辑
 COPY --from=swr.cn-north-4.myhuaweicloud.com/ddn-k8s/ghcr.io/astral-sh/uv /uv /uvx /bin/
@@ -101,16 +76,6 @@ RUN uv add pyproject.toml -i https://mirrors.aliyun.com/pypi/simple/
 # --- 阶段 3: 构建 uni-load (本项目) ---
 FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/oven/bun:1.2.15 AS uni-load-builder
 
-# 输出架构信息
-RUN echo "=== uni-load-builder 架构信息 ===" && \
-    uname -a && \
-    echo "Architecture: $(uname -m)" && \
-    echo "Platform: $(uname -s)-$(uname -m)" && \
-    echo "================================"
-
-# bun:1.2.15 是基于Ubuntu的，不需要修改apk源
-# 如果需要加速，可以设置npm镜像源
-
 WORKDIR /app
 COPY . ./
 
@@ -121,13 +86,6 @@ RUN echo '[install]\nregistry = "https://registry.npmmirror.com/"' > ./bunfig.to
 
 # --- 最终阶段: 组合所有服务 ---
 FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/library/node:18-slim
-
-# 输出架构信息
-RUN echo "=== final stage 架构信息 ===" && \
-    uname -a && \
-    echo "Architecture: $(uname -m)" && \
-    echo "Platform: $(uname -s)-$(uname -m)" && \
-    echo "================================"
 
 # 复制Python和uv
 COPY --from=swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/library/python:3.11-slim /usr/local/bin/python* /usr/local/bin/
