@@ -24,8 +24,8 @@ export class InstanceConfigManager {
    */
   async loadInstancesConfig(): Promise<GptloadInstance[]> {
     const configFiles = [
-      'gptload-instances.local.json', // 本地配置（优先级最高）
-      'gptload-instances.json', // 生产配置
+      'gpt-load-instances.local.json', // 本地配置（优先级最高）
+      'gpt-load-instances.json', // 生产配置
     ]
     const customPath = process.env.GPTLOAD_INSTANCES_FILE
     let configPath: string | null = null

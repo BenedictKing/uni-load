@@ -35,7 +35,7 @@ const PORT: number = parseInt(process.env.PORT || '3002', 10)
 // 中间件
 app.use(cors())
 app.use(express.json())
-app.use(express.static(path.join(__dirname, 'public')))
+app.use(express.static(path.join(__dirname, '../public')))
 
 // 预览站点名称的API端点
 app.post('/api/preview-site-name', (req: Request, res: Response) => {
