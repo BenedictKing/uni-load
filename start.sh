@@ -75,16 +75,16 @@ echo "gpt-load PID: $PID_GPT_LOAD"
 # 等待 gpt-load 启动
 echo "⏳ 等待 gpt-load 启动..."
 sleep 5
-for i in {1..12}; do
+for i in {1..24}; do
     if curl -f http://localhost:3001/health > /dev/null 2>&1; then
         echo "✅ gpt-load 启动成功"
         break
     fi
-    if [ $i -eq 12 ]; then
+    if [ $i -eq 24 ]; then
         echo "❌ gpt-load 启动超时"
         exit 1
     fi
-    echo "等待 gpt-load 响应... ($i/12)"
+    echo "等待 gpt-load 响应... ($i/24)"
     sleep 5
 done
 
@@ -106,29 +106,37 @@ api_keys:
       - all
     preferences:
       SCHEDULING_ALGORITHM: round_robin
+providers:
+  - provider: provider_name # 服务提供商名称, 如 openai、anthropic、gemini、openrouter，随便取名字，必填
+    base_url: https://api.your.com/v1/chat/completions # 后端服务的API地址，必填
+    api: sk-YgS6GTi0b4bEabc4C # 提供商的API Key，必填，自动使用 base_url 和 api 通过 /v1/models 端点获取可用的所有模型。
+  # 这里可以配置多个提供商，每个提供商可以配置多个 API Key，每个提供商可以配置多个模型。
+preferences:
+  model_timeout:
+    default: 600
 EOF
 fi
 EXISTING_UNI_API_KEY=$(grep -m 1 'api:' /uni-api/api.yaml | awk '{print $2}')
 
 # 按照uni-api的Dockerfile ENTRYPOINT启动
-DISABLE_DATABASE=true python -m uvicorn main:app --host 0.0.0.0 --port 8000 &
+DISABLE_DATABASE=true python -m uvicorn main:app --host 0.0.0.0 --port 3003 &
 PID_UNI_API=$!
 echo "uni-api PID: $PID_UNI_API"
 
 # 等待 uni-api 启动
 echo "⏳ 等待 uni-api 启动..."
-sleep 3
-for i in {1..10}; do
-    if curl -f http://localhost:8000/api/health > /dev/null 2>&1 || curl -f http://localhost:8000/ > /dev/null 2>&1; then
+sleep 5
+for i in {1..24}; do
+    if curl -f http://localhost:3003/api/health > /dev/null 2>&1 || curl -f http://localhost:3003/ > /dev/null 2>&1; then
         echo "✅ uni-api 启动成功"
         break
     fi
-    if [ $i -eq 10 ]; then
+    if [ $i -eq 24 ]; then
         echo "❌ uni-api 启动超时"
         exit 1
     fi
-    echo "等待 uni-api 响应... ($i/10)"
-    sleep 3
+    echo "等待 uni-api 响应... ($i/24)"
+    sleep 5
 done
 
 # 3. 启动 uni-load
@@ -141,8 +149,8 @@ echo "uni-load PID: $PID_UNI_LOAD"
 echo "🎉 所有服务启动完成！"
 echo "📊 服务端口："
 echo "  - gpt-load:  http://localhost:3001"
-echo "  - uni-api:   http://localhost:8000"  
 echo "  - uni-load:  http://localhost:3002"
+echo "  - uni-api:   http://localhost:3003"  
 
 # 读取 gpt-load 的密钥用于提示
 GPTLOAD_AUTH_KEY=$(grep '^AUTH_KEY=' /gpt-load/.env | cut -d'=' -f2)

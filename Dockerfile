@@ -45,17 +45,15 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /app/gpt-load .
 # --- 阶段 2: 构建 uni-api (使用其自己的Dockerfile) ---
 FROM docker.1ms.run/python:3.11.13-bookworm AS uni-api-builder
 
-# 复制uni-api的Dockerfile构建逻辑
-COPY --from=docker.1ms.run/astral/uv /uv /uvx /bin/
-
 WORKDIR /src
 
 # 克隆uni-api项目
 RUN git clone https://ghfast.top/https://github.com/yym68686/uni-api.git . || \
     git clone https://github.com/yym68686/uni-api.git .
 
-# 按照uni-api的Dockerfile构建（使用项目自己的pyproject.toml和uv.lock）
-RUN uv pip install --system --no-cache-dir . -i https://mirrors.aliyun.com/pypi/simple/
+# 克隆uni-api-core项目
+RUN git clone https://ghfast.top/https://github.com/yym68686/uni-api-core.git core || \
+git clone https://github.com/yym68686/uni-api-core.git core
 
 # --- 阶段 3: 构建 uni-load (本项目) ---
 FROM docker.1ms.run/oven/bun:latest AS uni-load-builder
@@ -76,6 +74,7 @@ FROM docker.1ms.run/node:18-slim
 COPY --from=docker.1ms.run/python:3.11.13-bookworm /usr/local/bin/python* /usr/local/bin/
 COPY --from=docker.1ms.run/python:3.11.13-bookworm /usr/local/lib/python3.11 /usr/local/lib/python3.11
 COPY --from=docker.1ms.run/python:3.11.13-bookworm /usr/local/lib/libpython* /usr/local/lib/
+COPY --from=docker.1ms.run/astral/uv /uv /uvx /bin/
 
 # 中国网络优化：使用阿里云镜像源
 RUN if [ -f /etc/apt/sources.list ]; then \
@@ -104,18 +103,24 @@ RUN mkdir -p /gpt-load /uni-api /uni-load
 COPY --from=gpt-load-builder /app/gpt-load /gpt-load/gpt-load
 COPY --from=gpt-load-builder /src/web/dist /gpt-load/web/dist
 COPY --from=gpt-load-builder /src/.env.example /gpt-load/.env.example
-COPY --from=uni-api-builder /src /uni-api/
-COPY --from=uni-api-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+
 COPY --from=uni-load-builder /src/dist /uni-load/dist
 COPY --from=uni-load-builder /src/public /uni-load/public
 COPY --from=uni-load-builder /src/.env.example /uni-load/.env
 COPY --from=uni-load-builder /src/start.sh /start.sh
 
+# 按照uni-api的Dockerfile构建（使用项目自己的pyproject.toml）
+COPY --from=uni-api-builder /src/pyproject.toml /uni-api/
+# RUN cd /uni-api && uv sync -i https://mirrors.aliyun.com/pypi/simple/
+RUN cd /uni-api && uv pip install --system --no-cache-dir . -i https://mirrors.aliyun.com/pypi/simple/
+COPY --from=uni-api-builder /src /uni-api
+# ENV PATH="/uni-api/.venv/bin:$PATH"
+
 # 赋予启动脚本执行权限
 RUN chmod +x /start.sh
 
 # 暴露端口
-EXPOSE 3001 8000 3002
+EXPOSE 3001 3002 3003
 
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
