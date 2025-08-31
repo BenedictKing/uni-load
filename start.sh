@@ -49,6 +49,22 @@ if [ ! -f "/gpt-load/.env" ]; then
     # 替换 .env 文件中的默认密钥
     sed -i "s|AUTH_KEY=sk-123456|AUTH_KEY=${GPTLOAD_NEW_AUTH_KEY}|g" /gpt-load/.env
     echo "  - gpt-load 新增 AUTH_KEY: ${GPTLOAD_NEW_AUTH_KEY}"
+    
+    # 为 uni-load 生成对应的 gpt-load-instances.json 配置文件
+    echo "📄 正在为 uni-load 生成 gpt-load-instances.json 配置文件..."
+    cat <<EOF > /uni-load/gpt-load-instances.json
+[
+  {
+    "id": "local",
+    "name": "本地 gpt-load",
+    "url": "http://localhost:3001",
+    "token": "${GPTLOAD_NEW_AUTH_KEY}",
+    "priority": 1,
+    "description": "本地服务，优先使用"
+  }
+]
+EOF
+    echo "  - 已生成 uni-load 配置文件，使用相同的密钥"
 fi
 
 cd /gpt-load
