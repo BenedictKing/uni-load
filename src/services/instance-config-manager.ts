@@ -32,26 +32,31 @@ export class InstanceConfigManager {
     let configPath: string | null = null
 
     if (customPath) {
+      // 如果提供了自定义路径，则只检查该路径
       if (fs.existsSync(customPath)) {
         configPath = customPath
         console.log(`📁 使用自定义配置文件: ${customPath}`)
       } else {
-        console.warn(`⚠️ 自定义配置文件不存在: ${customPath}`)
+        // 如果自定义文件不存在，则抛出特定错误，不再回退
+        throw new Error(
+          `指定的 gpt-load 实例配置文件未找到。\n` +
+            `  - 环境变量 GPTLOAD_INSTANCES_FILE 指向: ${customPath}\n` +
+            `  - 请确认此文件是否存在，或清除该环境变量以使用默认配置文件。`
+        )
       }
-    }
-
-    // 如果没有自定义路径或自定义文件不存在，按优先级查找
-    if (!configPath) {
+    } else {
+      // 如果没有自定义路径，则按优先级查找默认文件
       for (const fileName of this.configFiles) {
         if (fs.existsSync(fileName)) {
           configPath = fileName
-          console.log(`📁 使用配置文件: ${fileName}`)
+          console.log(`📁 使用默认配置文件: ${fileName}`)
           break
         }
       }
     }
 
     if (!configPath) {
+      // 仅当未提供自定义路径且未找到任何默认文件时，才会触发此错误
       throw new Error(
         `未找到 gpt-load 实例配置文件。请创建以下文件之一：\n` +
           this.configFiles.map((f) => `  - ${f}`).join('\n') +
