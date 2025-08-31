@@ -5,7 +5,7 @@
   "description": "中间桥梁项目，连接 uni-api 和 gptload，实现第三方AI站点的自动配置",
   "main": "dist/server.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && tsc-alias",
     "start": "bun run dist/server.js",
     "start:ts": "ts-node server.ts",
     "dev": "bun --hot server.ts",
@@ -27,7 +27,8 @@
     "@types/express": "^5.0.3",
     "@types/node": "^24.3.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "tsc-alias": "^1.8.10"
   },
   "packageManager": "bun@1.0.0",
   "keywords": [
