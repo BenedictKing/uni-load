@@ -103,7 +103,7 @@ RUN mkdir -p /gpt-load /uni-api /uni-load
 # 从各构建阶段复制编译好的产物
 COPY --from=gpt-load-builder /app/gpt-load /gpt-load/gpt-load
 COPY --from=gpt-load-builder /src/web/dist /gpt-load/web/dist
-COPY --from=gpt-load-builder /src/.env.example /gpt-load/.env
+COPY --from=gpt-load-builder /src/.env.example /gpt-load/.env.example
 COPY --from=uni-api-builder /src /uni-api/
 COPY --from=uni-api-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=uni-load-builder /src/dist /uni-load/dist

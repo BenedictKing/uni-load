@@ -38,6 +38,21 @@ trap graceful_shutdown SIGINT SIGTERM
 
 # 1. 启动 gpt-load
 echo "📡 启动 gpt-load..."
+
+# 检查 gpt-load 的 .env 文件是否存在，如果不存在则从示例创建并生成密钥
+if [ ! -f "/gpt-load/.env" ]; then
+    echo "📄 检测到 /gpt-load/.env 不存在，正在从 .env.example 创建并生成新密钥..."
+    # 复制示例文件
+    cp /gpt-load/.env.example /gpt-load/.env
+    # 生成新密钥
+    GPTLOAD_NEW_AUTH_KEY=sk-$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 48 | head -n 1)
+    # 替换 .env 文件中的默认密钥
+    sed -i "s|AUTH_KEY=sk-123456|AUTH_KEY=${GPTLOAD_NEW_AUTH_KEY}|g" /gpt-load/.env
+    echo "  - gpt-load 新增 AUTH_KEY: ${GPTLOAD_NEW_AUTH_KEY}"
+else
+    echo "📄 检测到已存在的 /gpt-load/.env，将使用现有配置。"
+fi
+
 cd /gpt-load
 ./gpt-load &
 PID_GPT_LOAD=$!
@@ -115,9 +130,15 @@ echo "  - gpt-load:  http://localhost:3001"
 echo "  - uni-api:   http://localhost:8000"  
 echo "  - uni-load:  http://localhost:3002"
 
+# 读取 gpt-load 的密钥用于提示
+GPTLOAD_AUTH_KEY=$(grep '^AUTH_KEY=' /gpt-load/.env | cut -d'=' -f2)
+
 # 如果存在从 api.yaml 读取的密钥，则提示用户
 if [ -n "$EXISTING_UNI_API_KEY" ]; then
     echo "🔑 uni-api 访问密钥: $EXISTING_UNI_API_KEY"
+fi
+if [ -n "$GPTLOAD_AUTH_KEY" ]; then
+    echo "🔑 gpt-load 访问密钥: $GPTLOAD_AUTH_KEY"
 fi
 
 # 监控所有进程，如果任何一个退出，则关闭所有服务
