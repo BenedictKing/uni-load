@@ -76,7 +76,7 @@ echo "gpt-load PID: $PID_GPT_LOAD"
 echo "⏳ 等待 gpt-load 启动..."
 sleep 5
 for i in {1..12}; do
-    if curl -f http://localhost:3001/api/healthcheck > /dev/null 2>&1; then
+    if curl -f http://localhost:3001/health > /dev/null 2>&1; then
         echo "✅ gpt-load 启动成功"
         break
     fi
