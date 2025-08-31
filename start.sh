@@ -62,8 +62,26 @@ done
 # 2. 启动 uni-api  
 echo "🌐 启动 uni-api..."
 cd /uni-api
-# 确保 api.yaml 文件存在且可写
-touch api.yaml
+
+# 检查 api.yaml 是否存在，如果不存在则创建
+if [ ! -f "/uni-api/api.yaml" ]; then
+    echo "📄 检测到 api.yaml 不存在，正在生成新的配置和密钥..."
+    # 为 uni-api 生成一个随机的64位密钥
+    UNI_API_AUTH_KEY=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 64 | head -n 1)
+    echo "  - uni-api 新增 AUTH_KEY: sk-${UNI_API_AUTH_KEY}"
+    # 将生成的密钥写入 uni-api 的 api.yaml 配置文件
+    cat <<EOF > /uni-api/api.yaml
+api_keys:
+  - api: sk-${UNI_API_AUTH_KEY}
+    model:
+      - all
+    preferences:
+      SCHEDULING_ALGORITHM: round_robin
+EOF
+else
+    echo "📄 检测到已存在的 api.yaml，将使用现有配置。"
+fi
+
 # 按照uni-api的Dockerfile ENTRYPOINT启动
 python -m uvicorn main:app --host 0.0.0.0 --port 8000 &
 PID_UNI_API=$!
