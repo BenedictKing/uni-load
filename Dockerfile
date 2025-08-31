@@ -1,6 +1,13 @@
 # --- 阶段 1: 构建 gpt-load ---
 FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/oven/bun:1.2.15 AS gpt-load-builder
 
+# 输出架构信息
+RUN echo "=== gpt-load-builder 架构信息 ===" && \
+    uname -a && \
+    echo "Architecture: $(uname -m)" && \
+    echo "Platform: $(uname -s)-$(uname -m)" && \
+    echo "================================"
+
 # 复制Go运行时
 COPY --from=swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/library/golang:1.24.2-alpine /usr/local/go /usr/local/go
 ENV PATH="/usr/local/go/bin:${PATH}"
@@ -9,7 +16,8 @@ ENV PATH="${GOPATH}/bin:${PATH}"
 ENV GOROOT="/usr/local/go"
 
 # 设置Go代理为中国镜像
-ENV GOPROXY=https://goproxy.io,direct
+ENV GO111MODULE=on
+ENV GOPROXY=https://mirrors.aliyun.com/goproxy/
 ENV GOSUMDB=sum.golang.google.cn
 # 禁用Go自动下载更新
 ENV GOTOOLCHAIN=local
@@ -34,22 +42,17 @@ WORKDIR /src
 
 # 使用ghfast.top GitHub加速镜像
 RUN git clone https://ghfast.top/https://github.com/tbphp/gpt-load.git . || \
-    git clone https://gitee.com/tbphp/gpt-load.git . || \
     git clone https://github.com/tbphp/gpt-load.git .
 
 # 修改 gpt-load 的 group_handler.go 文件：将 3(.*)30 替换为 3($1)100
 RUN sed -i 's/3\(.*\)30/3\1100/g' internal/handler/group_handler.go
 
-# 使用bun构建前端（如果存在web目录）
-RUN if [ -d "web" ]; then \
-        cd web && \
-        rm -f package-lock.json yarn.lock pnpm-lock.yaml bun.lock && \
-        echo '[install]\nregistry = "https://registry.npmmirror.com/"' > ~/.bunfig.toml && \
-        bun install && \
-        bun vite build; \
-    else \
-        mkdir -p web/dist && echo '{}' > web/dist/index.html; \
-    fi
+# 使用bun构建前端
+RUN cd web && \
+    rm -f package-lock.json yarn.lock pnpm-lock.yaml bun.lock && \
+    echo '[install]\nregistry = "https://registry.npmmirror.com/"' > ./bunfig.toml && \
+    bun install && \
+    bun vite build
 
 # 先下载go模块依赖
 RUN go mod download && go mod verify
@@ -59,6 +62,13 @@ RUN CGO_ENABLED=0 go build -o gpt-load .
 
 # --- 阶段 2: 构建 uni-api (使用其自己的Dockerfile) ---
 FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/python:3.11-slim AS uni-api-builder
+
+# 输出架构信息
+RUN echo "=== uni-api-builder 架构信息 ===" && \
+    uname -a && \
+    echo "Architecture: $(uname -m)" && \
+    echo "Platform: $(uname -s)-$(uname -m)" && \
+    echo "================================"
 
 # 复制uni-api的Dockerfile构建逻辑
 COPY --from=swr.cn-north-4.myhuaweicloud.com/ddn-k8s/ghcr.io/astral-sh/uv /uv /uvx /bin/
@@ -83,7 +93,6 @@ WORKDIR /src
 
 # 克隆uni-api项目
 RUN git clone https://ghfast.top/https://github.com/yym68686/uni-api.git . || \
-    git clone https://gitee.com/yym68686/uni-api.git . || \
     git clone https://github.com/yym68686/uni-api.git .
 
 # 按照uni-api的Dockerfile构建（使用项目自己的pyproject.toml和uv.lock）
@@ -92,23 +101,33 @@ RUN uv add pyproject.toml -i https://mirrors.aliyun.com/pypi/simple/
 # --- 阶段 3: 构建 uni-load (本项目) ---
 FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/oven/bun:1.2.15 AS uni-load-builder
 
+# 输出架构信息
+RUN echo "=== uni-load-builder 架构信息 ===" && \
+    uname -a && \
+    echo "Architecture: $(uname -m)" && \
+    echo "Platform: $(uname -s)-$(uname -m)" && \
+    echo "================================"
+
 # bun:1.2.15 是基于Ubuntu的，不需要修改apk源
 # 如果需要加速，可以设置npm镜像源
 
 WORKDIR /app
-COPY package.json tsconfig.json ./
+COPY . ./
 
 # 使用淘宝npm镜像
-RUN echo '[install]\nregistry = "https://registry.npmmirror.com/"' > ~/.bunfig.toml
-# 安装所有依赖（包括开发依赖）以进行构建
-RUN bun install
-
-# 复制源代码和其他配置文件
-COPY . .
-RUN bun run build
+RUN echo '[install]\nregistry = "https://registry.npmmirror.com/"' > ./bunfig.toml && \
+    bun install && \
+    bun run build
 
 # --- 最终阶段: 组合所有服务 ---
 FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/library/node:18-slim
+
+# 输出架构信息
+RUN echo "=== final stage 架构信息 ===" && \
+    uname -a && \
+    echo "Architecture: $(uname -m)" && \
+    echo "Platform: $(uname -s)-$(uname -m)" && \
+    echo "================================"
 
 # 复制Python和uv
 COPY --from=swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/library/python:3.11-slim /usr/local/bin/python* /usr/local/bin/
@@ -150,7 +169,7 @@ COPY --from=uni-load-builder /app/public /uni-load/public
 
 # 复制启动脚本和配置文件
 COPY start.sh /start.sh
-COPY gptload-instances.json /uni-load/gptload-instances.json
+COPY gpt-load-instances.json /uni-load/gpt-load-instances.json
 COPY .env.local /uni-load/.env.local
 
 # 赋予启动脚本执行权限
