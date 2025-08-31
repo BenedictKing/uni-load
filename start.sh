@@ -118,7 +118,7 @@ preferences:
     default: 600
 EOF
 fi
-EXISTING_UNI_API_KEY=$(grep -m 1 'api:' /uni-api/api.yaml | awk '{print $2}')
+EXISTING_UNI_API_KEY=$(grep -m 1 'api:' /uni-api/api.yaml | awk '{print $2}' | tr -d '\r')
 
 # 按照uni-api的Dockerfile ENTRYPOINT启动
 DISABLE_DATABASE=true python -m uvicorn main:app --host 0.0.0.0 --port 3003 &
