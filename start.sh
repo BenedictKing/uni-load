@@ -39,9 +39,6 @@ trap graceful_shutdown SIGINT SIGTERM
 # 1. 启动 gpt-load
 echo "📡 启动 gpt-load..."
 cd /gpt-load
-if [ ! -f "config.ini" ]; then
-    cp config.ini.example config.ini
-fi
 ./gpt-load &
 PID_GPT_LOAD=$!
 echo "gpt-load PID: $PID_GPT_LOAD"
