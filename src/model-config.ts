@@ -78,6 +78,35 @@ class ModelConfig {
       // MiniMax
       // "minimax-",
     ]
+
+    // 初始化黑名单关键词
+    this.blacklistedKeywords = [
+      'vision',
+      'image', 
+      'dalle',
+      'tts',
+      'whisper',
+      'deprecated',
+      'test',
+      'embedding',
+    ]
+
+    // 初始化高消耗模型模式
+    this.highCostModelPatterns = [
+      'gpt-4', // 所有gpt-4系列
+      'claude-opus', // Opus系列  
+      'gemini-pro', // Pro系列
+      'grok-', // Grok系列
+    ]
+
+    // 初始化优先测试模型列表（按成本和速度排序）
+    this.preferredTestModels = [
+      'gpt-4o-mini',
+      'claude-3-haiku', 
+      'gemini-2.5-flash',
+      'deepseek-chat',
+      'gpt-3.5-turbo',
+    ]
   }
 
   /**
