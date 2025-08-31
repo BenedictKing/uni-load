@@ -55,7 +55,7 @@ RUN git clone https://ghfast.top/https://github.com/yym68686/uni-api.git . || \
     git clone https://github.com/yym68686/uni-api.git .
 
 # 按照uni-api的Dockerfile构建（使用项目自己的pyproject.toml和uv.lock）
-RUN uv add pyproject.toml -i https://mirrors.aliyun.com/pypi/simple/
+RUN uv pip install --system --no-cache-dir . -i https://mirrors.aliyun.com/pypi/simple/
 
 # --- 阶段 3: 构建 uni-load (本项目) ---
 FROM docker.1ms.run/oven/bun:latest AS uni-load-builder
