@@ -65,6 +65,14 @@ if [ ! -f "/gpt-load/.env" ]; then
 ]
 EOF
     echo "  - 已生成 uni-load 配置文件，使用相同的密钥"
+    
+    # 为 uni-load 创建 .env 文件并设置配置文件的绝对路径
+    echo "📄 正在为 uni-load 创建 .env 配置文件..."
+    cp /uni-load/.env.example /uni-load/.env
+    # 使用 sed 删除可能存在的旧行并追加新行，确保配置正确
+    sed -i '/^GPTLOAD_INSTANCES_FILE=/d' /uni-load/.env
+    echo "GPTLOAD_INSTANCES_FILE=/uni-load/gpt-load-instances.json" >> /uni-load/.env
+    echo "  - 已在 .env 中设置 GPTLOAD_INSTANCES_FILE 的绝对路径"
 fi
 
 cd /gpt-load
