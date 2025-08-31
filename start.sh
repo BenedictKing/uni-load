@@ -111,7 +111,7 @@ fi
 EXISTING_UNI_API_KEY=$(grep -m 1 'api:' /uni-api/api.yaml | awk '{print $2}')
 
 # 按照uni-api的Dockerfile ENTRYPOINT启动
-python -m uvicorn main:app --host 0.0.0.0 --port 8000 &
+DISABLE_DATABASE=true python -m uvicorn main:app --host 0.0.0.0 --port 8000 &
 PID_UNI_API=$!
 echo "uni-api PID: $PID_UNI_API"
 

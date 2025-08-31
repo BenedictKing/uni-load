@@ -108,11 +108,8 @@ COPY --from=uni-api-builder /src /uni-api/
 COPY --from=uni-api-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=uni-load-builder /src/dist /uni-load/dist
 COPY --from=uni-load-builder /src/public /uni-load/public
-
-# 复制启动脚本和配置文件
-COPY start.sh /start.sh
-COPY gpt-load-instances.json.example /uni-load/gpt-load-instances.json
-COPY .env.example /uni-load/.env
+COPY --from=uni-load-builder /src/.env.example /uni-load/.env
+COPY --from=uni-load-builder /src/start.sh /start.sh
 
 # 赋予启动脚本执行权限
 RUN chmod +x /start.sh
