@@ -490,7 +490,6 @@ class ChannelHealthMonitor {
       console.log(`🔗 直接测试 ${siteGroup.name}: ${baseUrl}`)
 
       // 使用 modelsService 测试连接
-      const modelsService = require('./models')
       const models = await modelsService.getModels(baseUrl, apiKey)
 
       if (models && models.length > 0) {

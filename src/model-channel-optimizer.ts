@@ -10,8 +10,8 @@
  * 4. 利用 uni-api 的多渠道配置实现冗余
  */
 
-const gptloadService = require('./gptload')
-const modelConfig = require('./model-config')
+import gptloadService from './gptload'
+import modelConfig from './model-config'
 import { IntelligentHealthCheckResult } from './types'
 
 class ModelChannelOptimizer {
@@ -1702,4 +1702,4 @@ process.on('SIGTERM', () => {
   process.exit(0)
 })
 
-module.exports = modelChannelOptimizer
+export default modelChannelOptimizer
