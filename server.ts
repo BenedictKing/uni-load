@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express'
 import cors from 'cors'
 import path from 'path'
+import { fileURLToPath } from 'url'
 import dotenv from 'dotenv'
 import { ProcessAiSiteRequest, ApiResponse, CleanupOptions, ApiErrorResponse } from './src/types'
 
@@ -23,6 +24,10 @@ import {
   cleanupServices,
   getService,
 } from './src/services/service-factory'
+
+// ES Module 中 __dirname 的替代方案
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 const app = express()
 const PORT: number = parseInt(process.env.PORT || '3002', 10)
