@@ -38,7 +38,7 @@ class ModelConfig {
 
       // Qwen (Alibaba)
       // "qwen-",
-      // "qwen3-",
+      'qwen3-',
 
       // Llama (Meta)
       // "llama-",
@@ -80,29 +80,25 @@ class ModelConfig {
     ]
 
     // 初始化黑名单关键词
-    this.blacklistedKeywords = [
-      'vision',
-      'image', 
-      'dalle',
-      'tts',
-      'whisper',
-      'deprecated',
-      'test',
-      'embedding',
-    ]
+    this.blacklistedKeywords = ['vision', 'image', 'dalle', 'tts', 'whisper', 'deprecated', 'test', 'embedding']
 
     // 初始化高消耗模型模式
     this.highCostModelPatterns = [
       'gpt-4', // 所有gpt-4系列
-      'claude-opus', // Opus系列  
-      'gemini-pro', // Pro系列
-      'grok-', // Grok系列
+      'gpt-5', // 所有gpt-5系列
+      'claude-opus', // Opus系列
+      'gemini-2.5-pro', // Pro系列
+      'grok-4', // Grok系列
     ]
 
-    // 初始化优先测试模型列表（按成本和速度排序）
+    // 初始化优先测试模型列表
     this.preferredTestModels = [
       'gpt-4o-mini',
-      'claude-3-haiku', 
+      'gpt-4.1-nano',
+      'gpt-4.1-mini',
+      'claude-3-haiku',
+      'claude-3-5-haiku',
+      'gemini-2.5-flash-lite',
       'gemini-2.5-flash',
       'deepseek-chat',
       'gpt-3.5-turbo',

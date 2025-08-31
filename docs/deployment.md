@@ -9,12 +9,14 @@
 ### 硬件要求
 
 **最低配置**:
+
 - CPU: 1 核心
 - 内存: 512MB
 - 存储: 1GB 可用空间
 - 网络: 稳定的互联网连接
 
 **推荐配置**:
+
 - CPU: 2+ 核心
 - 内存: 2GB+
 - 存储: 5GB+ 可用空间
@@ -23,15 +25,18 @@
 ### 软件要求
 
 **必需软件**:
+
 - **Node.js**: >= 18.0.0
 - **Bun**: >= 1.0.0 (推荐运行时)
 - **Git**: >= 2.30.0
 
 **依赖服务**:
+
 - **gpt-load**: 必须运行在可访问的地址
 - **uni-api**: 项目目录必须存在且可写
 
 **可选软件**:
+
 - **Docker**: >= 20.10.0 (容器化部署)
 - **PM2**: >= 5.0.0 (进程管理)
 - **Nginx**: >= 1.20.0 (反向代理)
@@ -70,7 +75,7 @@ UNI_API_YAML_PATH=../uni-api/api.yaml
 
 # 服务功能开关
 ENABLE_MODEL_SYNC=true                # 启用模型同步服务
-ENABLE_CHANNEL_HEALTH=true            # 启用渠道健康监控  
+ENABLE_CHANNEL_HEALTH=true            # 启用渠道健康监控
 ENABLE_MODEL_OPTIMIZER=true           # 启用三层架构管理器
 
 # 监控间隔配置（分钟）
@@ -81,28 +86,31 @@ CHANNEL_FAILURE_THRESHOLD=3           # 渠道失败阈值
 
 **配置参数详细说明**:
 
-| 参数 | 默认值 | 说明 |
-|------|--------|------|
-| `PORT` | 3002 | 服务监听端口 |
-| `GPTLOAD_INSTANCES_FILE` | gptload-instances.json | gpt-load 实例配置文件路径 |
-| `UNI_API_PATH` | ../uni-api | uni-api 项目目录相对路径 |
-| `UNI_API_YAML_PATH` | ../uni-api/api.yaml | uni-api 配置文件路径 |
-| `ENABLE_MODEL_SYNC` | true | 是否启用模型同步服务 |
-| `ENABLE_CHANNEL_HEALTH` | true | 是否启用渠道健康监控 |
-| `ENABLE_MODEL_OPTIMIZER` | true | 是否启用三层架构管理器 |
-| `MODEL_SYNC_INTERVAL` | 360 | 模型同步间隔（分钟） |
-| `CHANNEL_CHECK_INTERVAL` | 10 | 渠道健康检查间隔（分钟） |
-| `CHANNEL_FAILURE_THRESHOLD` | 3 | 连续失败多少次后被认为不可用 |
+| 参数                        | 默认值                 | 说明                         |
+| --------------------------- | ---------------------- | ---------------------------- |
+| `PORT`                      | 3002                   | 服务监听端口                 |
+| `GPTLOAD_INSTANCES_FILE`    | gptload-instances.json | gpt-load 实例配置文件路径    |
+| `UNI_API_PATH`              | ../uni-api             | uni-api 项目目录相对路径     |
+| `UNI_API_YAML_PATH`         | ../uni-api/api.yaml    | uni-api 配置文件路径         |
+| `ENABLE_MODEL_SYNC`         | true                   | 是否启用模型同步服务         |
+| `ENABLE_CHANNEL_HEALTH`     | true                   | 是否启用渠道健康监控         |
+| `ENABLE_MODEL_OPTIMIZER`    | true                   | 是否启用三层架构管理器       |
+| `MODEL_SYNC_INTERVAL`       | 360                    | 模型同步间隔（分钟）         |
+| `CHANNEL_CHECK_INTERVAL`    | 10                     | 渠道健康检查间隔（分钟）     |
+| `CHANNEL_FAILURE_THRESHOLD` | 3                      | 连续失败多少次后被认为不可用 |
 
 # 调试和日志配置
-LOG_LEVEL=info                        # 日志级别：debug, info, warn, error
-ENABLE_DEBUG_LOGS=false               # 启用调试日志
-ENABLE_METRICS=false                  # 启用性能监控
+
+LOG_LEVEL=info # 日志级别：debug, info, warn, error
+ENABLE_DEBUG_LOGS=false # 启用调试日志
+ENABLE_METRICS=false # 启用性能监控
 
 # 安全配置
+
 ALLOWED_ORIGINS=http://localhost:3002 # CORS 允许的源
-MAX_REQUEST_SIZE=10mb                 # 最大请求体大小
-```
+MAX_REQUEST_SIZE=10mb # 最大请求体大小
+
+````
 
 **生产环境推荐配置**:
 ```bash
@@ -110,7 +118,7 @@ MAX_REQUEST_SIZE=10mb                 # 最大请求体大小
 MODEL_SYNC_INTERVAL=720               # 降低同步频率为12小时
 CHANNEL_CHECK_INTERVAL=30             # 适中的检查频率
 CHANNEL_FAILURE_THRESHOLD=5           # 增加容错次数
-```
+````
 
 ### gpt-load 实例配置
 
@@ -128,8 +136,10 @@ cp gptload-instances.json.example gptload-instances.json
 系统内置了智能的模型过滤机制，通过白名单和黑名单来确保只使用合适的模型。
 
 **白名单配置** (src/model-config.ts):
+
 - 只有匹配白名单前缀的模型才会被添加到系统中
 - 支持的模型前缀包括：
+
   ```javascript
   // 主流AI模型
   'gpt-', 'chatgpt-',           // OpenAI
@@ -141,28 +151,31 @@ cp gptload-instances.json.example gptload-instances.json
   'glm-4.5',                   // 智谱AI
   'grok-3', 'grok-4',          // xAI
   'v0-',                       // Vercel
-  
+
   // 注释掉的模型（默认不启用）
   // 'qwen-', 'llama-', 'mixtral-'
   ```
 
 **黑名单配置**:
+
 - 包含黑名单关键词的模型会被自动过滤
 - 黑名单关键词包括：
   ```javascript
-  [
-    'gpt-3.5',      // 过时模型
-    'test',         // 测试模型
-    'vision',       // 多模态模型
-    'image', 'audio', // 非文本模型
-    'embedding',    // 向量模型
-    'whisper',      // 语音模型
-    'dall-e',       // 图像生成
-    'sora',         // 视频生成
+  ;[
+    'gpt-3.5', // 过时模型
+    'test', // 测试模型
+    'vision', // 多模态模型
+    'image',
+    'audio', // 非文本模型
+    'embedding', // 向量模型
+    'whisper', // 语音模型
+    'dall-e', // 图像生成
+    'sora', // 视频生成
   ]
   ```
 
 **高消耗模型配置**:
+
 - 对于成本较高的模型，系统会跳过自动验证
 - 高消耗模型模式：`['o3-', 'o4-']`
 
@@ -170,12 +183,13 @@ cp gptload-instances.json.example gptload-instances.json
 系统支持多种模型名称格式，包括带有组织前缀的名称（如 `deepseek-ai/DeepSeek-V3`）以及非标准的 `OpenAI-GPT-` 前缀。这些名称在处理时会被自动标准化，以确保兼容性：
 
 - **组织前缀**: `deepseek-ai/DeepSeek-V3` → `deepseek-v3`
-- **OpenAI-GPT前缀**: `OpenAI-GPT-4o` → `gpt-4o`  
+- **OpenAI-GPT 前缀**: `OpenAI-GPT-4o` → `gpt-4o`
 - **标准化处理**: 自动移除特殊字符，转换为小写，统一命名规范
 
 这确保了不同来源的模型名称都能被正确识别和处理。
 
 **自定义模型过滤**:
+
 ```bash
 # 修改模型配置文件
 vim src/model-config.ts
@@ -200,6 +214,7 @@ blacklistedKeywords: [
 **配置文件**: `src/layer-configs.ts`
 
 **第一层 - 站点分组配置**:
+
 ```javascript
 siteGroup: {
   sort: 20,                              // 分组排序值
@@ -209,6 +224,7 @@ siteGroup: {
 ```
 
 **第二层 - 模型-渠道分组配置**:
+
 ```javascript
 modelChannelGroup: {
   sort: 15,                              // 分组排序值
@@ -218,6 +234,7 @@ modelChannelGroup: {
 ```
 
 **第三层 - 模型聚合分组配置**:
+
 ```javascript
 aggregateGroup: {
   sort: 10,                              // 分组排序值
@@ -228,12 +245,14 @@ aggregateGroup: {
 ```
 
 **配置参数说明**:
+
 - `sort`: 分组排序值，数字越小优先级越高
 - `blacklist_threshold`: 失败阈值，超过此值将被加入黑名单
 - `key_validation_interval_minutes`: 密钥验证间隔时间
 - `max_retries`: 最大重试次数
 
 **自定义分层配置**:
+
 ```bash
 # 修改分层配置文件
 vim src/layer-configs.ts
@@ -252,10 +271,11 @@ modelChannelGroup: {
 ```
 
 **最佳实践**:
+
 1. **站点分组**：高容错配置，因为站点问题通常是网络或临时性的
 2. **模型-渠道分组**：低容错配置，快速识别模型兼容性问题
 3. **聚合分组**：中等容错配置，平衡性能和稳定性
-4. **验证间隔**：根据API成本和系统负载调整验证频率
+4. **验证间隔**：根据 API 成本和系统负载调整验证频率
 5. **生产环境**：建议保持默认配置，除非有特殊需求
 
 #### 环境变量高级配置
@@ -298,6 +318,7 @@ bun run dev:build
 ```
 
 特点：
+
 - ✅ 自动重载代码变更
 - ✅ 详细的调试日志
 - ✅ 直接运行 TypeScript
@@ -341,31 +362,33 @@ npm install -g pm2
 
 ```javascript
 module.exports = {
-  apps: [{
-    name: 'uni-load',
-    script: 'dist/server.js',
-    cwd: '/path/to/uni-load',
-    instances: 1,
-    exec_mode: 'fork',
-    env: {
-      NODE_ENV: 'production',
-      PORT: 3002
+  apps: [
+    {
+      name: 'uni-load',
+      script: 'dist/server.js',
+      cwd: '/path/to/uni-load',
+      instances: 1,
+      exec_mode: 'fork',
+      env: {
+        NODE_ENV: 'production',
+        PORT: 3002,
+      },
+      env_production: {
+        NODE_ENV: 'production',
+        PORT: 3002,
+      },
+      log_file: 'logs/combined.log',
+      out_file: 'logs/out.log',
+      error_file: 'logs/error.log',
+      log_date_format: 'YYYY-MM-DD HH:mm Z',
+      merge_logs: true,
+      max_memory_restart: '1G',
+      restart_delay: 4000,
+      max_restarts: 5,
+      min_uptime: '10s',
     },
-    env_production: {
-      NODE_ENV: 'production',
-      PORT: 3002
-    },
-    log_file: 'logs/combined.log',
-    out_file: 'logs/out.log',
-    error_file: 'logs/error.log',
-    log_date_format: 'YYYY-MM-DD HH:mm Z',
-    merge_logs: true,
-    max_memory_restart: '1G',
-    restart_delay: 4000,
-    max_restarts: 5,
-    min_uptime: '10s'
-  }]
-};
+  ],
+}
 ```
 
 启动服务：
@@ -391,140 +414,7 @@ pm2 stop uni-load
 
 #### 3.1 创建 Dockerfile
 
-```dockerfile
-# --- 阶段 1: 构建 gpt-load ---
-FROM docker.1ms.run/golang:1.24.6-bookworm AS gpt-load-builder
-
-# 复制bun从官方容器
-COPY --from=docker.1ms.run/oven/bun:latest /usr/local/bin/bun /usr/local/bin/bun
-
-# 设置bun环境变量和node符号链接
-ENV PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/bun-node-fallback-bin"
-RUN mkdir -p /usr/local/bun-node-fallback-bin && \
-    ln -s /usr/local/bin/bun /usr/local/bun-node-fallback-bin/node
-ENV PATH="/usr/local/go/bin:${PATH}"
-ENV GOPATH="/go"
-ENV PATH="${GOPATH}/bin:${PATH}"
-ENV GOROOT="/usr/local/go"
-
-# 设置Go代理为中国镜像
-ENV GO111MODULE=on
-ENV GOPROXY=https://mirrors.aliyun.com/goproxy/
-ENV GOSUMDB=sum.golang.google.cn
-# 禁用Go自动下载更新
-ENV GOTOOLCHAIN=local
-
-WORKDIR /src
-
-# 使用ghfast.top GitHub加速镜像
-RUN git clone https://ghfast.top/https://github.com/tbphp/gpt-load.git . || \
-    git clone https://github.com/tbphp/gpt-load.git .
-
-# 修改 gpt-load 的 group_handler.go 文件：将 3(.*)30 替换为 3($1)100
-RUN sed -i 's/3\(.*\)30/3\1100/g' internal/handler/group_handler.go
-
-# 使用bun构建前端
-RUN cd web && \
-    rm -f package-lock.json yarn.lock pnpm-lock.yaml bun.lock && \
-    echo '[install]\nregistry = "https://registry.npmmirror.com/"' > ./bunfig.toml
-RUN cd web && bun install
-RUN cd web && bun vite build
-
-# 先下载go模块依赖
-RUN go mod download && go mod verify
-
-# 然后编译
-RUN CGO_ENABLED=0 GOOS=linux go build -o /app/gpt-load .
-
-# --- 阶段 2: 构建 uni-api (使用其自己的Dockerfile) ---
-FROM docker.1ms.run/python:3.11.13-bookworm AS uni-api-builder
-
-WORKDIR /src
-
-# 克隆uni-api项目
-RUN git clone https://ghfast.top/https://github.com/yym68686/uni-api.git . || \
-    git clone https://github.com/yym68686/uni-api.git .
-
-# 克隆uni-api-core项目
-RUN git clone https://ghfast.top/https://github.com/yym68686/uni-api-core.git core || \
-git clone https://github.com/yym68686/uni-api-core.git core
-
-# --- 阶段 3: 构建 uni-load (本项目) ---
-FROM docker.1ms.run/oven/bun:latest AS uni-load-builder
-
-WORKDIR /src
-COPY package.json ./
-
-# 使用淘宝npm镜像
-RUN echo '[install]\nregistry = "https://registry.npmmirror.com/"' > ./bunfig.toml
-RUN bun install
-COPY . ./
-RUN bun run build
-
-# --- 最终阶段: 组合所有服务 ---
-FROM docker.1ms.run/node:18-slim
-
-# 复制Python和uv
-COPY --from=docker.1ms.run/python:3.11.13-bookworm /usr/local/bin/python* /usr/local/bin/
-COPY --from=docker.1ms.run/python:3.11.13-bookworm /usr/local/lib/python3.11 /usr/local/lib/python3.11
-COPY --from=docker.1ms.run/python:3.11.13-bookworm /usr/local/lib/libpython* /usr/local/lib/
-COPY --from=docker.1ms.run/astral/uv /uv /uvx /bin/
-
-# 中国网络优化：使用阿里云镜像源
-RUN if [ -f /etc/apt/sources.list ]; then \
-        sed -i 's#deb.debian.org#mirrors.aliyun.com#g' /etc/apt/sources.list && \
-        sed -i 's#security.debian.org#mirrors.aliyun.com#g' /etc/apt/sources.list; \
-    elif [ -f /etc/apt/sources.list.d/debian.sources ]; then \
-        sed -i 's#deb.debian.org#mirrors.aliyun.com#g' /etc/apt/sources.list.d/debian.sources && \
-        sed -i 's#security.debian.org#mirrors.aliyun.com#g' /etc/apt/sources.list.d/debian.sources; \
-    else \
-        echo "deb https://mirrors.aliyun.com/debian/ bookworm main" > /etc/apt/sources.list && \
-        echo "deb https://mirrors.aliyun.com/debian-security/ bookworm-security main" >> /etc/apt/sources.list && \
-        echo "deb https://mirrors.aliyun.com/debian/ bookworm-updates main" >> /etc/apt/sources.list; \
-    fi
-
-# 安装必要的运行时依赖（已有node，只需要bash和curl）
-RUN apt-get update && apt-get install -y bash curl && rm -rf /var/lib/apt/lists/*
-
-# 设置Python符号链接
-RUN ln -sf /usr/local/bin/python3.11 /usr/local/bin/python3 && \
-    ln -sf /usr/local/bin/python3 /usr/local/bin/python
-
-# 创建根目录下的三个服务目录
-RUN mkdir -p /gpt-load /uni-api /uni-load
-
-# 从各构建阶段复制编译好的产物
-COPY --from=gpt-load-builder /app/gpt-load /gpt-load/gpt-load
-COPY --from=gpt-load-builder /src/web/dist /gpt-load/web/dist
-COPY --from=gpt-load-builder /src/.env.example /gpt-load/.env.example
-
-COPY --from=uni-load-builder /src/dist /uni-load/dist
-COPY --from=uni-load-builder /src/public /uni-load/public
-COPY --from=uni-load-builder /src/.env.example /uni-load/.env.example
-COPY --from=uni-load-builder /src/package.json /uni-load/package.json
-COPY --from=uni-load-builder /src/node_modules /uni-load/node_modules
-COPY --from=uni-load-builder /src/start.sh /start.sh
-
-# 按照uni-api的Dockerfile构建（使用项目自己的pyproject.toml）
-COPY --from=uni-api-builder /src/pyproject.toml /uni-api/
-# RUN cd /uni-api && uv sync -i https://mirrors.aliyun.com/pypi/simple/
-RUN cd /uni-api && uv pip install --system --no-cache-dir . -i https://mirrors.aliyun.com/pypi/simple/
-COPY --from=uni-api-builder /src /uni-api
-# ENV PATH="/uni-api/.venv/bin:$PATH"
-
-# 赋予启动脚本执行权限
-RUN chmod +x /start.sh
-
-# 暴露端口
-EXPOSE 3001 3002 3003
-
-# 健康检查
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:3002/api/health || exit 1
-
-# 设置启动命令
-CMD ["/start.sh"]
-```
+// 这里写 dockerfile 文件位置就行了，不要贴全文 AI!
 
 #### 3.2 创建 docker-compose.yml
 
@@ -537,7 +427,7 @@ services:
     build: .
     container_name: uni-load
     ports:
-      - "3002:3002"
+      - '3002:3002'
     environment:
       - NODE_ENV=production
       - PORT=3002
@@ -550,7 +440,7 @@ services:
       - ./logs:/app/logs
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3002/api/health"]
+      test: ['CMD', 'curl', '-f', 'http://localhost:3002/api/health']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -669,7 +559,7 @@ location / {
     allow 192.168.1.0/24;  # 允许内网
     allow 10.0.0.0/8;      # 允许专网
     deny all;              # 拒绝其他
-    
+
     proxy_pass http://127.0.0.1:3002;
 }
 ```
@@ -684,7 +574,7 @@ sudo htpasswd -c /etc/nginx/.htpasswd admin
 location / {
     auth_basic "uni-load Admin";
     auth_basic_user_file /etc/nginx/.htpasswd;
-    
+
     proxy_pass http://127.0.0.1:3002;
 }
 ```
@@ -785,6 +675,7 @@ sudo systemctl status uni-load
 #### 1. 服务无法启动
 
 **检查列表**:
+
 - ✅ gptload-instances.json 是否存在和配置正确
 - ✅ uni-api 目录是否存在和可访问
 - ✅ 端口 3002 是否被占用
@@ -792,6 +683,7 @@ sudo systemctl status uni-load
 - ✅ 依赖包是否安装完成
 
 **诊断命令**:
+
 ```bash
 # 检查端口占用
 lsof -i :3002
@@ -810,11 +702,13 @@ ls -la ../uni-api
 ```
 
 **常见错误信息**:
+
 - `EADDRINUSE`: 端口 3002 被占用
 - `ENOENT: no such file or directory 'gptload-instances.json'`: 实例配置文件不存在
 - `Cannot resolve module`: TypeScript 编译错误
-bun dev
-```
+  bun dev
+
+````
 
 #### 2. gpt-load 连接失败
 
@@ -834,14 +728,16 @@ ping gpt-load-host
 
 # 查看错误日志
 tail -f logs/error.log
-```
+````
 
 #### 3. 站点配置失败
 
 **症状**: API 返回错误，无法创建站点分组
 
 **排查步骤**:
+
 1. **验证 API 密钥**
+
    ```bash
    curl -X POST http://localhost:3002/api/probe-api \
      -H "Content-Type: application/json" \
@@ -858,13 +754,15 @@ tail -f logs/error.log
 #### 4. 模型获取失败
 
 **可能原因**:
+
 - API 密钥无效或过期
-- API 站点不支持 `/v1/models` 接口  
+- API 站点不支持 `/v1/models` 接口
 - 网络连接问题
 - gpt-load 实例不可达
 - 模型被白名单/黑名单过滤
 
 **解决方案**:
+
 ```bash
 # 1. 验证 API 密钥有效性
 curl -X POST http://localhost:3002/api/probe-api \
@@ -893,6 +791,7 @@ curl -X POST http://localhost:3002/api/process-ai-site \
 **症状**: 模型分组创建失败或结构异常
 
 **诊断步骤**:
+
 ```bash
 # 检查架构状态
 curl http://localhost:3002/api/architecture-status
@@ -909,6 +808,7 @@ curl -X POST http://localhost:3002/api/initialize-architecture
 **症状**: 部分 gpt-load 实例不可用
 
 **排查步骤**:
+
 ```bash
 # 检查所有实例状态
 curl http://localhost:3002/api/multi-instances
@@ -929,6 +829,7 @@ done
 ### 日志分析
 
 主要日志文件位置：
+
 - **应用日志**: `logs/combined.log`
 - **错误日志**: `logs/error.log`
 - **访问日志**: `logs/access.log`
@@ -1058,6 +959,7 @@ curl http://localhost:3002/api/health
 ```
 
 #### 6. Web 界面显示 "Cannot GET /"
+
 - **原因**: Node.js 在 ES Module 模式下运行时，`__dirname` 变量不可用，导致 Express 无法找到静态前端文件的正确路径。
 - **解决**: 此问题已在代码中通过使用 `import.meta.url` 和 `path.dirname` 来正确构造 `__dirname` 修复。如果遇到类似问题，请检查静态文件服务的路径是否正确指向 `public` 目录。
 
@@ -1071,6 +973,7 @@ curl http://localhost:3002/api/health
 - **大型生产**: Docker + 负载均衡
 
 记住关键配置点：
+
 1. 必须配置 gptload-instances.json
 2. 确保 uni-api 目录可访问
 3. 定期备份配置文件
