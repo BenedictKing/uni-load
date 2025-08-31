@@ -49,8 +49,6 @@ if [ ! -f "/gpt-load/.env" ]; then
     # 替换 .env 文件中的默认密钥
     sed -i "s|AUTH_KEY=sk-123456|AUTH_KEY=${GPTLOAD_NEW_AUTH_KEY}|g" /gpt-load/.env
     echo "  - gpt-load 新增 AUTH_KEY: ${GPTLOAD_NEW_AUTH_KEY}"
-else
-    echo "📄 检测到已存在的 /gpt-load/.env，将使用现有配置。"
 fi
 
 cd /gpt-load
