@@ -16,6 +16,7 @@ import channelHealthMonitor from './src/channel-health'
 import channelCleanupService from './src/channel-cleanup'
 import threeLayerArchitecture from './src/three-layer-architecture'
 import siteConfigurationService from './src/services/site-configuration'
+import { TempGroupCleaner } from './src/temp-group-cleaner'
 import {
   initializeServices,
   validateServiceRegistration,
@@ -281,7 +282,6 @@ app.post('/api/probe-api', async (req, res) => {
       return res.status(400).json({ error: '需要提供 baseUrl' })
     }
 
-    const modelsService = require('./src/models')
     const result = await modelsService.probeApiStructure(baseUrl, apiKey)
 
     res.json({
@@ -494,7 +494,6 @@ app.delete('/api/channels/:channelName', async (req, res) => {
 // 获取临时分组统计
 app.get('/api/temp-groups/stats', async (req, res) => {
   try {
-    const { TempGroupCleaner } = require('./src/temp-group-cleaner')
     const cleaner = new TempGroupCleaner(gptloadService.getMultiGPTLoadManager())
 
     const stats = await cleaner.getTempGroupsStats()
@@ -515,7 +514,6 @@ app.get('/api/temp-groups/stats', async (req, res) => {
 // 清理所有临时分组
 app.post('/api/temp-groups/cleanup', async (req, res) => {
   try {
-    const { TempGroupCleaner } = require('./src/temp-group-cleaner')
     const cleaner = new TempGroupCleaner(gptloadService.getMultiGPTLoadManager())
 
     const results = await cleaner.cleanupAllTempGroups()
@@ -537,7 +535,6 @@ app.post('/api/temp-groups/cleanup', async (req, res) => {
 app.post('/api/temp-groups/cleanup-old', async (req, res) => {
   try {
     const { hoursOld = 24 } = req.body
-    const { TempGroupCleaner } = require('./src/temp-group-cleaner')
     const cleaner = new TempGroupCleaner(gptloadService.getMultiGPTLoadManager())
 
     const results = await cleaner.cleanupOldTempGroups(hoursOld)
