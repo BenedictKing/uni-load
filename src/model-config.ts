@@ -48,7 +48,7 @@ class ModelConfig {
       // "mistral-",
 
       // 01.ai
-      // "yi-",
+      // 'yi-',
 
       // Moonshot
       'kimi-k2',

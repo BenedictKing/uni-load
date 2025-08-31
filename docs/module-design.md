@@ -978,7 +978,6 @@ export interface GptloadInstance {
   upstream_addresses?: string[];
 }
 
-// AI 模型
 export interface Model {
   id: string;
   name: string;

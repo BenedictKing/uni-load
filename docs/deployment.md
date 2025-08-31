@@ -414,7 +414,7 @@ pm2 stop uni-load
 
 #### 3.1 创建 Dockerfile
 
-// 这里写 dockerfile 文件位置就行了，不要贴全文 AI!
+项目根目录下已包含完整的 `Dockerfile`，支持多阶段构建，可用于构建包含 gpt-load、uni-api 和 uni-load 的完整容器镜像。
 
 #### 3.2 创建 docker-compose.yml
 
