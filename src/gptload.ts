@@ -1,15 +1,17 @@
-import MultiGptloadManager from './multi-gptload'
 import modelConfig from './model-config'
 import { layerConfigs } from './layer-configs'
-
-const multiGptloadManager = new MultiGptloadManager()
+import { getService } from './services/service-factory'
+import { IMultiGptloadManager } from './interfaces'
 
 class GptloadService {
-  public manager: any // 暴露 manager 属性
+  private _manager: IMultiGptloadManager | null = null
 
-  constructor() {
-    // 使用多实例管理器
-    this.manager = multiGptloadManager
+  // 使用 getter 实现延迟加载，确保从容器中获取正确的、已初始化的实例
+  public get manager(): IMultiGptloadManager {
+    if (!this._manager) {
+      this._manager = getService<IMultiGptloadManager>('multiGptloadManager')
+    }
+    return this._manager
   }
 
   /**
