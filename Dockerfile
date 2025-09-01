@@ -1,8 +1,8 @@
 # --- 阶段 1: 构建 gpt-load ---
-FROM docker.1ms.run/golang:1.24.6-bookworm AS gpt-load-builder
+FROM golang:1.24.6-bookworm AS gpt-load-builder
 
 # 复制bun从官方容器
-COPY --from=docker.1ms.run/oven/bun:latest /usr/local/bin/bun /usr/local/bin/bun
+COPY --from=oven/bun:latest /usr/local/bin/bun /usr/local/bin/bun
 
 # 设置bun环境变量和node符号链接
 ENV PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/bun-node-fallback-bin"
@@ -13,18 +13,17 @@ ENV GOPATH="/go"
 ENV PATH="${GOPATH}/bin:${PATH}"
 ENV GOROOT="/usr/local/go"
 
-# 设置Go代理为中国镜像
+# 设置Go代理为官方源
 ENV GO111MODULE=on
-ENV GOPROXY=https://mirrors.aliyun.com/goproxy/
-ENV GOSUMDB=sum.golang.google.cn
+ENV GOPROXY=https://proxy.golang.org,direct
+# GOSUMDB 使用默认值 sum.golang.google.cn，无需设置
 # 禁用Go自动下载更新
 ENV GOTOOLCHAIN=local
 
 WORKDIR /src
 
-# 使用ghfast.top GitHub加速镜像
-RUN git clone https://ghfast.top/https://github.com/tbphp/gpt-load.git . || \
-    git clone https://github.com/tbphp/gpt-load.git .
+# 使用官方GitHub仓库
+RUN git clone https://github.com/tbphp/gpt-load.git .
 
 # 修改 gpt-load 的 group_handler.go 文件：将 3(.*)30 替换为 3($1)100
 RUN sed -i 's/3\(.*\)30/3\1100/g' internal/handler/group_handler.go
@@ -36,7 +35,7 @@ RUN sed -i "s/uniqueIndex:idx_group_key\"/uniqueIndex:idx_group_key;index:idx_gr
 # 使用bun构建前端
 RUN cd web && \
     rm -f package-lock.json yarn.lock pnpm-lock.yaml bun.lock && \
-    echo '[install]\nregistry = "https://registry.npmmirror.com/"' > ./bunfig.toml
+    echo '[install]\nregistry = "https://registry.npmjs.org/"' > ./bunfig.toml
 RUN cd web && bun install
 RUN cd web && bun vite build
 
@@ -47,53 +46,51 @@ RUN go mod download && go mod verify
 RUN CGO_ENABLED=0 GOOS=linux go build -o /app/gpt-load .
 
 # --- 阶段 2: 构建 uni-api (使用其自己的Dockerfile) ---
-FROM docker.1ms.run/python:3.11.13-bookworm AS uni-api-builder
+FROM python:3.11.13-bookworm AS uni-api-builder
 
 WORKDIR /src
 
 # 克隆uni-api项目
-RUN git clone https://ghfast.top/https://github.com/yym68686/uni-api.git . || \
-    git clone https://github.com/yym68686/uni-api.git .
+RUN git clone https://github.com/yym68686/uni-api.git .
 
 # 克隆uni-api-core项目
-RUN git clone https://ghfast.top/https://github.com/yym68686/uni-api-core.git core || \
-git clone https://github.com/yym68686/uni-api-core.git core
+RUN git clone https://github.com/yym68686/uni-api-core.git core
 
 COPY patches/uni-api-utils.patch uni-api-utils.patch
 RUN patch -p1 < uni-api-utils.patch
 
 # --- 阶段 3: 构建 uni-load (本项目) ---
-FROM docker.1ms.run/oven/bun:latest AS uni-load-builder
+FROM oven/bun:latest AS uni-load-builder
 
 WORKDIR /src
 COPY package.json ./
 
-# 使用淘宝npm镜像
-RUN echo '[install]\nregistry = "https://registry.npmmirror.com/"' > ./bunfig.toml
+# 使用官方npm仓库
+RUN echo '[install]\nregistry = "https://registry.npmjs.org/"' > ./bunfig.toml
 RUN bun install
 COPY . ./
 RUN bun run build
 
 # --- 最终阶段: 组合所有服务 ---
-FROM docker.1ms.run/node:18-slim
+FROM node:18-slim
 
 # 复制Python和uv
-COPY --from=docker.1ms.run/python:3.11.13-bookworm /usr/local/bin/python* /usr/local/bin/
-COPY --from=docker.1ms.run/python:3.11.13-bookworm /usr/local/lib/python3.11 /usr/local/lib/python3.11
-COPY --from=docker.1ms.run/python:3.11.13-bookworm /usr/local/lib/libpython* /usr/local/lib/
-COPY --from=docker.1ms.run/astral/uv /uv /uvx /bin/
+COPY --from=python:3.11.13-bookworm /usr/local/bin/python* /usr/local/bin/
+COPY --from=python:3.11.13-bookworm /usr/local/lib/python3.11 /usr/local/lib/python3.11
+COPY --from=python:3.11.13-bookworm /usr/local/lib/libpython* /usr/local/lib/
+COPY --from=astral/uv /uv /uvx /bin/
 
-# 中国网络优化：使用阿里云镜像源
+# 使用官方Debian软件源
 RUN if [ -f /etc/apt/sources.list ]; then \
-        sed -i 's#deb.debian.org#mirrors.aliyun.com#g' /etc/apt/sources.list && \
-        sed -i 's#security.debian.org#mirrors.aliyun.com#g' /etc/apt/sources.list; \
+        sed -i 's#mirrors.aliyun.com#deb.debian.org#g' /etc/apt/sources.list && \
+        sed -i 's#mirrors.aliyun.com#security.debian.org#g' /etc/apt/sources.list; \
     elif [ -f /etc/apt/sources.list.d/debian.sources ]; then \
-        sed -i 's#deb.debian.org#mirrors.aliyun.com#g' /etc/apt/sources.list.d/debian.sources && \
-        sed -i 's#security.debian.org#mirrors.aliyun.com#g' /etc/apt/sources.list.d/debian.sources; \
+        sed -i 's#mirrors.aliyun.com#deb.debian.org#g' /etc/apt/sources.list.d/debian.sources && \
+        sed -i 's#mirrors.aliyun.com#security.debian.org#g' /etc/apt/sources.list.d/debian.sources; \
     else \
-        echo "deb https://mirrors.aliyun.com/debian/ bookworm main" > /etc/apt/sources.list && \
-        echo "deb https://mirrors.aliyun.com/debian-security/ bookworm-security main" >> /etc/apt/sources.list && \
-        echo "deb https://mirrors.aliyun.com/debian/ bookworm-updates main" >> /etc/apt/sources.list; \
+        echo "deb https://deb.debian.org/debian/ bookworm main" > /etc/apt/sources.list && \
+        echo "deb https://deb.debian.org/debian-security/ bookworm-security main" >> /etc/apt/sources.list && \
+        echo "deb https://deb.debian.org/debian/ bookworm-updates main" >> /etc/apt/sources.list; \
     fi
 
 # 安装必要的运行时依赖（已有node，只需要bash和curl）
@@ -120,8 +117,8 @@ COPY --from=uni-load-builder /src/start.sh /start.sh
 
 # 按照uni-api的Dockerfile构建（使用项目自己的pyproject.toml）
 COPY --from=uni-api-builder /src/pyproject.toml /uni-api/
-# RUN cd /uni-api && uv sync -i https://mirrors.aliyun.com/pypi/simple/
-RUN cd /uni-api && uv pip install --system --no-cache-dir . -i https://mirrors.aliyun.com/pypi/simple/
+# 使用官方PyPI源
+RUN cd /uni-api && uv pip install --system --no-cache-dir .
 COPY --from=uni-api-builder /src /uni-api
 # ENV PATH="/uni-api/.venv/bin:$PATH"
 
