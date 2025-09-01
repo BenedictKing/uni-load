@@ -29,6 +29,10 @@ RUN git clone https://ghfast.top/https://github.com/tbphp/gpt-load.git . || \
 # 修改 gpt-load 的 group_handler.go 文件：将 3(.*)30 替换为 3($1)100
 RUN sed -i 's/3\(.*\)30/3\1100/g' internal/handler/group_handler.go
 
+# 为 gpt-load 的 GroupID 和 Status 字段添加数据库索引以优化查询
+RUN sed -i "s/uniqueIndex:idx_group_key\"/uniqueIndex:idx_group_key;index:idx_group_status\"/" internal/models/types.go && \
+    sed -i "s/default:'active'\"/default:'active';index:idx_group_status\"/" internal/models/types.go
+
 # 使用bun构建前端
 RUN cd web && \
     rm -f package-lock.json yarn.lock pnpm-lock.yaml bun.lock && \
