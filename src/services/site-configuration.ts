@@ -1,6 +1,6 @@
 /**
  * 站点配置服务
- * 
+ *
  * 职责：处理AI站点的配置逻辑，包括站点名称生成、配置验证、处理流程等
  * 从 server.ts 中提取的业务逻辑
  */
@@ -88,12 +88,12 @@ class SiteConfigurationService {
         .replace(/^-+|-+$/g, '')
         .replace(/-+/g, '-')
 
-      // 确保长度在合理范围内 (3-30字符)
+      // 确保长度在合理范围内 (3-100字符)
       if (siteName.length < 3) {
         siteName = siteName + '-ai'
       }
-      if (siteName.length > 30) {
-        siteName = siteName.substring(0, 30).replace(/-+$/, '')
+      if (siteName.length > 100) {
+        siteName = siteName.substring(0, 100).replace(/-+$/, '')
       }
 
       return siteName
@@ -117,7 +117,7 @@ class SiteConfigurationService {
     }
 
     if (request.channelTypes) {
-      const invalidTypes = request.channelTypes.filter(type => !validChannelTypes.includes(type))
+      const invalidTypes = request.channelTypes.filter((type) => !validChannelTypes.includes(type))
       if (invalidTypes.length > 0) {
         throw new Error(`无效的 channelTypes：${invalidTypes.join(', ')}`)
       }
@@ -179,10 +179,7 @@ class SiteConfigurationService {
 
     // 对于新站点，使用多实例临时分组的方式获取模型
     try {
-      const result = await gptloadService.manager.getModelsViaMultiInstance(
-        request.baseUrl,
-        request.apiKeys[0]
-      )
+      const result = await gptloadService.manager.getModelsViaMultiInstance(request.baseUrl, request.apiKeys[0])
       return {
         models: result.models,
         successfulInstance: result.instanceId,
@@ -216,10 +213,7 @@ class SiteConfigurationService {
       throw new Error('首次配置渠道时必须提供API密钥')
     }
 
-    const existingKeys = await gptloadService.getGroupApiKeys(
-      existingChannel.id,
-      existingChannel._instance.id
-    )
+    const existingKeys = await gptloadService.getGroupApiKeys(existingChannel.id, existingChannel._instance.id)
 
     if (existingKeys.length === 0) {
       throw new Error(`现有渠道 ${existingChannel.name} 没有可用的API密钥`)
@@ -242,7 +236,7 @@ class SiteConfigurationService {
       return {
         models,
         successfulInstance: instance.id,
-        instanceName: instance.name
+        instanceName: instance.name,
       }
     } catch (error) {
       console.error(`- 通过现有渠道代理获取模型失败: ${error.message}`)
@@ -258,13 +252,11 @@ class SiteConfigurationService {
    */
   findExistingChannel(allGroups: any[], channelName: string, siteName: string, channelType: string) {
     // 精确匹配
-    let existingChannel = allGroups.find(g => g.name === channelName)
+    let existingChannel = allGroups.find((g) => g.name === channelName)
 
     if (!existingChannel) {
       // 模糊匹配
-      const fuzzyMatches = allGroups.filter(g =>
-        g.name && g.name.includes(siteName) && g.name.includes(channelType)
-      )
+      const fuzzyMatches = allGroups.filter((g) => g.name && g.name.includes(siteName) && g.name.includes(channelType))
 
       if (fuzzyMatches.length > 0) {
         existingChannel = fuzzyMatches[0]
@@ -280,8 +272,8 @@ class SiteConfigurationService {
    */
   private filterModelsByChannelType(models: string[], channelTypes: string[]): string[] {
     const compatibleModelSet = new Set<string>()
-    
-    models.forEach(model => {
+
+    models.forEach((model) => {
       const modelLower = model.toLowerCase()
       for (const type of channelTypes) {
         if (type === 'openai') {
@@ -298,7 +290,7 @@ class SiteConfigurationService {
         }
       }
     })
-    
+
     return Array.from(compatibleModelSet)
   }
 
@@ -324,8 +316,8 @@ class SiteConfigurationService {
         siteGroups: [],
         modelGroups: 0,
         emptyModelListHandling: true,
-        cleanupResult
-      }
+        cleanupResult,
+      },
     }
   }
 
@@ -336,21 +328,21 @@ class SiteConfigurationService {
     // 1. 验证和预处理请求
     this.validateRequest(request)
     const processedRequest = this.preprocessRequest(request)
-    
+
     // 2. 生成站点名称
     const siteName = this.generateSiteNameFromUrl(processedRequest.baseUrl)
     console.log(`开始处理AI站点：${siteName} (${processedRequest.baseUrl})`)
 
     // 3. 获取模型列表
     const modelResult = await this.getModels(processedRequest)
-    
+
     if (!modelResult.models || modelResult.models.length === 0) {
       return await this.handleEmptyModelList(siteName, processedRequest.channelTypes!)
     }
 
     // 4. 应用模型过滤
     const filteredModels = modelsService.filterModels(modelResult.models)
-    
+
     // 新增：根据渠道类型再次过滤
     const compatibleModels = this.filterModelsByChannelType(filteredModels, processedRequest.channelTypes!)
 
@@ -360,8 +352,8 @@ class SiteConfigurationService {
 
     // 5. 创建站点分组
     const siteGroups = await this.createSiteGroups(
-      siteName, 
-      processedRequest, 
+      siteName,
+      processedRequest,
       compatibleModels, // 使用兼容模型列表
       modelResult.successfulInstance
     )
@@ -389,11 +381,13 @@ class SiteConfigurationService {
         siteGroups,
         modelGroups: modelGroups.length,
         usingManualModels: !!(processedRequest.models && processedRequest.models.length > 0),
-        successfulInstance: modelResult.successfulInstance ? {
-          id: modelResult.successfulInstance,
-          name: modelResult.instanceName || ''
-        } : undefined
-      }
+        successfulInstance: modelResult.successfulInstance
+          ? {
+              id: modelResult.successfulInstance,
+              name: modelResult.instanceName || '',
+            }
+          : undefined,
+      },
     }
   }
 
@@ -401,9 +395,9 @@ class SiteConfigurationService {
    * 创建站点分组
    */
   private async createSiteGroups(
-    siteName: string, 
-    request: ProcessAiSiteRequest, 
-    models: string[], 
+    siteName: string,
+    request: ProcessAiSiteRequest,
+    models: string[],
     successfulInstance?: string
   ): Promise<any[]> {
     const siteGroups = []
@@ -427,7 +421,7 @@ class SiteConfigurationService {
           request.customValidationEndpoints,
           models
         )
-        
+
         if (siteGroup && siteGroup.name) {
           siteGroups.push(siteGroup)
           console.log(`✅ ${channelType} 格式站点分组创建成功`)

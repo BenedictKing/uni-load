@@ -58,8 +58,8 @@ class ThreeLayerArchitecture {
 
       // 2. 分析现有分组结构，而不是创建新的测试分组
       const allGroups = await gptloadService.getAllGroups()
-      const existingModelChannelGroups = allGroups.filter((g) => g.sort === 15)
-      const existingAggregateGroups = allGroups.filter((g) => g.sort === 10)
+      const existingModelChannelGroups = allGroups.filter((g) => g.sort === layerConfigs.modelChannelGroup.sort)
+      const existingAggregateGroups = allGroups.filter((g) => g.sort === layerConfigs.aggregateGroup.sort)
 
       console.log(`📊 现有第2层分组: ${existingModelChannelGroups.length} 个`)
       console.log(`📊 现有第3层分组: ${existingAggregateGroups.length} 个`)
@@ -149,10 +149,10 @@ class ThreeLayerArchitecture {
 
       // 筛选站点分组：sort=20
       const siteGroups = allGroups.filter((group) => {
-        return group.sort === 20
+        return group.sort === layerConfigs.siteGroup.sort
       })
 
-      console.log(`✅ 找到 ${siteGroups.length} 个站点分组 (sort=20)`)
+      console.log(`✅ 找到 ${siteGroups.length} 个站点分组 (sort=${layerConfigs.siteGroup.sort})`)
 
       return siteGroups
     } catch (error) {
@@ -418,9 +418,7 @@ class ThreeLayerArchitecture {
     try {
       // 选择第一个健康的实例用于二三层分组
       const allInstances = gptloadService.manager.getAllInstances();
-      const instance = allInstances.find(inst =>
-        gptloadService.manager.healthStatus.get(inst.id)?.healthy
-      );
+      const instance = allInstances.find(inst => inst.health?.healthy);
 
       if (!instance) {
         throw new Error('没有健康的 gptload 实例可用于创建二三层分组');
@@ -439,7 +437,7 @@ class ThreeLayerArchitecture {
         test_model: model,
         channel_type: site.channel_type || 'openai',
         validation_endpoint: site.validation_endpoint,
-        sort: 15, // 第2层分组
+        sort: layerConfigs.modelChannelGroup.sort, // 第2层分组
         param_overrides: {},
         config: {
           blacklist_threshold: this.layerConfigs.modelChannelGroup.blacklist_threshold,
@@ -648,9 +646,7 @@ class ThreeLayerArchitecture {
 
           // 选择第一个健康的实例用于二三层分组
           const allInstances = gptloadService.manager.getAllInstances();
-          const instance = allInstances.find(inst =>
-            gptloadService.manager.healthStatus.get(inst.id)?.healthy
-          );
+          const instance = allInstances.find(inst => inst.health?.healthy);
 
           if (!instance) {
             throw new Error('没有健康的 gptload 实例可用于创建二三层分组');
@@ -670,7 +666,7 @@ class ThreeLayerArchitecture {
             test_model: model,
             channel_type: site.channel_type || 'openai',
             validation_endpoint: site.validation_endpoint,
-            sort: config.sort, // 确保使用正确的 sort 值：15
+            sort: config.sort, // 确保使用正确的 sort 值：30
             param_overrides: {},
             config: {
               blacklist_threshold: config.blacklist_threshold,
@@ -1316,9 +1312,7 @@ class ThreeLayerArchitecture {
       // 直接创建第3层聚合分组，而不是通过 createSiteGroup
       // 选择第一个健康的实例用于二三层分组
       const allInstances = gptloadService.manager.getAllInstances();
-      const instance = allInstances.find(inst =>
-        gptloadService.manager.healthStatus.get(inst.id)?.healthy
-      );
+      const instance = allInstances.find(inst => inst.health?.healthy);
 
       if (!instance) {
         throw new Error('没有健康的 gptload 实例可用于创建二三层分组');
@@ -1399,7 +1393,7 @@ class ThreeLayerArchitecture {
     try {
       const allGroups = await gptloadService.getAllGroups()
 
-      const siteGroups = allGroups.filter((g) => g.sort === 20)
+      const siteGroups = allGroups.filter((g) => g.sort === layerConfigs.siteGroup.sort)
       const modelChannelGroups = allGroups.filter((g) => g.tags?.includes('layer-2'))
       const aggregateGroups = allGroups.filter((g) => g.tags?.includes('layer-3'))
 

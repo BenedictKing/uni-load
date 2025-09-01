@@ -632,9 +632,9 @@ async initialize(): Promise<ArchitectureInitResult> {
 private categorizeGroups(allGroups: any[]): LayerGroups {
   return {
     siteGroups: allGroups.filter(g => g.sort === 20),           // 第一层
-    modelChannelGroups: allGroups.filter(g => g.sort === 15),  // 第二层  
-    aggregateGroups: allGroups.filter(g => g.sort === 10),     // 第三层
-    otherGroups: allGroups.filter(g => ![10, 15, 20].includes(g.sort))
+    modelChannelGroups: allGroups.filter(g => g.sort === 30),  // 第二层  
+    aggregateGroups: allGroups.filter(g => g.sort === 40),     // 第三层
+    otherGroups: allGroups.filter(g => ![20, 30, 40].includes(g.sort))
   };
 }
 ```

@@ -34,7 +34,7 @@ import { MultiGptloadManager } from '../multi-gptload'
  * 初始化所有服务并注册到依赖注入容器
  * 注意：服务注册顺序很重要，被依赖的服务必须先注册
  */
-export function initializeServices(): void {
+export async function initializeServices(): Promise<void> {
   console.log('🚀 初始化依赖注入服务...')
 
   try {
@@ -58,6 +58,10 @@ export function initializeServices(): void {
 
     // 4. 注册 YamlManager (它会自动处理自己的依赖)
     container.registerSingleton<IYamlManager>('yamlManager', () => yamlManager)
+
+    // 初始化多实例管理器，确保首次健康检查完成
+    const multiGptloadManager = getService<MultiGptloadManager>('multiGptloadManager')
+    await multiGptloadManager.initializeInstances()
 
     console.log('✅ 依赖注入服务初始化完成')
     console.log(`📦 已注册 ${container.getRegisteredServices().length} 个服务:`)

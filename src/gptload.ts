@@ -146,7 +146,7 @@ class GptloadService {
         channel_type: channelType,
         test_model: testModel, // 使用选择的验证模型
         validation_endpoint: validationEndpoint, // 使用自定义端点或默认值
-        sort: 20, // 渠道分组的排序号为20
+        sort: layerConfigs.siteGroup.sort, // 渠道分组的排序号为20
         param_overrides: {},
         config: {
           blacklist_threshold: layerConfigs.siteGroup.blacklist_threshold,
@@ -264,10 +264,12 @@ class GptloadService {
    * 删除所有模型分组 (sort=10,15)
    */
   async deleteAllModelGroups() {
-    console.log('🚨 开始删除所有 sort=10 和 sort=15 的模型分组...')
+    console.log(`🚨 开始删除所有 sort=${layerConfigs.aggregateGroup.sort} 和 sort=${layerConfigs.modelChannelGroup.sort} 的模型分组...`)
 
     const allGroups = await this.getAllGroups()
-    const modelGroupsToDelete = allGroups.filter((group) => group.sort === 10 || group.sort === 15)
+    const modelGroupsToDelete = allGroups.filter(
+      (group) => group.sort === layerConfigs.aggregateGroup.sort || group.sort === layerConfigs.modelChannelGroup.sort
+    )
 
     if (modelGroupsToDelete.length === 0) {
       console.log('✅ 没有找到需要删除的模型分组')
@@ -547,7 +549,7 @@ class GptloadService {
         channel_type: channelType, // 动态设置 channel_type
         test_model: originalModelName, // 保持原始模型名称
         validation_endpoint: channelConfig.validation_endpoint, // 使用对应格式的验证端点
-        sort: 10, // 模型分组的排序号为10
+        sort: layerConfigs.aggregateGroup.sort, // 模型分组的排序号为40
       }
 
       const response = await targetInstance.apiClient.post('/groups', groupData)
@@ -915,10 +917,10 @@ class GptloadService {
 
       console.log(`✅ 确认渠道分组存在: ${channelName} (保留不删除)`)
 
-      // 2. 找到所有引用了该渠道的模型分组 (sort=15 和 sort=10) 并处理它们
+      // 2. 找到所有引用了该渠道的模型分组 (sort=30 和 sort=40) 并处理它们
       const upstreamToRemove = `/proxy/${channelName}`
       const modelGroupsToUpdate = allGroups.filter(
-        (g) => (g.sort === 15 || g.sort === 10) && g.upstreams?.some((u) => u.url.includes(upstreamToRemove))
+        (g) => (g.sort === layerConfigs.modelChannelGroup.sort || g.sort === layerConfigs.aggregateGroup.sort) && g.upstreams?.some((u) => u.url.includes(upstreamToRemove))
       )
 
       console.log(`🔍 找到 ${modelGroupsToUpdate.length} 个引用该渠道的模型分组`)

@@ -1,6 +1,7 @@
 import gptloadService from './gptload'
 import modelsService from './models'
 import yamlManager from './yaml-manager'
+import { layerConfigs } from './layer-configs'
 
 class ModelSyncService {
   private syncInterval: NodeJS.Timeout | null
@@ -155,7 +156,7 @@ class ModelSyncService {
       }
 
       // 只处理排序号为20的渠道（程序建立的渠道）
-      if (group.sort !== 20) {
+      if (group.sort !== layerConfigs.siteGroup.sort) {
         return false
       }
 
@@ -237,8 +238,8 @@ class ModelSyncService {
   getConfiguredModels(siteName, allGroupsCache) {
     // 优化：直接从缓存中查找
     const modelGroups = allGroupsCache.filter((group) => {
-      // 只考虑排序号为10的模型分组（程序建立的模型分组）
-      if (group.sort !== 10) {
+      // 只考虑排序号为40的模型分组（程序建立的模型分组）
+      if (group.sort !== layerConfigs.aggregateGroup.sort) {
         return false
       }
 
@@ -327,8 +328,8 @@ class ModelSyncService {
   async getAllConfiguredModels() {
     const allGroups = await gptloadService.getAllGroups()
     const modelGroups = allGroups.filter((group) => {
-      // 只考虑排序号为10的模型分组（程序建立的模型分组）
-      if (group.sort !== 10) {
+      // 只考虑排序号为40的模型分组（程序建立的模型分组）
+      if (group.sort !== layerConfigs.aggregateGroup.sort) {
         return false
       }
 

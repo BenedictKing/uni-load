@@ -1,4 +1,5 @@
 import modelConfig from './model-config'
+import { layerConfigs } from './layer-configs'
 import modelsService from './models'
 import instanceConfigManager, { GptloadInstance } from './services/instance-config-manager'
 import instanceHealthManager, { HealthResult, InstanceHealthStatus } from './services/instance-health-manager'
@@ -15,11 +16,7 @@ export class MultiGptloadManager {
   public healthStatus = new Map<string, HealthResult>() // 新增 healthStatus 属性
 
   constructor() {
-    // 异步初始化实例
-    this.initializeInstances().catch((error) => {
-      console.error('初始化实例失败:', error)
-      process.exit(1) // 如果配置文件不存在，强制退出
-    })
+    // 构造函数留空，初始化将由服务工厂调用
   }
 
   /**
@@ -39,12 +36,10 @@ export class MultiGptloadManager {
 
       console.log(`🌐 初始化了 ${this.instances.size} 个 gpt-load 实例`)
 
-      // 立即进行一次健康检查
-      setTimeout(() => {
-        this.checkAllInstancesHealth().catch((error) => {
-          console.error('初始健康检查失败:', error)
-        })
-      }, 1000) // 延迟1秒执行，让服务器完全启动
+      // 立即进行一次健康检查，并等待其完成
+      console.log('🩺 正在执行初始健康检查...')
+      await this.checkAllInstancesHealth()
+      console.log('✅ 初始健康检查完成')
     } catch (error) {
       console.error('初始化实例配置失败:', error.message)
       throw error
@@ -318,7 +313,7 @@ export class MultiGptloadManager {
       channel_type: channelType,
       validation_endpoint:
         customValidationEndpoints[channelType] || this.getChannelConfig(channelType).validation_endpoint,
-      sort: isModelGroup ? 10 : 20, // 模型分组为10，站点分组为20
+      sort: isModelGroup ? layerConfigs.aggregateGroup.sort : layerConfigs.siteGroup.sort, // 模型分组为40，站点分组为20
       param_overrides: {},
       config: {
         blacklist_threshold: 3,
@@ -610,7 +605,6 @@ export class MultiGptloadManager {
   get siteAssignments() {
     return this._siteAssignments
   }
-
 }
 
 export default MultiGptloadManager

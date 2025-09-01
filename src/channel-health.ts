@@ -15,6 +15,7 @@
 import gptloadService from './gptload'
 import modelsService from './models'
 import modelConfig from './model-config'
+import { layerConfigs } from './layer-configs'
 import { promises as fs } from 'fs'
 import path from 'path'
 import {
@@ -206,7 +207,7 @@ class ChannelHealthMonitor {
       }
 
       // 只处理排序号为20的渠道（程序建立的渠道）
-      if (group.sort !== 20) {
+      if (group.sort !== layerConfigs.siteGroup.sort) {
         return false
       }
 

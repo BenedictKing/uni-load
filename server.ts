@@ -18,6 +18,7 @@ import channelCleanupService from './src/channel-cleanup'
 import threeLayerArchitecture from './src/three-layer-architecture'
 import siteConfigurationService from './src/services/site-configuration'
 import { TempGroupCleaner } from './src/temp-group-cleaner'
+import { layerConfigs } from './src/layer-configs'
 import {
   initializeServices,
   validateServiceRegistration,
@@ -156,7 +157,7 @@ app.get('/api/channels/site-groups', async (req, res) => {
   try {
     const allGroups = await gptloadService.getAllGroups()
     // 假设站点分组的 sort 值为 20
-    const siteGroups = allGroups.filter((g) => g.sort === 20)
+    const siteGroups = allGroups.filter((g) => g.sort === layerConfigs.siteGroup.sort)
     res.json({ siteGroups })
   } catch (error) {
     res.status(500).json({ error: '获取站点分组失败', details: error.message })
@@ -436,9 +437,9 @@ app.get('/api/architecture-stats', async (req, res) => {
   }
 })
 
-// 维护脚本：删除所有二三层分组 (sort=10/sort=15) 并清理uni-api配置
+// 维护脚本：删除所有二三层分组 (sort=40/sort=30) 并清理uni-api配置
 app.post('/api/maintenance/delete-model-groups', async (req, res) => {
-  console.log('🚨 开始执行维护任务：删除所有二三层分组 (sort=10/sort=15)')
+  console.log(`🚨 开始执行维护任务：删除所有二三层分组 (sort=${layerConfigs.aggregateGroup.sort}/sort=${layerConfigs.modelChannelGroup.sort})`)
 
   try {
     const results = await modelSyncService.cleanupAndResetModels()
@@ -591,7 +592,7 @@ process.on('SIGINT', gracefulShutdown) // Ctrl+C
 process.on('SIGTERM', gracefulShutdown) // 终止信号
 process.on('SIGQUIT', gracefulShutdown) // 退出信号
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`🚀 uni-load 服务器启动成功`)
   console.log(`📍 访问地址: http://localhost:${PORT}`)
   console.log(`🔗 gptload: ${process.env.GPTLOAD_URL || 'http://localhost:3001'}`)
@@ -599,7 +600,7 @@ app.listen(PORT, () => {
 
   // 初始化依赖注入服务
   try {
-    initializeServices()
+    await initializeServices()
     if (validateServiceRegistration()) {
       console.log('✅ 依赖注入系统初始化成功')
     } else {
