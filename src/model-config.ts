@@ -80,7 +80,18 @@ class ModelConfig {
     ]
 
     // 初始化黑名单关键词
-    this.blacklistedKeywords = ['vision', 'image', 'dalle', 'tts', 'whisper', 'deprecated', 'test', 'embedding']
+    this.blacklistedKeywords = [
+      'vision',
+      'image',
+      'dalle',
+      'tts',
+      'whisper',
+      'deprecated',
+      'test',
+      'embedding',
+      'distill',
+      'rerank',
+    ]
 
     // 初始化高消耗模型模式
     this.highCostModelPatterns = [
