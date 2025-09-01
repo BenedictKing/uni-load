@@ -388,6 +388,11 @@ export class MultiGptloadManager {
         }
       }
 
+      // 关键修复：确保返回的对象包含完整的模型列表，因为 gpt-load 的创建接口可能不会在响应中返回此字段
+      if (availableModels && availableModels.length > 0) {
+        created.validated_models = availableModels
+      }
+
       return created
     } catch (error) {
       // 添加详细的错误信息输出
