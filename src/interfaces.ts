@@ -281,29 +281,36 @@ export interface IThreeLayerArchitecture {
 // ============= 多实例管理接口 =============
 
 export interface IMultiGptloadManager {
-  /**
-   * 实例集合
-   */
   instances: Map<string, any>
-
-  /**
-   * 健康状态映射
-   */
   healthStatus: Map<string, any>
+  siteAssignments: Map<string, string>
 
-  /**
-   * 选择最佳实例
-   */
+  initializeInstances(): Promise<void>
+  addInstance(config: GptloadInstance): void
+  checkAllInstancesHealth(): Promise<Map<string, any>>
+  getHealthyInstances(): Promise<any[]>
   selectBestInstance(siteUrl?: string): Promise<any>
-
-  /**
-   * 重新分配站点
-   */
+  getInstance(instanceId: string): any
+  getAllInstances(): any[]
   reassignSite(siteUrl: string, instanceId?: string): Promise<void>
-
-  /**
-   * 通过多实例获取模型
-   */
+  getAllInstancesStatus(): Record<string, any>
+  getSiteAssignments(): Record<string, any>
+  getAllGroups(): Promise<any[]>
+  createSiteGroup(
+    groupName: string,
+    baseUrl: string,
+    apiKeys: string[],
+    channelType?: string,
+    customValidationEndpoints?: any,
+    availableModels?: string[] | null,
+    isModelGroup?: boolean
+  ): Promise<any>
+  getChannelConfig(channelType: string): any
+  selectTestModel(availableModels: string[] | null, channelType: string): string
+  addApiKeysToGroup(instance: any, groupId: string, apiKeys: string[]): Promise<any>
+  deleteGroup(instance: any, groupId: string): Promise<boolean>
+  deleteAllApiKeysFromGroup(instance: any, groupId: string): Promise<any>
+  toggleApiKeysStatusForGroup(instance: any, groupId: string, status: 'active' | 'disabled'): Promise<any>
   getModelsViaMultiInstance(
     baseUrl: string,
     apiKey: string
@@ -312,42 +319,6 @@ export interface IMultiGptloadManager {
     instanceId: string
     instanceName: string
   }>
-
-  /**
-   * 获取所有实例状态信息（返回对象格式，便于按ID访问）
-   */
-  getAllInstancesStatus(): Record<string, {
-    id: string
-    name: string
-    url: string
-    priority: number
-    healthy: boolean
-    responseTime: number
-    lastCheck: Date
-    error?: string
-  }>
-
-  /**
-   * 获取站点分配信息
-   */
-  getSiteAssignments(): Record<string, {
-    instanceId: string
-    instanceName?: string
-  }>
-
-  /**
-   * 获取所有实例
-   */
-  getAllInstances(): any[]
-
-  /**
-   * 获取指定实例
-   */
-  getInstance(instanceId: string): any
-
-  /**
-   * 启动定期健康检查
-   */
   startPeriodicHealthCheck(intervalMs?: number): NodeJS.Timeout
 }
 

@@ -1,3 +1,4 @@
+import MultiGptloadManager from './multi-gptload'
 import modelConfig from './model-config'
 import { layerConfigs } from './layer-configs'
 import { getService } from './services/service-factory'
@@ -881,8 +882,9 @@ class GptloadService {
   /**
    * 获取多实例管理器实例（用于临时分组清理等高级操作）
    */
-  getMultiGPTLoadManager() {
-    return this.manager
+  getMultiGPTLoadManager(): MultiGptloadManager {
+    // 强制转换为具体的类，因为 TempGroupCleaner 需要它
+    return this.manager as MultiGptloadManager
   }
 
   /**

@@ -407,7 +407,7 @@ class SiteConfigurationService {
       const instance = gptloadService.manager.getInstance(successfulInstance)
       if (instance) {
         console.log(`🎯 预分配站点 ${request.baseUrl} 到成功实例 ${instance.name}`)
-        gptloadService.manager.siteAssignments.set(request.baseUrl, successfulInstance)
+        await gptloadService.manager.reassignSite(request.baseUrl, successfulInstance)
       }
     }
 
