@@ -153,6 +153,7 @@ class GptloadService {
         param_overrides: {},
         config: {
           blacklist_threshold: layerConfigs.siteGroup.blacklist_threshold,
+          key_validation_interval_minutes: layerConfigs.siteGroup.key_validation_interval_minutes,
         },
       }
 

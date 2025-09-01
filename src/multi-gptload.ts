@@ -299,6 +299,9 @@ export class MultiGptloadManager {
       throw new Error('没有健康的实例可用于创建站点分组')
     }
 
+    // 根据分组类型选择正确的配置
+    const configLayer = isModelGroup ? layerConfigs.aggregateGroup : layerConfigs.siteGroup
+    
     // 构建分组数据
     const groupData: any = {
       name: groupName, // 确保使用传入的完整 groupName
@@ -313,16 +316,21 @@ export class MultiGptloadManager {
       channel_type: channelType,
       validation_endpoint:
         customValidationEndpoints[channelType] || this.getChannelConfig(channelType).validation_endpoint,
-      sort: isModelGroup ? layerConfigs.aggregateGroup.sort : layerConfigs.siteGroup.sort, // 模型分组为40，站点分组为20
+      sort: configLayer.sort,
       param_overrides: {},
       config: {
-        blacklist_threshold: 3,
-        key_validation_interval_minutes: 30,
+        blacklist_threshold: configLayer.blacklist_threshold,
+        key_validation_interval_minutes: configLayer.key_validation_interval_minutes,
       },
     }
 
     // 设置测试模型，使用智能选择逻辑
     groupData.test_model = this.selectTestModel(availableModels, channelType)
+
+    // 将获取到的模型列表直接设置为已验证模型，避免后续再次API调用
+    if (availableModels && availableModels.length > 0) {
+      groupData.validated_models = availableModels
+    }
 
     // 设置tags
     if (isModelGroup) {
@@ -345,6 +353,8 @@ export class MultiGptloadManager {
         isModelGroup,
         upstreams: groupData.upstreams,
         tags: groupData.tags,
+        test_model: groupData.test_model,
+        validated_models_count: availableModels?.length || 0,
       })
 
       // 调用API创建分组
