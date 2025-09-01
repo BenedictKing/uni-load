@@ -56,15 +56,8 @@ export function initializeServices(): void {
     // 3. 注册依赖于多实例管理器的服务
     container.registerSingleton<IGptloadService>('gptloadService', () => gptloadService)
 
-    // 4. 注入依赖：为YamlManager设置依赖
-    container.registerSingleton<IYamlManager>('yamlManager', () => {
-      const gptloadService = container.resolve<IGptloadService>('gptloadService')
-      const multiGptloadManager = container.resolve<IMultiGptloadManager>('multiGptloadManager')
-
-      // 为现有的yamlManager实例设置依赖
-      yamlManager.setDependencies(gptloadService, multiGptloadManager)
-      return yamlManager
-    })
+    // 4. 注册 YamlManager (它会自动处理自己的依赖)
+    container.registerSingleton<IYamlManager>('yamlManager', () => yamlManager)
 
     console.log('✅ 依赖注入服务初始化完成')
     console.log(`📦 已注册 ${container.getRegisteredServices().length} 个服务:`)

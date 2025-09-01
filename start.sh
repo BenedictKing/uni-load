@@ -113,9 +113,9 @@ api_keys:
 providers:
   - provider: provider_name # 服务提供商名称, 如 openai、anthropic、gemini、openrouter，随便取名字，必填
     base_url: https://api.your.com/v1/chat/completions # 后端服务的API地址，必填
-    api: sk-YgS6GTi0b4bEabc4C # 提供商的API Key，必填，自动使用 base_url 和 api 通过 /v1/models 端点获取可用的所有模型。
+    api: your-api-key # 提供商的API Key，必填，自动使用 base_url 和 api 通过 /v1/models 端点获取可用的所有模型。
     model:
-      - gpt-5
+      - fake-model
   # 这里可以配置多个提供商，每个提供商可以配置多个 API Key，每个提供商可以配置多个模型。
 preferences:
   model_timeout:
@@ -125,7 +125,7 @@ fi
 EXISTING_UNI_API_KEY=$(grep -m 1 'api: sk-' /uni-api/api.yaml | awk -F': ' '{print $2}' | tr -d '\r')
 
 # 按照uni-api的Dockerfile ENTRYPOINT启动
-DISABLE_DATABASE=true python -m uvicorn main:app --host 0.0.0.0 --port 3003 &
+DISABLE_DATABASE=true PORT=3003 python main.py &
 PID_UNI_API=$!
 echo "uni-api PID: $PID_UNI_API"
 

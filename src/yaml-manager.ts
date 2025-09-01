@@ -146,7 +146,7 @@ class YamlManager implements IYamlManager {
       }
 
       // 使用服务工厂获取依赖
-      const gptloadService = getService<IGptloadService>('GptloadService')
+      const gptloadService = getService<IGptloadService>('gptloadService')
       if (!gptloadService) {
         throw new Error('无法从服务工厂获取 GptloadService')
       }
@@ -190,7 +190,7 @@ class YamlManager implements IYamlManager {
         (instance: any) => instance.name && instance.name.includes('本地')
       )
 
-      const multiGptloadManager = getService<IMultiGptloadManager>('MultiGptloadManager')
+      const multiGptloadManager = getService<IMultiGptloadManager>('multiGptloadManager')
 
       if (localInstance && multiGptloadManager) {
         const instance = multiGptloadManager.getInstance('local')
@@ -308,7 +308,7 @@ class YamlManager implements IYamlManager {
     // 如果需要任何映射，创建一个重命名映射对象
     if (needsWithoutOrgMapping || needsSimplifiedMapping) {
       const renameMapping = {}
-      
+
       // 优先使用简化名称，如果没有则使用去组织名称
       if (needsSimplifiedMapping) {
         renameMapping[originalModelName] = simplifiedName
@@ -319,7 +319,7 @@ class YamlManager implements IYamlManager {
         mappingsAdded++
         console.log(`📝 添加重命名映射: ${originalModelName} -> ${withoutOrgName}`)
       }
-      
+
       modelMappings.push(renameMapping)
     }
 
