@@ -272,6 +272,9 @@ bun run build
 # 启动生产服务
 bun start
 
+# 构建 Docker 镜像
+docker build -t uni-load .
+
 # 健康检查
 curl http://localhost:3002/api/health
 
