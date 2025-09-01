@@ -334,7 +334,7 @@ class SiteConfigurationService {
 
     // 6. 初始化或更新三层架构
     console.log('🏗️  触发三层架构更新以包含新站点...')
-    const architectureResult = await threeLayerArchitecture.initialize()
+    const architectureResult = await threeLayerArchitecture.initialize(siteGroups)
 
     // 7. 构造响应
     return {
