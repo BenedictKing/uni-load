@@ -59,25 +59,8 @@ RUN git clone https://ghfast.top/https://github.com/yym68686/uni-api.git . || \
 RUN git clone https://ghfast.top/https://github.com/yym68686/uni-api-core.git core || \
 git clone https://github.com/yym68686/uni-api-core.git core
 
-# 修改 utils.py 文件 - 修复字典推导式和条件判断问题
-RUN sed -i '/weights_dict\.update({provider_name + "\/" + model_name: int(value) for model_item in model_dict\.keys()})/c\
-                            for model_item in model_dict.keys():\
-                                weights_dict.update({provider_name + "/" + model_item: int(value)})' utils.py
-
-# 修改 if isinstance(model, str): 为 elif isinstance(model, str):
-RUN sed -i 's/if isinstance(model, str):/elif isinstance(model, str):/' utils.py
-
-# 在 elif isinstance(model, str): 后添加处理 "all" 模型的逻辑
-RUN sed -i '/elif isinstance(model, str):/a\
-                    # 处理字符串格式的模型配置\
-                    if model == "all":\
-                        # 如果有权重配置，为所有模型设置默认权重1\
-                        if weights_dict or any(isinstance(m, dict) for m in api_key.get('\''model'\'', [])):\
-                            for provider_item in config_data["providers"]:\
-                                model_dict = get_model_dict(provider_item)\
-                                for model_item in model_dict.keys():\
-                                    if f"{provider_item['\''provider'\'']}/{model_item}" not in weights_dict:\
-                                        weights_dict.update({f"{provider_item['\''provider'\'']}/{model_item}": 1})' utils.py
+COPY patches/uni-api-utils.patch uni-api-utils.patch
+RUN patch -p1 < uni-api-utils.patch
 
 # --- 阶段 3: 构建 uni-load (本项目) ---
 FROM docker.1ms.run/oven/bun:latest AS uni-load-builder
