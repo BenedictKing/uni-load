@@ -496,31 +496,6 @@ Content-Type: application/json
 }
 ```
 
-### 9. 临时分组管理
-
-#### 9.1 获取临时分组统计
-
-```http
-GET /api/temp-groups/stats
-```
-
-#### 9.2 清理所有临时分组
-
-```http
-POST /api/temp-groups/cleanup
-```
-
-#### 9.3 清理过期临时分组
-
-```http
-POST /api/temp-groups/cleanup-old
-Content-Type: application/json
-
-{
-  "hoursOld": 24
-}
-```
-
 ## 错误响应格式
 
 所有 API 在出错时都会返回统一的错误格式：

@@ -332,24 +332,23 @@ class SiteConfigurationService {
       throw new Error('所有格式的站点分组都创建失败')
     }
 
-    // 6. 创建模型分组
-    const modelGroups = await gptloadService.createOrUpdateModelGroups(compatibleModels, siteGroups) // 使用兼容模型列表
+    // 6. 初始化或更新三层架构
+    console.log('🏗️  触发三层架构更新以包含新站点...')
+    const architectureResult = await threeLayerArchitecture.initialize()
 
-    // 7. 更新uni-api配置
-    await yamlManager.updateUniApiConfig(modelGroups)
-
+    // 7. 构造响应
     return {
       success: true,
-      message: `成功配置AI站点 ${siteName}`,
+      message: `成功配置AI站点 ${siteName} 并更新三层架构`,
       data: {
         siteName,
         baseUrl: processedRequest.baseUrl,
         channelTypes: processedRequest.channelTypes!,
-        groupsCreated: siteGroups.length,
-        modelsCount: compatibleModels.length, // 使用兼容模型列表
-        models: compatibleModels, // 使用兼容模型列表
+        groupsCreated: siteGroups.length, // 本次操作创建的站点分组数量
+        modelsCount: compatibleModels.length,
+        models: compatibleModels,
         siteGroups,
-        modelGroups: modelGroups.length,
+        modelGroups: architectureResult.aggregateGroups, // 使用架构更新后的聚合分组总数
         usingManualModels: !!(processedRequest.models && processedRequest.models.length > 0),
         successfulInstance: modelResult.successfulInstance
           ? {

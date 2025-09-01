@@ -181,36 +181,27 @@ curl -X POST http://localhost:3002/api/process-ai-site \
 ```
 uni-load/
 ├── src/                          # 源代码目录
-│   ├── types.ts                  # TypeScript 类型定义
-│   ├── gptload.ts               # gpt-load 服务交互
-│   ├── multi-gptload.ts         # 多实例管理
+│   ├── services/                 # 业务逻辑与基础服务
+│   │   ├── dependency-container.ts  # 依赖注入容器
+│   │   ├── service-factory.ts       # 服务工厂
+│   │   ├── site-configuration.ts    # 站点配置核心服务
+│   │   ├── instance-config-manager.ts # 实例配置管理服务
+│   │   └── instance-health-manager.ts # 实例健康管理服务
+│   ├── gptload.ts               # gpt-load 服务接口层
+│   ├── multi-gptload.ts         # 多实例协调器
 │   ├── models.ts                # 模型获取服务
 │   ├── yaml-manager.ts          # uni-api 配置管理
 │   ├── model-sync.ts            # 模型同步服务
 │   ├── channel-health.ts        # 渠道健康监控
-│   ├── channel-cleanup.ts       # 渠道清理服务
-│   ├── model-config.ts          # 模型配置管理
-│   ├── model-channel-optimizer.ts # 模型渠道优化
-│   ├── three-layer-architecture.ts # 三层架构管理
-│   └── temp-group-cleaner.ts    # 临时分组清理
-├── public/                      # 静态资源
-│   └── index.html              # Web界面
+│   └── ...                     # 其他核心模块
+├── public/                      # 静态资源 (Web UI)
 ├── docs/                       # 项目文档
-│   ├── architecture.md         # 系统架构设计
-│   ├── api.md                  # API 接口文档
-│   ├── deployment.md           # 部署指南
-│   ├── development.md          # 开发指南
-│   └── multi-gptload-config.md # 多实例配置说明
 ├── logs/                       # 日志目录
 ├── dist/                       # 编译输出目录
-├── server.ts                   # 主服务器文件
-├── tsconfig.json              # TypeScript 配置
+├── server.ts                   # Express 服务器主文件
 ├── package.json               # 项目配置
-├── bunfig.toml                # Bun 配置
-├── .env.example               # 环境变量示例
-├── .env.local                 # 本地环境变量
-├── gptload-instances.json     # gpt-load 实例配置
-└── README.md                  # 说明文档
+├── Dockerfile                 # Docker 配置文件
+└── gptload-instances.json     # gpt-load 实例配置
 ```
 
 ## ⚙️ 环境配置
