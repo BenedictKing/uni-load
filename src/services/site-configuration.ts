@@ -47,38 +47,7 @@ class SiteConfigurationService {
       }
 
       const urlObj = new URL(url)
-      let hostname = urlObj.hostname
-
-      // 移除常见的前缀
-      hostname = hostname.replace(/^(www\.|api\.|openai\.|claude\.)/, '')
-
-      // 处理域名规则
-      let siteName = hostname
-
-      const parts = hostname.split('.')
-      if (parts.length >= 2) {
-        // 对于多级域名，优先选择有意义的子域名
-        if (parts.length >= 3) {
-          const firstPart = parts[0]
-          const secondPart = parts[1]
-
-          // 常见的通用前缀
-          const commonPrefixes = ['api', 'www', 'app', 'admin', 'service']
-
-          const isCommonPrefix = commonPrefixes.some(
-            (prefix) => firstPart === prefix || firstPart.startsWith(prefix + '-')
-          )
-
-          if (isCommonPrefix && secondPart) {
-            siteName = secondPart
-          } else {
-            siteName = `${firstPart}-${secondPart}`
-          }
-        } else {
-          // 只有2级域名，取主域名
-          siteName = parts[parts.length - 2]
-        }
-      }
+      let siteName = urlObj.hostname
 
       // 转换规则
       siteName = siteName
