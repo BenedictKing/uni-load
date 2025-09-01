@@ -36,7 +36,9 @@ const PORT: number = parseInt(process.env.PORT || '3002', 10)
 // 中间件
 app.use(cors())
 app.use(express.json())
-app.use(express.static(path.join(__dirname, '../public')))
+// 动态计算 public 目录的路径，以兼容开发和生产模式
+const publicPath = path.join(__dirname, __dirname.endsWith('dist') ? '../public' : 'public')
+app.use(express.static(publicPath))
 
 // 预览站点名称的API端点
 app.post('/api/preview-site-name', (req: Request, res: Response) => {
