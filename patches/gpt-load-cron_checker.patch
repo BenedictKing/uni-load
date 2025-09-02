@@ -1,0 +1,44 @@
+
+diff --git a/internal/keypool/cron_checker.go b/internal/keypool/cron_checker.go
+index 62b11d4..7f27229 100644
+--- a/internal/keypool/cron_checker.go
++++ b/internal/keypool/cron_checker.go
+@@ -91,16 +91,26 @@ func (s *CronChecker) submitValidationJobs() {
+ 	validationStartTime := time.Now()
+ 	var wg sync.WaitGroup
+ 
++	// Use KeyValidationConcurrency to limit group-level concurrency.
++	// A more robust solution might be a separate setting, but this is a simple fix.
++	concurrency := s.SettingsManager.GetSettings().KeyValidationConcurrency
++	if concurrency <= 0 {
++		concurrency = 4 // Default to 4 concurrent groups if not set or invalid
++	}
++	sem := make(chan struct{}, concurrency)
++
+ 	for i := range groups {
+ 		group := &groups[i]
+ 		group.EffectiveConfig = s.SettingsManager.GetEffectiveConfig(group.Config)
+ 		interval := time.Duration(group.EffectiveConfig.KeyValidationIntervalMinutes) * time.Minute
+ 
+ 		if group.LastValidatedAt == nil || validationStartTime.Sub(*group.LastValidatedAt) > interval {
++			sem <- struct{}{}
+ 			wg.Add(1)
+ 			g := group
+ 			go func() {
+ 				defer wg.Done()
++				defer func() { <-sem }()
+ 				s.validateGroupKeys(g)
+ 			}()
+ 		}
+@@ -133,7 +143,10 @@ func (s *CronChecker) validateGroupKeys(group *models.Group) {
+ 	jobs := make(chan *models.APIKey, len(invalidKeys))
+ 
+ 	concurrency := group.EffectiveConfig.KeyValidationConcurrency
+-	for range concurrency {
++	if concurrency <= 0 {
++		concurrency = 1
++	}
++	for i := 0; i < concurrency; i++ {
+ 		keyWg.Add(1)
+ 		go func() {
+ 			defer keyWg.Done()
