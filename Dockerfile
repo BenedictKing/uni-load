@@ -13,10 +13,7 @@ ENV GOPATH="/go"
 ENV PATH="${GOPATH}/bin:${PATH}"
 ENV GOROOT="/usr/local/go"
 
-# 设置Go代理为官方源
 ENV GO111MODULE=on
-ENV GOPROXY=https://proxy.golang.org,direct
-# GOSUMDB 使用默认值 sum.golang.google.cn，无需设置
 # 禁用Go自动下载更新
 ENV GOTOOLCHAIN=local
 
@@ -25,12 +22,13 @@ WORKDIR /src
 # 使用官方GitHub仓库
 RUN git clone https://github.com/tbphp/gpt-load.git .
 
-# 修改 gpt-load 的 group_handler.go 文件：将 3(.*)30 替换为 3($1)100
-RUN sed -i 's/3\(.*\)30/3\1100/g' internal/handler/group_handler.go
+# 安装 patch 命令
+RUN apt-get update && apt-get install -y patch && rm -rf /var/lib/apt/lists/*
 
-# 为 gpt-load 的 GroupID 和 Status 字段添加数据库索引以优化查询
-RUN sed -i "s/uniqueIndex:idx_group_key\"/uniqueIndex:idx_group_key;index:idx_group_status\"/" internal/models/types.go && \
-    sed -i "s/default:'active'\"/default:'active';index:idx_group_status\"/" internal/models/types.go
+COPY patches/gpt-load-*.patch .
+RUN patch -p1 < gpt-load-group_handler.patch
+RUN patch -p1 < gpt-load-cron_checker.patch
+RUN patch -p1 < gpt-load-models-types.patch
 
 # 使用bun构建前端
 RUN cd web && \
@@ -80,19 +78,6 @@ COPY --from=python:3.11.13-bookworm /usr/local/lib/python3.11 /usr/local/lib/pyt
 COPY --from=python:3.11.13-bookworm /usr/local/lib/libpython* /usr/local/lib/
 COPY --from=astral/uv /uv /uvx /bin/
 
-# 使用官方Debian软件源
-RUN if [ -f /etc/apt/sources.list ]; then \
-        sed -i 's#mirrors.aliyun.com#deb.debian.org#g' /etc/apt/sources.list && \
-        sed -i 's#mirrors.aliyun.com#security.debian.org#g' /etc/apt/sources.list; \
-    elif [ -f /etc/apt/sources.list.d/debian.sources ]; then \
-        sed -i 's#mirrors.aliyun.com#deb.debian.org#g' /etc/apt/sources.list.d/debian.sources && \
-        sed -i 's#mirrors.aliyun.com#security.debian.org#g' /etc/apt/sources.list.d/debian.sources; \
-    else \
-        echo "deb https://deb.debian.org/debian/ bookworm main" > /etc/apt/sources.list && \
-        echo "deb https://deb.debian.org/debian-security/ bookworm-security main" >> /etc/apt/sources.list && \
-        echo "deb https://deb.debian.org/debian/ bookworm-updates main" >> /etc/apt/sources.list; \
-    fi
-
 # 安装必要的运行时依赖（已有node，只需要bash和curl）
 RUN apt-get update && apt-get install -y bash curl && rm -rf /var/lib/apt/lists/*
 
@@ -120,7 +105,6 @@ COPY --from=uni-api-builder /src/pyproject.toml /uni-api/
 # 使用官方PyPI源
 RUN cd /uni-api && uv pip install --system --no-cache-dir .
 COPY --from=uni-api-builder /src /uni-api
-# ENV PATH="/uni-api/.venv/bin:$PATH"
 
 # 赋予启动脚本执行权限
 RUN chmod +x /start.sh
