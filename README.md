@@ -82,6 +82,7 @@ uni-load 采用三层分组架构实现 AI 模型的统一管理。在多实例�
 
 ## 🐋 Docker 部署
 国内镜像（本项目镜像和依赖镜像均使用中国镜像）：受开发环境影响，请根据`Dockerfile_China`自行build（`docker build -t yourname/uni-load:china -f Dockerfile_China .`）
+
 全球镜像（不含考虑中国境内网络因素，全部使用官方源）：`skydog221/uni-load:latest`
 最低 CPU 要求：`0.1 Core`
 最低内存要求：`256 MB` 
