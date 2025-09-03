@@ -278,7 +278,7 @@ class YamlManager implements IYamlManager {
           apiPath = '/v1/messages'
           break
         case 'gemini':
-          apiPath = '/v1beta/openai/chat/completions'
+          apiPath = '/v1beta'
           break
         default: // openai 及其他
           apiPath = '/v1/chat/completions'
