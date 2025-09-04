@@ -1616,10 +1616,12 @@
             submitBtn.disabled = true
             submitBtn.textContent = '更新中...'
 
-            // 构建请求体，只有在有新密钥时才发送
+            // 构建请求体，明确指定目标分组和操作类型
             const requestBody = {
               baseUrl: baseUrl,
               channelTypes: [channelType],
+              targetChannelName: channelName,  // 明确指定要更新的分组
+              operationType: 'update'          // 明确指定为更新操作
             }
 
             // 只有在用户输入了新密钥时才添加到请求中

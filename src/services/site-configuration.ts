@@ -129,25 +129,38 @@ class SiteConfigurationService {
       return { models: request.models }
     }
 
-    // 检查是否已存在渠道分组
+    // 如果是更新操作且指定了目标分组名称
+    if (request.operationType === 'update' && request.targetChannelName) {
+      console.log(`🔄 更新操作：查找指定分组 ${request.targetChannelName}`)
+      return await this.getModelsFromSpecificChannel(request)
+    }
+
+    // 检查是否已存在渠道分组（用于兼容旧的调用方式）
     const siteName = this.generateSiteNameFromUrl(request.baseUrl)
     const allGroups = await gptloadService.getAllGroups()
-    const channelName = `${siteName}-${request.channelTypes![0]}`
-    const existingChannel = this.findExistingChannel(allGroups, channelName, siteName, request.channelTypes![0])
 
-    // 如果渠道已存在，则通过其代理获取模型
+    let existingChannel = null
+    for (const channelType of (request.channelTypes || ['openai'])) {
+      const channelName = `${siteName}-${channelType}`
+      existingChannel = this.findExistingChannel(allGroups, channelName, siteName, channelType)
+      if (existingChannel) {
+        break
+      }
+    }
+
+    // 如果找到现有渠道，通过其代理获取模型
     if (existingChannel) {
       console.log('ℹ️ 检测到现有渠道，将通过其代理获取模型...')
       return await this.getModelsFromExistingChannel(request)
     }
 
-    // 如果渠道不存在，则作为新站点处理，此时必须提供API密钥
+    // 新站点处理
     console.log('ℹ️ 未找到现有渠道，作为新站点处理...')
     if (!request.apiKeys || request.apiKeys.length === 0) {
       throw new Error('首次配置渠道时必须提供API密钥')
     }
 
-    // 对于新站点，使用多实例临时分组的方式获取模型
+    // 使用多实例临时分组方式获取模型
     try {
       const result = await gptloadService.manager.getModelsViaMultiInstance(request.baseUrl, request.apiKeys[0])
       return {
@@ -156,7 +169,6 @@ class SiteConfigurationService {
         instanceName: result.instanceName,
       }
     } catch (error) {
-      // 如果多实例方式失败，回退到直接调用
       console.log('多实例获取失败，回退到直接调用...')
       const models = await modelsService.getModels(request.baseUrl, request.apiKeys[0], 3)
       return { models }
@@ -221,19 +233,82 @@ class SiteConfigurationService {
   }
 
   /**
-   * 查找现有渠道
+   * 从指定的渠道获取模型
+   */
+  private async getModelsFromSpecificChannel(request: ProcessAiSiteRequest): Promise<{
+    models: string[]
+    successfulInstance?: string
+    instanceName?: string
+  }> {
+    const allGroups = await gptloadService.getAllGroups()
+    const targetChannel = allGroups.find(g => g.name === request.targetChannelName)
+
+    if (!targetChannel) {
+      throw new Error(`未找到指定的渠道分组: ${request.targetChannelName}`)
+    }
+
+    console.log(`✅ 找到目标分组: ${targetChannel.name} (实例: ${targetChannel._instance.name})`)
+
+    // 获取现有API密钥
+    const existingKeys = await gptloadService.getGroupApiKeys(targetChannel.id, targetChannel._instance.id)
+
+    if (existingKeys.length === 0) {
+      throw new Error(`渠道 ${targetChannel.name} 没有可用的API密钥`)
+    }
+
+    try {
+      const instance = gptloadService.manager.getInstance(targetChannel._instance.id)
+      if (!instance) {
+        throw new Error(`找不到实例: ${targetChannel._instance.id}`)
+      }
+
+      const proxyUrl = `${instance.url}/proxy/${targetChannel.name}`
+      console.log(`🔄 通过指定渠道代理获取模型: ${proxyUrl}`)
+
+      const authToken = existingKeys[0]
+      const models = await modelsService.getModels(proxyUrl, authToken, 3)
+
+      return {
+        models,
+        successfulInstance: instance.id,
+        instanceName: instance.name,
+      }
+    } catch (error) {
+      console.error(`通过指定渠道代理获取模型失败: ${error.message}`)
+      console.log('代理获取失败，回退到直接访问原始URL...')
+      const models = await modelsService.getModels(request.baseUrl, existingKeys[0], 3)
+      return { models }
+    }
+  }
+
+  /**
+   * 查找现有渠道 - 增强版
    */
   findExistingChannel(allGroups: any[], channelName: string, siteName: string, channelType: string) {
     // 精确匹配
     let existingChannel = allGroups.find((g) => g.name === channelName)
 
     if (!existingChannel) {
-      // 模糊匹配
-      const fuzzyMatches = allGroups.filter((g) => g.name && g.name.includes(siteName) && g.name.includes(channelType))
+      // 模糊匹配：包含站点名和渠道类型
+      const fuzzyMatches = allGroups.filter(
+        (g) => g.name && g.name.includes(siteName) && g.name.includes(channelType) && g.sort === 20 // 确保是站点分组
+      )
 
       if (fuzzyMatches.length > 0) {
         existingChannel = fuzzyMatches[0]
         console.log(`✅ 使用模糊匹配的分组: ${existingChannel.name}`)
+      }
+    }
+
+    // 如果还没找到，尝试只匹配站点名
+    if (!existingChannel) {
+      const siteMatches = allGroups.filter(
+        (g) => g.name && g.name.startsWith(siteName) && g.sort === 20 // 确保是站点分组
+      )
+
+      if (siteMatches.length > 0) {
+        existingChannel = siteMatches[0]
+        console.log(`✅ 使用站点名匹配的分组: ${existingChannel.name}`)
       }
     }
 

@@ -69,6 +69,10 @@ export interface ProcessAiSiteRequest {
   channelTypes?: string[]
   customValidationEndpoints?: any
   models?: string[]
+  
+  // 用于更新操作的分组标识
+  targetChannelName?: string  // 要更新的具体分组名称
+  operationType?: 'create' | 'update'  // 操作类型
 }
 
 export interface CleanupOptions {
