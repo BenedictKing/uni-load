@@ -210,14 +210,15 @@ class SiteConfigurationService {
       const proxyUrl = `${instance.url}/proxy/${existingChannel.name}`
       console.log(`- 直接通过现有渠道代理获取模型: ${proxyUrl}`)
 
-      // 错误逻辑：原始代码会优先使用 instance.token，这是 gpt-load 的管理令牌，
-      // 而非上游 AI 站点的有效密钥，会导致上游认证失败。
-      // const authToken = instance.token || existingKeys[0]
+      // --- 关键修复 ---
+      // 访问 gpt-load 的 proxy 接口需要使用 gpt-load 实例自身的 token，
+      // 而不是上游站点的 API Key。
+      const authTokenForProxy = instance.token
+      if (!authTokenForProxy) {
+        console.warn(`⚠️ 实例 ${instance.name} 没有配置 token，代理访问可能会失败。`)
+      }
 
-      // 正确逻辑：通过代理访问时，必须提供一个对上游站点有效的API密钥。
-      const authToken = existingKeys[0]
-
-      const models = await modelsService.getModels(proxyUrl, authToken, 3)
+      const models = await modelsService.getModels(proxyUrl, authTokenForProxy, 3)
       return {
         models,
         successfulInstance: instance.id,
@@ -265,8 +266,13 @@ class SiteConfigurationService {
       const proxyUrl = `${instance.url}/proxy/${targetChannel.name}`
       console.log(`🔄 通过指定渠道代理获取模型: ${proxyUrl}`)
 
-      const authToken = existingKeys[0]
-      const models = await modelsService.getModels(proxyUrl, authToken, 3)
+      // --- 关键修复 ---
+      // 同样，这里也需要使用 gpt-load 实例的 token
+      const authTokenForProxy = instance.token
+      if (!authTokenForProxy) {
+        console.warn(`⚠️ 实例 ${instance.name} 没有配置 token，代理访问可能会失败。`)
+      }
+      const models = await modelsService.getModels(proxyUrl, authTokenForProxy, 3)
 
       return {
         models,
