@@ -258,6 +258,9 @@ async checkAllInstancesHealth() {
 6. **清理**：无论成功与否，都会删除创建的临时分组和密钥，避免留下垃圾数据。
 7. **返回结果**：一旦某个实例成功获取模型，就立即返回结果并终止遍历。如果所有实例都失败，则抛出错误。
 
+**代理访问认证机制**: 
+**重要更正**: 通过 `gpt-load` 的 `/proxy/` 路径访问时，应使用 **`gpt-load` 实例自身的 token** 进行认证，而不是上游站点的 API 密钥。这确保了访问的安全性和权限控制的准确性。
+
 ## 新增服务模块
 
 ### 1. SiteConfigurationService (src/services/site-configuration.ts)
@@ -282,8 +285,13 @@ class SiteConfigurationService {
   
   // 异常处理
   async handleEmptyModelList(siteName: string, channelTypes: string[]): Promise<ProcessResult>
+  
+  // 更新操作支持
+  async updateSiteConfiguration(request: ProcessAiSiteRequest, targetChannelName: string): Promise<ProcessResult>
 }
 ```
+
+**更新操作支持**: 该服务现在可以处理 `operationType: 'update'` 请求，通过 `targetChannelName` 精确定位要更新的分组。当系统识别到更新操作时，会直接通过目标渠道的代理刷新模型列表，而不创建临时分组，大大提高了更新效率。
 
 #### 设计特点
 1. **业务逻辑集中**: 将原本散布在 server.ts 中的业务逻辑统一管理
@@ -702,6 +710,8 @@ class ModelSyncService {
 
 #### 同步策略
 
+**完整清理功能**: 模型同步服务现在已实现了**完整的清理功能**，可以在模型被移除时成功删除 `gpt-load` 中的对应分组，确保数据的一致性和完整性。
+
 ##### 7.1 全量同步流程
 ```typescript
 async syncAllModels(): Promise<SyncResult> {
@@ -733,6 +743,11 @@ async syncAllModels(): Promise<SyncResult> {
           result.modelsUpdated += diff.changedModels.length;
         }
         
+        // 6. 清理被移除的模型分组
+        if (diff.removedModels.length > 0) {
+          await this.cleanupRemovedModelGroups(siteGroup, diff.removedModels);
+        }
+        
         result.sitesProcessed++;
         
       } catch (error) {
@@ -745,6 +760,25 @@ async syncAllModels(): Promise<SyncResult> {
   }
   
   return result;
+}
+```
+
+##### 7.2 完整的模型分组清理功能
+```typescript
+private async cleanupRemovedModelGroups(siteGroup: SiteGroup, removedModels: string[]): Promise<void> {
+  for (const model of removedModels) {
+    try {
+      // 从 gpt-load 中删除对应的模型分组
+      await this.deleteModelGroupFromGptload(siteGroup, model);
+      
+      // 从 uni-api 配置中移除对应的 provider
+      await this.removeProviderFromUniApi(siteGroup, model);
+      
+      console.log(`✅ 已清理被移除的模型分组: ${model}`);
+    } catch (error) {
+      console.error(`❌ 清理模型分组 ${model} 失败:`, error.message);
+    }
+  }
 }
 ```
 

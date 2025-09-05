@@ -52,7 +52,9 @@ Content-Type: application/json
   "customValidationEndpoints": {
     "health": "/health"
   },
-  "models": ["deepseek-chat", "deepseek-coder"]
+  "models": ["deepseek-chat", "deepseek-coder"],
+  "targetChannelName": "deepseek-openai",
+  "operationType": "update"
 }
 ```
 
@@ -62,6 +64,17 @@ Content-Type: application/json
 - `channelTypes` (可选): 支持的 API 格式类型，默认 `["openai"]`
 - `customValidationEndpoints` (可选): 自定义验证端点
 - `models` (可选): 手动指定模型列表
+- `targetChannelName` (可选): 指定要更新的目标渠道名称
+- `operationType` (可选): 操作类型，可选值：
+  - `create` (默认): 创建新渠道
+  - `update`: 更新现有渠道
+
+#### 更新操作说明
+
+当 `operationType` 设置为 `update` 并提供 `targetChannelName` 时：
+- 系统将执行更新逻辑，而不是创建新渠道
+- 通过 `targetChannelName` 精确定位要更新的模型分组
+- 使用 gpt-load 实例的 token 进行认证，提高更新效率
 
 **支持的 channelTypes**:
 - `openai`: OpenAI 兼容格式

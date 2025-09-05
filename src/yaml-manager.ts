@@ -249,7 +249,7 @@ class YamlManager implements IYamlManager {
     config,
     originalModelName,
     groupName,
-    validationEndpoint,
+    validationEndpoint, // 这个参数实际上不应该用于生成 base_url
     channelType,
     gptloadToken = 'sk-uni-load-auto-generated'
   ) {
@@ -263,26 +263,20 @@ class YamlManager implements IYamlManager {
     const providerName = `gptload-${modelNameForUrl}`
 
     let apiPath
-    // 优先使用 gptload 分组中已设定的验证端点
-    if (validationEndpoint && typeof validationEndpoint === 'string' && validationEndpoint.startsWith('/')) {
-      apiPath = validationEndpoint
-    } else {
-      // 否则，根据渠道类型回退到默认值
-      console.warn(
-        `⚠️ 模型分组 ${groupName} 未设置有效的 validation_endpoint，将根据 channel_type [${
-          channelType || 'default'
-        }] 回退到默认 API 路径`
-      )
-      switch (channelType) {
-        case 'anthropic':
-          apiPath = '/v1/messages'
-          break
-        case 'gemini':
-          apiPath = '/v1beta'
-          break
-        default: // openai 及其他
-          apiPath = '/v1/chat/completions'
-      }
+    // --- 关键修复 ---
+    // 移除使用 validationEndpoint 的逻辑，因为它用于健康检查，而不是内容生成。
+    // 直接根据 channelType 来决定正确的 API 路径。
+    switch (channelType) {
+      case 'anthropic':
+        apiPath = '/v1/messages'
+        break
+      case 'gemini':
+        // 修复：为 Gemini 使用正确的 v1beta 路径
+        // uni-api 会在此基础上构建完整的请求，例如: .../proxy/group-name/v1beta/models/gemini-pro:generateContent
+        apiPath = '/v1beta'
+        break
+      default: // openai 及其他
+        apiPath = '/v1/chat/completions'
     }
 
     // 查找是否已存在该 provider
@@ -291,8 +285,9 @@ class YamlManager implements IYamlManager {
     // 构建 provider 配置
     const providerConfig: any = {
       provider: providerName,
+      // 修复：这里使用动态生成的 apiPath
       base_url: `${this.gptloadUrl}/proxy/${modelNameForUrl}${apiPath}`,
-      api: gptloadToken, // 使用gpt-load的访问token
+      api: gptloadToken,
       tools: true,
     }
 
@@ -364,7 +359,7 @@ class YamlManager implements IYamlManager {
         model_timeout: {
           default: 600,
         },
-        rate_limit: '999999/min',
+        api_key_cooldown_period: 3,
       },
     }
   }
