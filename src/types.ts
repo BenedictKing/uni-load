@@ -197,6 +197,7 @@ export interface ProcessResult {
     groupsCreated: number
     modelsCount: number
     models: string[]
+    modelsByChannel: Record<string, string[]> // 新增：按渠道类型分类的模型列表
     siteGroups: any[]
     modelGroups: number
     usingManualModels?: boolean

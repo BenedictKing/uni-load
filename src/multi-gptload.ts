@@ -301,7 +301,7 @@ export class MultiGptloadManager {
 
     // 根据分组类型选择正确的配置
     const configLayer = isModelGroup ? layerConfigs.aggregateGroup : layerConfigs.siteGroup
-    
+
     // 构建分组数据
     const groupData: any = {
       name: groupName, // 确保使用传入的完整 groupName
@@ -451,7 +451,17 @@ export class MultiGptloadManager {
    * 选择测试模型
    */
   selectTestModel(availableModels: string[] | null, channelType: string): string {
-    // 直接调用 modelConfig 中的智能选择逻辑
+    if (channelType === 'gemini') {
+      const geminiModel = availableModels?.find((m) => m.toLowerCase().startsWith('gemini-'))
+      return geminiModel || 'gemini-pro' // 默认值
+    }
+
+    if (channelType === 'anthropic') {
+      const claudeModel = availableModels?.find((m) => m.toLowerCase().startsWith('claude-'))
+      return claudeModel || 'claude-3-haiku-20240307' // 默认值
+    }
+
+    // 对于 'openai' 和其他类型，保持原有逻辑
     return modelConfig.selectTestModel(availableModels, channelType)
   }
 

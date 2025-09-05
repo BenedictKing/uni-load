@@ -9,29 +9,7 @@ import gptloadService from '../gptload'
 import modelsService from '../models'
 import yamlManager from '../yaml-manager'
 import threeLayerArchitecture from '../three-layer-architecture'
-import { ProcessAiSiteRequest, ApiResponse } from '../types'
-
-export interface ProcessResult {
-  success: boolean
-  message: string
-  data: {
-    siteName: string
-    baseUrl: string
-    channelTypes: string[]
-    groupsCreated: number
-    modelsCount: number
-    models: string[]
-    siteGroups: any[]
-    modelGroups: number
-    usingManualModels?: boolean
-    successfulInstance?: {
-      id: string
-      name: string
-    }
-    emptyModelListHandling?: boolean
-    cleanupResult?: any
-  }
-}
+import { ProcessAiSiteRequest, ApiResponse, ProcessResult } from '../types'
 
 class SiteConfigurationService {
   /**
@@ -379,6 +357,7 @@ class SiteConfigurationService {
         groupsCreated: 0,
         modelsCount: 0,
         models: [],
+        modelsByChannel: {}, // 新增：空的分类模型对象
         siteGroups: [],
         modelGroups: 0,
         emptyModelListHandling: true,
@@ -432,7 +411,28 @@ class SiteConfigurationService {
     console.log('🏗️  触发三层架构更新以包含新站点...')
     const architectureResult = await threeLayerArchitecture.initialize(siteGroups)
 
-    // 7. 构造响应
+    // 7. 按渠道类型对模型进行分类
+    const modelsByChannel: Record<string, string[]> = {}
+    processedRequest.channelTypes!.forEach(type => {
+      const typeModels: string[] = []
+      switch (type) {
+        case 'openai':
+          // OpenAI 格式包含所有模型
+          typeModels.push(...compatibleModels)
+          break
+        case 'anthropic':
+          // Anthropic 格式只包含 claude- 开头的模型
+          typeModels.push(...compatibleModels.filter(m => m.toLowerCase().startsWith('claude-')))
+          break
+        case 'gemini':
+          // Gemini 格式只包含 gemini- 开头的模型
+          typeModels.push(...compatibleModels.filter(m => m.toLowerCase().startsWith('gemini-')))
+          break
+      }
+      modelsByChannel[type] = typeModels
+    })
+
+    // 8. 构造响应
     return {
       success: true,
       message: `成功配置AI站点 ${siteName} 并更新三层架构`,
@@ -443,6 +443,7 @@ class SiteConfigurationService {
         groupsCreated: siteGroups.length, // 本次操作创建的站点分组数量
         modelsCount: compatibleModels.length,
         models: compatibleModels,
+        modelsByChannel, // 新增：按渠道类型分类的模型列表
         siteGroups,
         modelGroups: architectureResult.aggregateGroups, // 使用架构更新后的聚合分组总数
         usingManualModels: !!(processedRequest.models && processedRequest.models.length > 0),

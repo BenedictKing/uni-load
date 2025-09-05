@@ -947,6 +947,21 @@
 
           if (data.success) {
             result.className = 'result success'
+
+            // 构建分类的模型列表HTML
+            let modelsHtml = '';
+            const modelsByChannel = data.data.modelsByChannel;
+            for (const channelType in modelsByChannel) {
+                if (modelsByChannel[channelType].length > 0) {
+                    modelsHtml += `<h4>${channelType.charAt(0).toUpperCase() + channelType.slice(1)} 格式模型:</h4>`;
+                    modelsHtml += '<ul style="margin-left: 20px; margin-top: 5px; margin-bottom: 15px;">';
+                    modelsByChannel[channelType].forEach(model => {
+                        modelsHtml += `<li>${model}</li>`;
+                    });
+                    modelsHtml += '</ul>';
+                }
+            }
+
             result.innerHTML = `
                         <h3>✅ 配置成功！</h3>
                         <p><strong>站点名称:</strong> ${data.data.siteName}</p>
@@ -956,9 +971,9 @@
               data.data.usingManualModels ? '(手动指定)' : '(自动获取)'
             }</p>
                         <p><strong>模型列表:</strong></p>
-                        <ul style="margin-left: 20px; margin-top: 10px;">
-                            ${data.data.models.map((model) => `<li>${model}</li>`).join('')}
-                        </ul>
+                        <div style="margin-left: 20px; margin-top: 10px;">
+                            ${modelsHtml}
+                        </div>
                         <p style="margin-top: 15px; color: #28a745;">
                             <strong>✨ 现在可以通过 uni-api 访问这些模型了！</strong>
                         </p>
@@ -1648,7 +1663,15 @@
                 successMsg += `保持现有API密钥不变\n`
               }
 
-              successMsg += `模型数量: ${data.data.modelsCount}`
+              successMsg += `模型数量: ${data.data.modelsCount}\n\n`
+
+              // 添加分类模型信息
+              const modelsByChannel = data.data.modelsByChannel;
+              for (const channelType in modelsByChannel) {
+                if (modelsByChannel[channelType].length > 0) {
+                  successMsg += `${channelType.charAt(0).toUpperCase() + channelType.slice(1)} 格式: ${modelsByChannel[channelType].length} 个模型\n`;
+                }
+              }
 
               alert(successMsg)
 
