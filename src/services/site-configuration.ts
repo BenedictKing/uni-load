@@ -195,10 +195,16 @@ class SiteConfigurationService {
       throw new Error('首次配置渠道时必须提供API密钥')
     }
 
-    const existingKeys = await gptloadService.getGroupApiKeys(existingChannel.id, existingChannel._instance.id)
+    let keysToUse = request.apiKeys?.length > 0 ? request.apiKeys : []
 
-    if (existingKeys.length === 0) {
-      throw new Error(`现有渠道 ${existingChannel.name} 没有可用的API密钥`)
+    if (keysToUse.length === 0) {
+      console.log('请求中未提供新密钥，尝试获取现有密钥...')
+      const existingKeys = await gptloadService.getGroupApiKeys(existingChannel.id, existingChannel._instance.id)
+      keysToUse = existingKeys
+    }
+
+    if (keysToUse.length === 0) {
+      throw new Error(`现有渠道 ${existingChannel.name} 没有可用的API密钥，且请求中未提供新密钥`)
     }
 
     try {
@@ -228,7 +234,7 @@ class SiteConfigurationService {
       console.error(`- 通过现有渠道代理获取模型失败: ${error.message}`)
       console.log('- 代理获取失败，回退到直接访问原始URL...')
       // 如果通过代理失败（例如 gpt-load 配置问题），回退到直接访问原始 URL
-      const models = await modelsService.getModels(request.baseUrl, existingKeys[0], 3)
+      const models = await modelsService.getModels(request.baseUrl, keysToUse[0], 3)
       return { models }
     }
   }
@@ -250,11 +256,17 @@ class SiteConfigurationService {
 
     console.log(`✅ 找到目标分组: ${targetChannel.name} (实例: ${targetChannel._instance.name})`)
 
-    // 获取现有API密钥
-    const existingKeys = await gptloadService.getGroupApiKeys(targetChannel.id, targetChannel._instance.id)
+    // 优先使用请求中的新密钥，如果没有则使用现有密钥
+    let keysToUse = request.apiKeys?.length > 0 ? request.apiKeys : []
 
-    if (existingKeys.length === 0) {
-      throw new Error(`渠道 ${targetChannel.name} 没有可用的API密钥`)
+    if (keysToUse.length === 0) {
+      console.log('请求中未提供新密钥，尝试获取现有密钥...')
+      const existingKeys = await gptloadService.getGroupApiKeys(targetChannel.id, targetChannel._instance.id)
+      keysToUse = existingKeys
+    }
+
+    if (keysToUse.length === 0) {
+      throw new Error(`渠道 ${targetChannel.name} 没有可用的API密钥，且请求中未提供新密钥`)
     }
 
     try {
@@ -282,7 +294,7 @@ class SiteConfigurationService {
     } catch (error) {
       console.error(`通过指定渠道代理获取模型失败: ${error.message}`)
       console.log('代理获取失败，回退到直接访问原始URL...')
-      const models = await modelsService.getModels(request.baseUrl, existingKeys[0], 3)
+      const models = await modelsService.getModels(request.baseUrl, keysToUse[0], 3)
       return { models }
     }
   }
