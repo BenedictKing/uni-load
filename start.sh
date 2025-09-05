@@ -120,6 +120,7 @@ providers:
 preferences:
   model_timeout:
     default: 600
+  cooldown_period: 60
 EOF
 fi
 EXISTING_UNI_API_KEY=$(grep -m 1 'api: sk-' /uni-api/api.yaml | awk -F': ' '{print $2}' | tr -d '\r')

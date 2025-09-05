@@ -359,7 +359,7 @@ class YamlManager implements IYamlManager {
         model_timeout: {
           default: 600,
         },
-        api_key_cooldown_period: 3,
+        cooldown_period: 60,
       },
     }
   }

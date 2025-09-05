@@ -58,7 +58,7 @@ RUN git clone https://ghfast.top/https://github.com/yym68686/uni-api.git . || \
 
 # 克隆uni-api-core项目
 RUN git clone https://ghfast.top/https://github.com/yym68686/uni-api-core.git core || \
-git clone https://github.com/yym68686/uni-api-core.git core
+    git clone https://github.com/yym68686/uni-api-core.git core
 
 COPY patches/uni-api-utils.patch uni-api-utils.patch
 RUN patch -p1 < uni-api-utils.patch
@@ -86,15 +86,15 @@ COPY --from=docker.1ms.run/astral/uv /uv /uvx /bin/
 
 # 中国网络优化：使用阿里云镜像源
 RUN if [ -f /etc/apt/sources.list ]; then \
-        sed -i 's#deb.debian.org#mirrors.aliyun.com#g' /etc/apt/sources.list && \
-        sed -i 's#security.debian.org#mirrors.aliyun.com#g' /etc/apt/sources.list; \
+    sed -i 's#deb.debian.org#mirrors.aliyun.com#g' /etc/apt/sources.list && \
+    sed -i 's#security.debian.org#mirrors.aliyun.com#g' /etc/apt/sources.list; \
     elif [ -f /etc/apt/sources.list.d/debian.sources ]; then \
-        sed -i 's#deb.debian.org#mirrors.aliyun.com#g' /etc/apt/sources.list.d/debian.sources && \
-        sed -i 's#security.debian.org#mirrors.aliyun.com#g' /etc/apt/sources.list.d/debian.sources; \
+    sed -i 's#deb.debian.org#mirrors.aliyun.com#g' /etc/apt/sources.list.d/debian.sources && \
+    sed -i 's#security.debian.org#mirrors.aliyun.com#g' /etc/apt/sources.list.d/debian.sources; \
     else \
-        echo "deb https://mirrors.aliyun.com/debian/ bookworm main" > /etc/apt/sources.list && \
-        echo "deb https://mirrors.aliyun.com/debian-security/ bookworm-security main" >> /etc/apt/sources.list && \
-        echo "deb https://mirrors.aliyun.com/debian/ bookworm-updates main" >> /etc/apt/sources.list; \
+    echo "deb https://mirrors.aliyun.com/debian/ bookworm main" > /etc/apt/sources.list && \
+    echo "deb https://mirrors.aliyun.com/debian-security/ bookworm-security main" >> /etc/apt/sources.list && \
+    echo "deb https://mirrors.aliyun.com/debian/ bookworm-updates main" >> /etc/apt/sources.list; \
     fi
 
 # 安装必要的运行时依赖（已有node，只需要bash和curl）
@@ -123,6 +123,7 @@ COPY --from=uni-load-builder /src/start.sh /start.sh
 COPY --from=uni-api-builder /src/pyproject.toml /uni-api/
 RUN cd /uni-api && uv pip install --system --no-cache-dir . -i https://mirrors.aliyun.com/pypi/simple/
 COPY --from=uni-api-builder /src /uni-api
+ENV WATCHFILES_FORCE_POLLING=true
 
 # 赋予启动脚本执行权限
 RUN chmod +x /start.sh

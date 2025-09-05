@@ -105,6 +105,7 @@ COPY --from=uni-api-builder /src/pyproject.toml /uni-api/
 # 使用官方PyPI源
 RUN cd /uni-api && uv pip install --system --no-cache-dir .
 COPY --from=uni-api-builder /src /uni-api
+ENV WATCHFILES_FORCE_POLLING=true
 
 # 赋予启动脚本执行权限
 RUN chmod +x /start.sh
