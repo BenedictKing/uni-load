@@ -312,10 +312,9 @@ class ModelSyncService {
       const modelGroup = allGroupsCache.find((group) => group.name === groupName)
 
       if (modelGroup) {
-        // 这里需要实现删除分组的API调用
-        // await gptloadService.deleteGroup(modelGroup.id);
-        console.log(`🗑️ 需要删除模型分组: ${groupName} (ID: ${modelGroup.id})`)
-        console.log(`⚠️ 分组删除功能需要在 gptload 服务中实现`)
+        // 修复：调用 gptloadService 中实现的删除方法，并传入实例ID
+        await gptloadService.deleteGroupById(modelGroup.id, modelGroup._instance.id)
+        console.log(`🗑️ 已成功删除模型分组: ${groupName} (ID: ${modelGroup.id})`)
       }
     } catch (error) {
       console.error(`删除模型分组 ${modelName} 失败:`, error.message)
