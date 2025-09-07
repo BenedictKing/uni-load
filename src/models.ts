@@ -126,6 +126,16 @@ class ModelsService implements IModelsService {
       else if (data && Array.isArray(data.data)) {
         models = data.data.map((model) => model.id || model.name).filter((id) => id && typeof id === 'string')
       }
+      // Gemini API格式: { models: [...], nextPageToken: ... }
+      else if (data && data.models && Array.isArray(data.models)) {
+        models = data.models
+          .map((model) => {
+            // Gemini模型对象使用 name 字段
+            if (typeof model === 'string') return model
+            return model.name || model.id || model.displayName || model
+          })
+          .filter((id) => id && typeof id === 'string')
+      }
       // 直接是模型数组
       else if (Array.isArray(data)) {
         models = data
@@ -133,12 +143,6 @@ class ModelsService implements IModelsService {
             if (typeof model === 'string') return model
             return model.id || model.name || model.model
           })
-          .filter((id) => id && typeof id === 'string')
-      }
-      // 其他可能的格式
-      else if (data && data.models && Array.isArray(data.models)) {
-        models = data.models
-          .map((model) => model.id || model.name || model)
           .filter((id) => id && typeof id === 'string')
       } else {
         console.warn('未识别的模型响应格式:', data)
