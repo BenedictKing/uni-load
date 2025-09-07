@@ -37,7 +37,12 @@ class ModelsService implements IModelsService {
    * 从AI站点获取支持的模型列表
    * HttpClientFactory已处理重试机制和HTTPS配置
    */
-  async getModels(baseUrl: string, apiKey: string, maxRetries: number = 3, channelType: string = 'openai'): Promise<Model[]> {
+  async getModels(
+    baseUrl: string,
+    apiKey: string,
+    maxRetries: number = 3,
+    channelType: string = 'openai'
+  ): Promise<Model[]> {
     try {
       console.log(`正在从 ${baseUrl} 获取模型列表...`)
 
@@ -45,19 +50,27 @@ class ModelsService implements IModelsService {
       const modelsUrl = this.buildModelsUrl(baseUrl, channelType)
 
       // 根据渠道类型构建请求配置
-      let requestConfig: any;
+      let requestConfig: any
       if (channelType === 'gemini') {
         // Gemini API 使用 key 作为 URL 参数
         requestConfig = {
-          params: { key: apiKey }
-        };
+          params: { key: apiKey },
+        }
+      } else if (channelType === 'anthropic') {
+        // Anthropic Claude API 使用 x-api-key 和 anthropic-version 头
+        requestConfig = {
+          headers: {
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+          },
+        }
       } else {
         // OpenAI 和 Anthropic 兼容格式使用 Bearer token
         requestConfig = {
           headers: {
             Authorization: `Bearer ${apiKey}`,
           },
-        };
+        }
       }
 
       // 使用统一的HTTP客户端发送请求
