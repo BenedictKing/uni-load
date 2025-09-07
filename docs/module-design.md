@@ -396,8 +396,13 @@ Server.ts
 
 ```typescript
 class ModelsService {
-  // 模型获取
-  async getModels(baseUrl: string, apiKey: string, retryCount: number = 3): Promise<Model[]>
+  // 模型获取 - 支持多种认证方式
+  async getModels(
+    baseUrl: string, 
+    apiKey: string, 
+    maxRetries: number = 3, 
+    channelType: string = 'openai'
+  ): Promise<Model[]>
   
   // API 探测
   async probeApiStructure(baseUrl: string, apiKey?: string): Promise<ApiProbeResult>
@@ -405,10 +410,73 @@ class ModelsService {
   // 模型过滤
   filterModels(models: Model[]): Model[]
   
-  // 格式适配
-  private adaptOpenAIFormat(data: any): Model[]
-  private adaptAnthropicFormat(data: any): Model[]
-  private adaptGeminiFormat(data: any): Model[]
+  // URL构建 - 根据渠道类型
+  buildModelsUrl(baseUrl: string, channelType: string = 'openai'): string
+  
+  // 响应解析 - 支持多种API格式
+  parseModelsResponse(data: any): Model[]
+}
+```
+
+#### 多渠道认证支持
+
+ModelsService 现在支持多种 AI API 格式的认证方式，通过 `channelType` 参数控制：
+
+##### 认证方式对比
+```typescript
+// 根据渠道类型构建请求配置
+if (channelType === 'gemini') {
+  // Gemini API 使用 URL 参数认证
+  requestConfig = {
+    params: { key: apiKey }
+  };
+} else if (channelType === 'anthropic') {
+  // Anthropic Claude API 使用专用头部认证
+  requestConfig = {
+    headers: {
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01'
+    }
+  };
+} else {
+  // OpenAI 兼容格式使用 Bearer token
+  requestConfig = {
+    headers: {
+      Authorization: `Bearer ${apiKey}`
+    }
+  };
+}
+```
+
+##### URL 构建策略
+```typescript
+buildModelsUrl(baseUrl: string, channelType: string = 'openai'): string {
+  const normalizedBaseUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
+  
+  // Gemini API 使用特殊的 v1beta 路径
+  if (channelType === 'gemini') {
+    return normalizedBaseUrl + 'v1beta/models';
+  }
+  
+  // 其他格式使用标准的 v1/models 路径
+  return normalizedBaseUrl + 'v1/models';
+}
+```
+
+##### 响应格式解析
+```typescript
+parseModelsResponse(data: any): Model[] {
+  // OpenAI 标准格式: { object: "list", data: [...] }
+  if (data?.object === 'list' && Array.isArray(data.data)) {
+    return data.data.map(model => model.id || model.name);
+  }
+  
+  // Gemini API 格式: { models: [...], nextPageToken: ... }
+  if (data?.models && Array.isArray(data.models)) {
+    return data.models.map(model => model.name || model.id || model.displayName);
+  }
+  
+  // 其他格式的兼容处理...
 }
 ```
 

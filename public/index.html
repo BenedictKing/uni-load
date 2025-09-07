@@ -76,6 +76,49 @@
         background: #f8f9fa;
       }
 
+      /* API基础地址输入框容器样式 */
+      .input-with-badge {
+        position: relative;
+        display: flex;
+        align-items: center;
+      }
+
+      .input-with-badge input {
+        flex: 1;
+        padding-right: 120px; /* 为右侧胶囊留出空间 */
+      }
+
+      /* 站点名称胶囊样式 */
+      .site-name-badge {
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+        max-width: 100px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        transition: all 0.3s ease;
+        pointer-events: none;
+        box-shadow: 0 2px 8px rgba(40, 167, 80, 0.3);
+      }
+
+      .site-name-badge.loading {
+        background: linear-gradient(135deg, #6c757d 0%, #adb5bd 100%);
+        box-shadow: 0 2px 8px rgba(108, 117, 125, 0.3);
+      }
+
+      .site-name-badge.error {
+        background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);
+        box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+      }
+
       .form-group input:focus,
       .form-group textarea:focus,
       .form-group select:focus {
@@ -527,6 +570,62 @@
       .btn-secondary:hover {
         background: #545b62;
       }
+
+      /* 折叠区域样式 */
+      .collapsible-section {
+        margin-bottom: 25px;
+      }
+
+      .collapsible-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        cursor: pointer;
+        padding: 12px 15px;
+        background: #f8f9fa;
+        border: 2px solid #e1e5e9;
+        border-radius: 10px;
+        transition: all 0.3s ease;
+        user-select: none;
+      }
+
+      .collapsible-header:hover {
+        background: #e9ecef;
+        border-color: #ced4da;
+      }
+
+      .collapsible-header label {
+        margin: 0;
+        cursor: pointer;
+        font-weight: 600;
+        color: #555;
+        font-size: 1.1em;
+      }
+
+      .collapsible-toggle {
+        font-size: 18px;
+        font-weight: bold;
+        color: #6c757d;
+        transition: transform 0.3s ease;
+        min-width: 20px;
+        text-align: center;
+      }
+
+      .collapsible-content {
+        overflow: hidden;
+        transition: max-height 0.3s ease, padding 0.3s ease;
+        max-height: 0;
+        padding: 0 15px;
+      }
+
+      .collapsible-content.expanded {
+        max-height: 200px; /* 足够高以容纳textarea */
+        padding: 15px;
+      }
+
+      .collapsible-header.expanded .collapsible-toggle {
+        transform: rotate(180deg);
+      }
     </style>
   </head>
   <body>
@@ -540,26 +639,19 @@
         <form id="aiSiteForm">
           <div class="form-group">
             <label for="baseUrl">API 基础地址 *</label>
-            <input
-              type="url"
-              id="baseUrl"
-              name="baseUrl"
-              required
-              placeholder="https://api.example.com"
-              oninput="debouncedUpdateSiteName()" />
-            <div class="help-text">AI站点的API地址</div>
-          </div>
-
-          <div class="form-group">
-            <label>自动生成的站点名称</label>
-            <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; border: 2px solid #e1e5e9">
-              <div
-                id="generatedSiteName"
-                style="font-family: 'Courier New', monospace; font-weight: bold; color: #28a745">
-                请先输入 API 基础地址
-              </div>
-              <div class="help-text">根据域名自动生成</div>
+            <div class="input-with-badge">
+              <input
+                type="url"
+                id="baseUrl"
+                name="baseUrl"
+                required
+                placeholder="https://api.example.com"
+                oninput="debouncedUpdateSiteName()" />
+              <span id="generatedSiteName" class="site-name-badge loading">
+                请输入地址
+              </span>
             </div>
+            <div class="help-text">AI站点的API地址，系统会自动生成站点名称</div>
           </div>
 
           <div class="form-group">
@@ -610,14 +702,22 @@
               rows="6"></textarea>
           </div>
 
-          <div class="form-group">
-            <label for="manualModels">手动指定模型 (可选)</label>
-            <textarea
-              id="manualModels"
-              name="manualModels"
-              placeholder="如果站点无法自动获取模型列表，可以手动指定：&#10;gpt-3.5-turbo&#10;gpt-4&#10;claude-3-sonnet&#10;deepseek-chat&#10;&#10;每行一个模型名称"
-              rows="4"></textarea>
-            <div class="help-text">仅当自动获取模型失败时使用。每行一个模型名称。</div>
+          <!-- 手动指定模型 - 可折叠区域 -->
+          <div class="collapsible-section">
+            <div class="collapsible-header" onclick="toggleCollapsible('manualModelsSection')">
+              <label>手动指定模型 (可选)</label>
+              <span class="collapsible-toggle">▼</span>
+            </div>
+            <div id="manualModelsSection" class="collapsible-content">
+              <div class="form-group" style="margin-bottom: 10px;">
+                <textarea
+                  id="manualModels"
+                  name="manualModels"
+                  placeholder="如果站点无法自动获取模型列表，可以手动指定：&#10;gpt-3.5-turbo&#10;gpt-4&#10;claude-3-sonnet&#10;deepseek-chat&#10;&#10;每行一个模型名称"
+                  rows="4"></textarea>
+                <div class="help-text">仅当自动获取模型失败时使用。每行一个模型名称。</div>
+              </div>
+            </div>
           </div>
 
           <!-- 新的动态验证端点输入区域 -->
@@ -753,14 +853,18 @@
       // 自动生成站点名称 - 通过后端API
       async function updateSiteName() {
         const baseUrlInput = document.getElementById('baseUrl')
-        const siteNameDiv = document.getElementById('generatedSiteName')
+        const siteNameBadge = document.getElementById('generatedSiteName')
         const baseUrl = baseUrlInput.value.trim()
 
         if (!baseUrl) {
-          siteNameDiv.textContent = '请先输入 API 基础地址'
-          siteNameDiv.style.color = '#6c757d'
+          siteNameBadge.textContent = '请输入地址'
+          siteNameBadge.className = 'site-name-badge loading'
           return
         }
+
+        // 显示加载状态
+        siteNameBadge.textContent = '生成中...'
+        siteNameBadge.className = 'site-name-badge loading'
 
         try {
           // 调用后端API获取站点名称
@@ -775,15 +879,18 @@
           const data = await response.json()
 
           if (response.ok) {
-            siteNameDiv.textContent = data.siteName
-            siteNameDiv.style.color = '#28a745'
+            siteNameBadge.textContent = data.siteName
+            siteNameBadge.className = 'site-name-badge'
+            siteNameBadge.title = `站点名称: ${data.siteName}` // 添加tooltip显示完整名称
           } else {
-            siteNameDiv.textContent = data.error || '无法生成站点名称'
-            siteNameDiv.style.color = '#dc3545'
+            siteNameBadge.textContent = '生成失败'
+            siteNameBadge.className = 'site-name-badge error'
+            siteNameBadge.title = data.error || '无法生成站点名称'
           }
         } catch (error) {
-          siteNameDiv.textContent = '网络错误，无法生成站点名称'
-          siteNameDiv.style.color = '#dc3545'
+          siteNameBadge.textContent = '网络错误'
+          siteNameBadge.className = 'site-name-badge error'
+          siteNameBadge.title = '网络错误，无法生成站点名称'
         }
       }
 
@@ -794,9 +901,20 @@
         debounceTimer = setTimeout(updateSiteName, 500) // 500ms 延迟
       }
 
-      function debouncedUpdateSiteName() {
-        clearTimeout(debounceTimer)
-        debounceTimer = setTimeout(updateSiteName, 500) // 500ms 延迟
+      // 折叠/展开功能
+      function toggleCollapsible(sectionId) {
+        const content = document.getElementById(sectionId)
+        const header = content.previousElementSibling
+        
+        if (content.classList.contains('expanded')) {
+          // 收起
+          content.classList.remove('expanded')
+          header.classList.remove('expanded')
+        } else {
+          // 展开
+          content.classList.add('expanded')
+          header.classList.add('expanded')
+        }
       }
 
       // 动态更新验证端点的帮助信息

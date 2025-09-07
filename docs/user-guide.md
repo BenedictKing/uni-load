@@ -38,9 +38,9 @@ http://localhost:3002
      ```
 
 2. **选择API格式**
-   - `OpenAI`: 兼容 OpenAI API 格式的服务
-   - `Anthropic`: Claude API 格式
-   - `Gemini`: Google Gemini API 格式
+   - `OpenAI`: 兼容 OpenAI API 格式的服务 (使用 `Authorization: Bearer` 认证)
+   - `Anthropic`: Anthropic Claude API 格式 (使用 `x-api-key` 头部认证)
+   - `Gemini`: Google Gemini API 格式 (使用 URL 参数 `?key=` 认证)
 
 3. **高级设置** (可选)
    - **自定义验证端点**: 特殊的健康检查端点
@@ -155,7 +155,10 @@ Content-Type: application/json
 **参数说明**:
 - `baseUrl` (必需): AI 站点的基础 URL
 - `apiKeys` (可选): API 密钥数组，用于负载均衡
-- `channelTypes` (可选): 支持的 API 格式类型，默认 `["openai"]`
+- `channelTypes` (可选): 支持的 API 格式类型，默认 `["openai"]`。支持的值：
+  - `openai`: OpenAI 兼容格式 (Bearer token 认证)
+  - `anthropic`: Anthropic Claude 格式 (x-api-key 认证)
+  - `gemini`: Google Gemini 格式 (URL 参数认证)
 - `customValidationEndpoints` (可选): 自定义验证端点
 - `models` (可选): 手动指定模型列表，跳过自动发现
 
@@ -362,21 +365,25 @@ curl -X POST http://localhost:3002/api/process-ai-site \
   -d '{
     "baseUrl": "https://api.example.com/v1",
     "apiKeys": ["sk-example-key"],
-    "channelTypes": ["openai", "anthropic"]
+    "channelTypes": ["openai", "anthropic", "gemini"]
   }'
 ```
 
-**结果**: 系统会创建两个站点分组：
-- `example-openai`: OpenAI 格式接入
-- `example-anthropic`: Anthropic 格式接入
+**结果**: 系统会创建三个站点分组：
+- `example-openai`: OpenAI 格式接入 (Bearer token 认证)
+- `example-anthropic`: Anthropic 格式接入 (x-api-key 认证)
+- `example-gemini`: Gemini 格式接入 (URL 参数认证)
 
 **模型兼容性说明**: 系统会根据模型名称智能地将其分配给兼容的渠道分组：
 
 - **OpenAI 格式 (`openai`)**: 作为通用格式，所有模型（包括 `claude-` 和 `gemini-`）都可以通过此格式的渠道分组进行访问。
-- **Anthropic 格式 (`anthropic`)**: 仅限 `claude-` 系列模型使用。
-- **Gemini 格式 (`gemini`)**: 仅限 `gemini-` 系列模型使用。
+- **Anthropic 格式 (`anthropic`)**: 仅限 `claude-` 系列模型使用，采用专用的头部认证方式。
+- **Gemini 格式 (`gemini`)**: 仅限 `gemini-` 系列模型使用，采用URL参数认证方式。
 
-例如，`claude-3-opus` 模型会被同时分配到 `example-anthropic` 和 `example-openai` 两个上游，而 `gpt-4` 模型只会被分配到 `example-openai`。
+例如：
+- `claude-3-opus` 模型会被同时分配到 `example-anthropic` 和 `example-openai` 两个上游
+- `gemini-2.5-flash` 模型会被同时分配到 `example-gemini` 和 `example-openai` 两个上游
+- `gpt-4` 模型只会被分配到 `example-openai` 上游
 
 ### 场景 4: 手动指定模型列表
 

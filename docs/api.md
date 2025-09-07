@@ -61,7 +61,10 @@ Content-Type: application/json
 **请求参数**:
 - `baseUrl` (必需): AI 站点的基础 URL
 - `apiKeys` (可选): API 密钥数组，用于负载均衡
-- `channelTypes` (可选): 支持的 API 格式类型，默认 `["openai"]`
+- `channelTypes` (可选): 支持的 API 格式类型，默认 `["openai"]`。支持的值：
+  - `openai`: OpenAI 兼容格式 (使用 `Authorization: Bearer` 头部认证)
+  - `anthropic`: Anthropic Claude 格式 (使用 `x-api-key` 头部认证)
+  - `gemini`: Google Gemini 格式 (使用 URL 参数 `?key=` 认证)
 - `customValidationEndpoints` (可选): 自定义验证端点
 - `models` (可选): 手动指定模型列表
 - `targetChannelName` (可选): 指定要更新的目标渠道名称

@@ -140,9 +140,13 @@ Uni-Load 是一个基于 [gpt-load](gpt-load.md) 的多实例负载均衡系统�
 ### 7. ModelsService (src/models.ts)
 **职责**：模型发现和管理
 - **功能**：
-  - 从AI提供商获取模型列表
+  - 从AI提供商获取模型列表，支持多种认证方式
   - 模型验证和过滤
-  - 支持多种API格式（OpenAI、Anthropic、Gemini）
+  - 支持多种API格式和响应结构
+- **支持的渠道类型**：
+  - `openai`: OpenAI 兼容格式 (使用 `Authorization: Bearer` 认证)
+  - `anthropic`: Anthropic Claude 格式 (使用 `x-api-key` 头部认证)
+  - `gemini`: Google Gemini 格式 (使用 URL 参数 `?key=` 认证)
   - 重试机制和网络容错
 
 ### 8. YamlManager (src/yaml-manager.ts)
