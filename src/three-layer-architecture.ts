@@ -26,6 +26,8 @@ class ThreeLayerArchitecture {
   weightCache: Map<string, any>
   weightOptimizationTimer: any
   emergencyOptimizationTimer: any
+  passiveRecoveryTimer: any
+  logAnalysisTimer: any
   isRunning: boolean
 
   constructor() {
@@ -887,13 +889,24 @@ class ThreeLayerArchitecture {
    * 设置被动恢复机制
    */
   setupPassiveRecovery() {
+    // 清理现有的定时器
+    if (this.passiveRecoveryTimer) {
+      clearInterval(this.passiveRecoveryTimer)
+      this.passiveRecoveryTimer = null
+    }
+    
+    if (this.logAnalysisTimer) {
+      clearInterval(this.logAnalysisTimer)
+      this.logAnalysisTimer = null
+    }
+
     // 定期检查失败的组合
-    setInterval(async () => {
+    this.passiveRecoveryTimer = setInterval(async () => {
       await this.performPassiveRecovery()
     }, 5 * 60 * 1000) // 每5分钟检查一次
 
     // 分析最近的请求日志
-    setInterval(async () => {
+    this.logAnalysisTimer = setInterval(async () => {
       await this.analyzeRecentLogs()
     }, 60 * 1000) // 每分钟分析一次
   }
@@ -1002,6 +1015,17 @@ class ThreeLayerArchitecture {
    * 启动权重优化
    */
   startWeightOptimization() {
+    // 清理现有的定时器
+    if (this.weightOptimizationTimer) {
+      clearInterval(this.weightOptimizationTimer)
+      this.weightOptimizationTimer = null
+    }
+    
+    if (this.emergencyOptimizationTimer) {
+      clearInterval(this.emergencyOptimizationTimer)
+      this.emergencyOptimizationTimer = null
+    }
+
     // 每24小时优化一次权重，避免过于频繁的缓存重载
     this.weightOptimizationTimer = setInterval(async () => {
       await this.optimizeAggregateWeights()
@@ -1513,7 +1537,7 @@ class ThreeLayerArchitecture {
    */
   stop() {
     // 清理所有定时器
-    const timers = ['weightOptimizationTimer', 'emergencyOptimizationTimer']
+    const timers = ['weightOptimizationTimer', 'emergencyOptimizationTimer', 'passiveRecoveryTimer', 'logAnalysisTimer']
 
     timers.forEach((timerName) => {
       if (this[timerName]) {

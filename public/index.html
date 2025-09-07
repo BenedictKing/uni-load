@@ -355,120 +355,377 @@
       /* 单个渠道项目样式 */
       .channel-item {
         display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 1rem;
+        flex-direction: column;
+        padding: 1.2rem;
         border: 1px solid #e1e5e9;
-        border-radius: 8px;
+        border-radius: 12px;
         background: white;
-        margin-bottom: 0.8rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        transition: all 0.2s ease;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .channel-item::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+        opacity: 0.7;
+        transition: all 0.3s ease;
+      }
+
+      /* OpenAI 渠道卡片 - 绿色边框 */
+      .channel-item[data-channel-type="openai"]::before,
+      .channel-item:has(.channel-type-badge.openai)::before {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      }
+
+      /* Anthropic 渠道卡片 - 紫色边框 */
+      .channel-item[data-channel-type="anthropic"]::before,
+      .channel-item:has(.channel-type-badge.anthropic)::before {
+        background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+      }
+
+      /* Gemini 渠道卡片 - 蓝色边框 */
+      .channel-item[data-channel-type="gemini"]::before,
+      .channel-item:has(.channel-type-badge.gemini)::before {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      }
+
+      .channel-item:hover::before {
+        opacity: 1;
+        width: 6px;
       }
 
       .channel-item:hover {
         background: #f8f9fa;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+        transform: translateY(-2px);
       }
 
       .channel-info {
         flex: 1;
         min-width: 0; /* 允许内容截断 */
+        display: flex;
+        flex-direction: column;
+        gap: 0.8rem;
       }
 
       .channel-name {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
-        margin-bottom: 0.5rem;
+        gap: 0.8rem;
+        margin-bottom: 0.3rem;
+        flex-wrap: wrap;
       }
 
       .channel-name strong {
-        color: #333;
-        font-size: 1.1em;
+        color: #2c3e50;
+        font-size: 1.15em;
+        font-weight: 600;
+        flex: 1;
+        min-width: 200px;
       }
 
+      /* 渠道类型标记基础样式 */
       .channel-type-badge {
-        background: #6c757d;
         color: white;
-        padding: 0.2rem 0.4rem;
-        border-radius: 4px;
-        font-size: 0.75em;
-        font-weight: bold;
+        padding: 0.3rem 0.6rem;
+        border-radius: 6px;
+        font-size: 0.8em;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        transition: all 0.2s ease;
+      }
+
+      /* OpenAI 渠道类型 - 绿色主题 */
+      .channel-type-badge.openai,
+      .channel-type-badge[data-type="openai"] {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+      }
+
+      .channel-type-badge.openai:hover,
+      .channel-type-badge[data-type="openai"]:hover {
+        background: linear-gradient(135deg, #059669 0%, #047857 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(16, 185, 129, 0.4);
+      }
+
+      /* Anthropic 渠道类型 - 紫色主题 */
+      .channel-type-badge.anthropic,
+      .channel-type-badge[data-type="anthropic"] {
+        background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+        box-shadow: 0 2px 4px rgba(139, 92, 246, 0.3);
+      }
+
+      .channel-type-badge.anthropic:hover,
+      .channel-type-badge[data-type="anthropic"]:hover {
+        background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(139, 92, 246, 0.4);
+      }
+
+      /* Gemini 渠道类型 - 蓝色主题 */
+      .channel-type-badge.gemini,
+      .channel-type-badge[data-type="gemini"] {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+      }
+
+      .channel-type-badge.gemini:hover,
+      .channel-type-badge[data-type="gemini"]:hover {
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(59, 130, 246, 0.4);
+      }
+
+      /* 其他渠道类型 - 灰色主题 */
+      .channel-type-badge.default,
+      .channel-type-badge:not(.openai):not(.anthropic):not(.gemini):not([data-type]) {
+        background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+        box-shadow: 0 2px 4px rgba(107, 114, 128, 0.3);
+      }
+
+      .channel-type-badge.default:hover,
+      .channel-type-badge:not(.openai):not(.anthropic):not(.gemini):not([data-type]):hover {
+        background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(107, 114, 128, 0.4);
       }
 
       .channel-details {
         display: flex;
-        gap: 1rem;
+        gap: 1.2rem;
         flex-wrap: wrap;
         font-size: 0.9em;
-        color: #666;
+        color: #6c757d;
+        background: #f8f9fa;
+        padding: 0.8rem;
+        border-radius: 8px;
+        border-left: 3px solid #e9ecef;
       }
 
       .detail-item {
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+      }
+
+      .detail-item::before {
+        content: '•';
+        color: #adb5bd;
+        font-weight: bold;
+      }
+
+      .detail-item:first-child::before {
+        content: '';
       }
 
       .channel-actions {
         display: flex;
-        gap: 0.5rem;
-        flex-shrink: 0;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        margin-top: 0.8rem;
+        padding-top: 0.8rem;
+        border-top: 1px solid #e9ecef;
+        flex-wrap: wrap;
+      }
+
+      .channel-action-group {
+        display: flex;
+        gap: 0.6rem;
+        align-items: center;
+      }
+
+      .channel-reassign-group {
+        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+        padding: 0.5rem 0.8rem;
+        border-radius: 10px;
+        border: 1px solid #90caf9;
+        box-shadow: 0 2px 4px rgba(33, 150, 243, 0.1);
+      }
+
+      .channel-management-group {
+        display: flex;
+        gap: 0.6rem;
       }
 
       .btn-update {
-        background: #28a745;
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
         color: white;
         border: none;
-        padding: 0.5rem 1rem;
-        border-radius: 6px;
+        padding: 0.6rem 1.2rem;
+        border-radius: 8px;
         cursor: pointer;
         font-size: 0.9em;
+        font-weight: 500;
         white-space: nowrap;
-        transition: background 0.2s ease;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(40, 167, 69, 0.2);
       }
 
       .btn-update:hover {
-        background: #218838;
+        background: linear-gradient(135deg, #218838 0%, #1ba085 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
       }
 
       .btn-delete {
-        background: #dc3545;
+        background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);
         color: white;
         border: none;
-        padding: 0.5rem 1rem;
-        border-radius: 6px;
+        padding: 0.6rem 1.2rem;
+        border-radius: 8px;
         cursor: pointer;
         font-size: 0.9em;
+        font-weight: 500;
         white-space: nowrap;
-        transition: background 0.2s ease;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(220, 53, 69, 0.2);
       }
 
       .btn-delete:hover {
-        background: #c82333;
+        background: linear-gradient(135deg, #c82333 0%, #e8590c 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+      }
+
+      .btn-promote,
+      .btn-demote {
+        border: none;
+        padding: 0.6rem 1.2rem;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.9em;
+        font-weight: 500;
+        white-space: nowrap;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .btn-promote {
+        background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%);
+        color: white;
+      }
+
+      .btn-promote:hover {
+        background: linear-gradient(135deg, #138496 0%, #1ba085 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(23, 162, 184, 0.3);
+      }
+
+      .btn-demote {
+        background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+        color: #212529;
+      }
+
+      .btn-demote:hover {
+        background: linear-gradient(135deg, #e0a800 0%, #e8590c 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(255, 193, 7, 0.3);
+      }
+
+      /* 按钮禁用状态 */
+      .btn-update:disabled,
+      .btn-delete:disabled,
+      .btn-promote:disabled,
+      .btn-demote:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
       }
 
       /* 响应式设计 */
       @media (max-width: 768px) {
         .channel-item {
+          padding: 1rem;
+          margin-bottom: 0.8rem;
+        }
+
+        .channel-info {
+          gap: 0.6rem;
+        }
+
+        .channel-name {
           flex-direction: column;
-          align-items: stretch;
+          align-items: flex-start;
+          gap: 0.5rem;
+          margin-bottom: 0.2rem;
+        }
+
+        .channel-name strong {
+          min-width: auto;
+          font-size: 1.1em;
         }
 
         .channel-details {
           flex-direction: column;
-          gap: 0.3rem;
+          gap: 0.5rem;
+          padding: 0.6rem;
         }
 
         .channel-actions {
-          margin-top: 1rem;
+          flex-direction: column;
+          gap: 0.8rem;
+          align-items: stretch;
+        }
+
+        .channel-action-group {
           justify-content: center;
+          gap: 0.5rem;
         }
 
         .detail-item {
           overflow: visible;
           white-space: normal;
+        }
+
+        .btn-update,
+        .btn-delete,
+        .btn-promote,
+        .btn-demote {
+          padding: 0.5rem 1rem;
+          font-size: 0.85em;
+        }
+      }
+
+      /* 超小屏幕适配 */
+      @media (max-width: 480px) {
+        .channel-item {
+          padding: 0.8rem;
+        }
+
+        .channel-name {
+          font-size: 1em;
+        }
+
+        .channel-actions {
+          gap: 0.6rem;
+        }
+
+        .channel-action-group {
+          flex-direction: column;
+          gap: 0.4rem;
+        }
+
+        .btn-update,
+        .btn-delete,
+        .btn-promote,
+        .btn-demote {
+          width: 100%;
+          text-align: center;
         }
       }
 
@@ -796,8 +1053,6 @@
           <div class="sync-status" id="channelHealthStatus">
             <p>正在获取状态...</p>
           </div>
-          <!-- 新增一个用于显示渠道列表的容器 -->
-          <div id="channelListContainer" style="margin-top: 15px"></div>
           <div class="sync-controls">
             <button type="button" class="btn-sync" onclick="triggerChannelCheck()">健康检查</button>
             <button type="button" class="btn-control" id="healthControlBtn" onclick="toggleHealthMonitor()">
@@ -806,6 +1061,8 @@
             <button type="button" class="btn-warning" onclick="showFailedChannels()">查看失败渠道</button>
             <button type="button" class="btn-refresh" onclick="refreshChannelHealthStatus()">刷新状态</button>
           </div>
+          <!-- 新增一个用于显示渠道列表的容器 -->
+          <div id="channelListContainer" style="margin-top: 15px"></div>
         </div>
       </div>
     </div>
@@ -1512,23 +1769,29 @@
                 <div class="channel-info">
                     <div class="channel-name">
                         <strong>${channel.name}</strong>
-                        <span class="channel-type-badge">${channelType.toUpperCase()}</span>
+                        <span class="channel-type-badge ${channelType.toLowerCase()}" data-type="${channelType.toLowerCase()}">${channelType.toUpperCase()}</span>
                     </div>
                     <div class="channel-details">
                         <span class="detail-item">站点: ${siteName}</span>
                         <span class="detail-item">实例: ${channel._instance.name}</span>
                         <span class="detail-item">上游: ${channel.upstreams?.[0]?.url || 'N/A'}</span>
                     </div>
-                </div>
-                <div class="channel-actions">
-                    <button class="btn-update" onclick="showUpdateChannelModal('${channel.name}', '${
+                    <div class="channel-actions">
+                        <div class="channel-action-group channel-reassign-group">
+                            <button class="btn-promote" onclick="reassignChannel('${channel.name}', 'promote', event)">⬆️ 提级</button>
+                            <button class="btn-demote" onclick="reassignChannel('${channel.name}', 'demote', event)">⬇️ 降级</button>
+                        </div>
+                        <div class="channel-action-group channel-management-group">
+                            <button class="btn-update" onclick="showUpdateChannelModal('${channel.name}', '${
             channel.upstreams?.[0]?.url || ''
           }', '${channelType}')">
-                        🔄 更新
-                    </button>
-                    <button class="btn-delete" onclick="deleteChannel('${channel.name}')">
-                        🗑️ 删除
-                    </button>
+                                🔄 更新
+                            </button>
+                            <button class="btn-delete" onclick="deleteChannel('${channel.name}', event)">
+                                🗑️ 删除
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         `
@@ -1538,7 +1801,7 @@
       }
 
       // 删除指定渠道
-      async function deleteChannel(channelName) {
+      async function deleteChannel(channelName, event) {
         if (
           !confirm(
             `您确定要彻底删除渠道 "${channelName}" 吗？\n\n此操作将同时：\n1. 删除此渠道分组。\n2. 从所有模型分组中移除对此渠道的引用。\n\n操作不可逆！`
@@ -1574,6 +1837,42 @@
           alert(`❌ 删除渠道 "${channelName}" 失败: ${error.message}`)
           btn.disabled = false
           btn.textContent = originalText
+        }
+      }
+
+      // 重新分配渠道实例
+      async function reassignChannel(channelName, action, event) {
+        const actionText = action === 'promote' ? '提级' : '降级'
+        if (!confirm(`您确定要对渠道 "${channelName}" 执行 ${actionText} 操作吗？\n\n这将尝试将其分配到下一个可用实例。`)) {
+          return
+        }
+
+        const btn = event.target
+        const originalText = btn.innerHTML
+
+        try {
+          btn.disabled = true
+          btn.innerHTML = '处理中...'
+
+          const response = await fetch('/api/channels/reassign', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ channelName, action }),
+          })
+
+          const data = await response.json()
+
+          if (data.success) {
+            alert(`✅ ${data.message}`)
+            refreshChannelHealthStatus()
+          } else {
+            throw new Error(data.message || '操作失败')
+          }
+        } catch (error) {
+          alert(`❌ ${actionText}失败: ${error.message}`)
+        } finally {
+          btn.disabled = false
+          btn.innerHTML = originalText
         }
       }
 

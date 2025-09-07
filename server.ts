@@ -498,6 +498,26 @@ app.delete('/api/channels/:channelName', async (req, res) => {
   }
 })
 
+// 重新分配渠道实例
+app.post('/api/channels/reassign', async (req, res) => {
+  try {
+    const { channelName, action } = req.body
+
+    if (!channelName || !action || !['promote', 'demote'].includes(action)) {
+      return res.status(400).json({ success: false, message: '参数无效: 需要 channelName 和 action (promote/demote)' })
+    }
+
+    const result = await gptloadService.reassignChannelInstance(channelName, action)
+    res.json({
+      success: true,
+      message: `渠道 ${channelName} 已成功${action === 'promote' ? '提级' : '降级'}到实例 ${result.newInstanceName}`,
+      data: result,
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
 // 临时分组清理API
 // 获取临时分组统计
 app.get('/api/temp-groups/stats', async (req, res) => {

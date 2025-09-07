@@ -1037,6 +1037,59 @@ class GptloadService {
     console.log(`🏁 渠道 ${channelName} 删除完成`)
     return results
   }
+
+  /**
+   * 重新分配渠道到上一个或下一个实例
+   */
+  async reassignChannelInstance(channelName: string, action: 'promote' | 'demote') {
+    const allGroups = await this.getAllGroups()
+    const channelGroup = allGroups.find((g) => g.name === channelName)
+
+    if (!channelGroup) {
+      throw new Error(`未找到渠道分组: ${channelName}`)
+    }
+
+    if (!channelGroup.upstreams || channelGroup.upstreams.length === 0) {
+      throw new Error(`渠道分组 ${channelName} 没有配置上游URL`)
+    }
+
+    const siteUrl = channelGroup.upstreams[0].url
+
+    const currentInstanceId = channelGroup._instance.id
+    const allInstances = this.manager.getAllInstances() // Assumes sorted by priority
+
+    const currentIndex = allInstances.findIndex((inst) => inst.id === currentInstanceId)
+    if (currentIndex === -1) {
+      throw new Error(`找不到渠道 ${channelName} 当前所在的实例 ${currentInstanceId}`)
+    }
+
+    let newIndex
+    if (action === 'promote') {
+      newIndex = currentIndex + 1
+      if (newIndex >= allInstances.length) {
+        throw new Error(`渠道 ${channelName} 已经是最高优先级实例，无法提级`)
+      }
+    } else {
+      // demote
+      newIndex = currentIndex - 1
+      if (newIndex < 0) {
+        throw new Error(`渠道 ${channelName} 已经是最低优先级实例，无法降级`)
+      }
+    }
+
+    const newInstance = allInstances[newIndex]
+    if (!newInstance.health.healthy) {
+      throw new Error(`目标实例 ${newInstance.name} 不健康，无法分配`)
+    }
+
+    await this.manager.reassignSite(siteUrl, newInstance.id)
+
+    return {
+      channelName,
+      previousInstanceName: allInstances[currentIndex].name,
+      newInstanceName: newInstance.name,
+    }
+  }
 }
 
 export default new GptloadService()
