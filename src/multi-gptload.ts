@@ -586,7 +586,11 @@ export class MultiGptloadManager {
         const proxyBaseUrl = `${instance.url.replace(/\/$/, '')}/proxy/${tempGroupName}`
 
         // 使用实例的token（如果存在）来访问代理，而不是目标站点的apiKey
-        const authTokenForProxy = instance.token || apiKey
+        const authTokenForProxy = instance.token
+        if (!authTokenForProxy) {
+          console.warn(`⚠️ 实例 ${instance.name} 没有配置 token，无法通过代理获取模型，跳过...`)
+          continue
+        }
         const models = await modelsService.getModels(proxyBaseUrl, authTokenForProxy, 1) // 测试时减少重试次数
 
         if (models && models.length > 0) {
