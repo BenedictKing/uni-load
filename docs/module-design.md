@@ -108,7 +108,7 @@ app.post("/api/sync-models", syncModelsHandler);
 
 ### 2. gpt-load 服务模块 (gptload.ts)
 
-**职责**: 与 gpt-load 实例交互的核心服务
+**职责**: 与 [gpt-load](gpt-load.md) 实例交互的核心服务
 
 #### 架构设计
 

@@ -71,10 +71,17 @@ Content-Type: application/json
 
 #### 更新操作说明
 
-当 `operationType` 设置为 `update` 并提供 `targetChannelName` 时：
-- 系统将执行更新逻辑，而不是创建新渠道
-- 通过 `targetChannelName` 精确定位要更新的模型分组
-- 使用 gpt-load 实例的 token 进行认证，提高更新效率
+当 `operationType` 设置为 `update` 并提供 `targetChannelName` 时，系统执行以下流程：
+
+1. **添加新密钥**: 首先将新提供的 API 密钥添加到指定的现有渠道分组中
+2. **刷新模型列表**: 通过该渠道的代理高效地获取最新的模型列表
+3. **更新配置**: 同步更新相关的分组配置和模型映射
+
+**执行特点**：
+- 通过 `targetChannelName` 精确定位要更新的渠道分组
+- 使用 gpt-load 实例的 token 进行认证，无需上游站点的 API 密钥
+- 不会创建临时分组，直接通过现有渠道代理操作，提高更新效率
+- 确保密钥先添加后使用，保证认证成功率
 
 **支持的 channelTypes**:
 - `openai`: OpenAI 兼容格式

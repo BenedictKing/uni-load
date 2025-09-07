@@ -173,22 +173,17 @@ class SiteConfigurationService {
       throw new Error('首次配置渠道时必须提供API密钥')
     }
 
-    let keysToUse = request.apiKeys?.length > 0 ? request.apiKeys : []
-
-    if (keysToUse.length === 0) {
-      console.log('请求中未提供新密钥，尝试获取现有密钥...')
-      const existingKeys = await gptloadService.getGroupApiKeys(existingChannel.id, existingChannel._instance.id)
-      keysToUse = existingKeys
-    }
-
-    if (keysToUse.length === 0) {
-      throw new Error(`现有渠道 ${existingChannel.name} 没有可用的API密钥，且请求中未提供新密钥`)
-    }
-
     try {
       const instance = gptloadService.manager.getInstance(existingChannel._instance.id)
       if (!instance) {
         throw new Error(`找不到实例: ${existingChannel._instance.id}`)
+      }
+
+      // 如果有新密钥，先添加
+      if (request.apiKeys && request.apiKeys.length > 0) {
+        console.log(`🔑 为现有渠道 ${existingChannel.name} 添加 ${request.apiKeys.length} 个新密钥...`);
+        await gptloadService.addApiKeysToGroup(existingChannel.id, request.apiKeys, instance);
+        console.log(`✅ 新密钥已添加。`);
       }
 
       const proxyUrl = `${instance.url}/proxy/${existingChannel.name}`
@@ -211,7 +206,20 @@ class SiteConfigurationService {
     } catch (error) {
       console.error(`- 通过现有渠道代理获取模型失败: ${error.message}`)
       console.log('- 代理获取失败，回退到直接访问原始URL...')
-      // 如果通过代理失败（例如 gpt-load 配置问题），回退到直接访问原始 URL
+      
+      // 回退到直接访问时，优先使用请求中的新密钥
+      let keysToUse = request.apiKeys?.length > 0 ? request.apiKeys : []
+
+      if (keysToUse.length === 0) {
+        console.log('请求中未提供新密钥，尝试获取现有密钥...')
+        const existingKeys = await gptloadService.getGroupApiKeys(existingChannel.id, existingChannel._instance.id)
+        keysToUse = existingKeys
+      }
+
+      if (keysToUse.length === 0) {
+        throw new Error(`现有渠道 ${existingChannel.name} 没有可用的API密钥，且请求中未提供新密钥`)
+      }
+
       const models = await modelsService.getModels(request.baseUrl, keysToUse[0], 3)
       return { models }
     }
@@ -234,23 +242,17 @@ class SiteConfigurationService {
 
     console.log(`✅ 找到目标分组: ${targetChannel.name} (实例: ${targetChannel._instance.name})`)
 
-    // 优先使用请求中的新密钥，如果没有则使用现有密钥
-    let keysToUse = request.apiKeys?.length > 0 ? request.apiKeys : []
-
-    if (keysToUse.length === 0) {
-      console.log('请求中未提供新密钥，尝试获取现有密钥...')
-      const existingKeys = await gptloadService.getGroupApiKeys(targetChannel.id, targetChannel._instance.id)
-      keysToUse = existingKeys
-    }
-
-    if (keysToUse.length === 0) {
-      throw new Error(`渠道 ${targetChannel.name} 没有可用的API密钥，且请求中未提供新密钥`)
-    }
-
     try {
       const instance = gptloadService.manager.getInstance(targetChannel._instance.id)
       if (!instance) {
         throw new Error(`找不到实例: ${targetChannel._instance.id}`)
+      }
+
+      // 如果有新密钥，先添加
+      if (request.apiKeys && request.apiKeys.length > 0) {
+        console.log(`🔑 为目标渠道 ${targetChannel.name} 添加 ${request.apiKeys.length} 个新密钥...`);
+        await gptloadService.addApiKeysToGroup(targetChannel.id, request.apiKeys, instance);
+        console.log(`✅ 新密钥已添加。`);
       }
 
       const proxyUrl = `${instance.url}/proxy/${targetChannel.name}`
@@ -272,6 +274,20 @@ class SiteConfigurationService {
     } catch (error) {
       console.error(`通过指定渠道代理获取模型失败: ${error.message}`)
       console.log('代理获取失败，回退到直接访问原始URL...')
+      
+      // 回退到直接访问时，优先使用请求中的新密钥
+      let keysToUse = request.apiKeys?.length > 0 ? request.apiKeys : []
+
+      if (keysToUse.length === 0) {
+        console.log('请求中未提供新密钥，尝试获取现有密钥...')
+        const existingKeys = await gptloadService.getGroupApiKeys(targetChannel.id, targetChannel._instance.id)
+        keysToUse = existingKeys
+      }
+
+      if (keysToUse.length === 0) {
+        throw new Error(`渠道 ${targetChannel.name} 没有可用的API密钥，且请求中未提供新密钥`)
+      }
+
       const models = await modelsService.getModels(request.baseUrl, keysToUse[0], 3)
       return { models }
     }
@@ -371,6 +387,7 @@ class SiteConfigurationService {
    */
   async processSiteConfiguration(request: ProcessAiSiteRequest): Promise<ProcessResult> {
     // 1. 验证和预处理请求
+    console.log('📬 收到站点配置请求:', JSON.stringify(request, null, 2));
     this.validateRequest(request)
     const processedRequest = this.preprocessRequest(request)
 
