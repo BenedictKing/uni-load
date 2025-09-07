@@ -15,7 +15,7 @@
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         line-height: 1.6;
         color: #333;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
         min-height: 100vh;
         padding: 20px;
       }
@@ -23,18 +23,20 @@
       .container {
         max-width: 800px;
         margin: 0 auto;
-        background: rgba(255, 255, 255, 0.95);
+        background: rgba(255, 255, 255, 0.98);
         border-radius: 20px;
-        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         backdrop-filter: blur(10px);
         overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.2);
       }
 
       .header {
-        background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+        background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
         color: white;
         padding: 30px;
         text-align: center;
+        box-shadow: 0 4px 15px rgba(86, 171, 47, 0.3);
       }
 
       .header h1 {
@@ -106,7 +108,7 @@
         text-overflow: ellipsis;
         transition: all 0.3s ease;
         pointer-events: none;
-        box-shadow: 0 2px 8px rgba(40, 167, 80, 0.3);
+        box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
       }
 
       .site-name-badge.loading {
@@ -136,7 +138,7 @@
 
       .btn-submit {
         width: 100%;
-        background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+        background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
         color: white;
         border: none;
         padding: 18px;
@@ -146,11 +148,12 @@
         cursor: pointer;
         transition: all 0.3s ease;
         margin-top: 20px;
+        box-shadow: 0 4px 15px rgba(86, 171, 47, 0.3);
       }
 
       .btn-submit:hover:not(:disabled) {
         transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(76, 175, 80, 0.3);
+        box-shadow: 0 6px 20px rgba(86, 171, 47, 0.4);
       }
 
       .btn-submit:disabled {
@@ -166,15 +169,19 @@
       }
 
       .result.success {
-        background: #d4edda;
+        background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
         border: 1px solid #c3e6cb;
         color: #155724;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(40, 167, 69, 0.2);
       }
 
       .result.error {
-        background: #f8d7da;
+        background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
         border: 1px solid #f5c6cb;
         color: #721c24;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(220, 53, 69, 0.2);
       }
 
       .loading {
@@ -250,9 +257,16 @@
       .sync-panel {
         margin-top: 40px;
         padding: 25px;
-        background: #f8f9fa;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
         border-radius: 15px;
-        border: 2px solid #e1e5e9;
+        border: 1px solid #dee2e6;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s ease;
+      }
+
+      .sync-panel:hover {
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+        transform: translateY(-1px);
       }
 
       .sync-panel h3 {
@@ -267,6 +281,7 @@
         border-radius: 10px;
         margin-bottom: 20px;
         border: 1px solid #dee2e6;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
       }
 
       .sync-controls {
@@ -289,63 +304,129 @@
       }
 
       .btn-sync {
-        background: #17a2b8;
+        background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%);
         color: white;
+        box-shadow: 0 2px 4px rgba(23, 162, 184, 0.3);
       }
 
       .btn-sync:hover {
-        background: #138496;
+        background: linear-gradient(135deg, #138496 0%, #1ba085 100%);
         transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(23, 162, 184, 0.4);
       }
 
       .btn-control {
-        background: #ffc107;
+        background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
         color: #212529;
+        box-shadow: 0 2px 4px rgba(255, 193, 7, 0.3);
       }
 
       .btn-control:hover {
-        background: #e0a800;
+        background: linear-gradient(135deg, #e0a800 0%, #e8590c 100%);
         transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(255, 193, 7, 0.4);
       }
 
       .btn-refresh {
-        background: #6c757d;
+        background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
         color: white;
+        box-shadow: 0 2px 4px rgba(108, 117, 125, 0.3);
       }
 
       .btn-refresh:hover {
-        background: #545b62;
+        background: linear-gradient(135deg, #545b62 0%, #343a40 100%);
         transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(108, 117, 125, 0.4);
       }
 
       .btn-warning {
-        background: #dc3545;
+        background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);
         color: white;
+        box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
       }
 
       .btn-warning:hover {
-        background: #c82333;
+        background: linear-gradient(135deg, #c82333 0%, #e8590c 100%);
         transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(220, 53, 69, 0.4);
+      }
+
+      .btn-secondary {
+        background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);
+        color: white;
+        box-shadow: 0 2px 4px rgba(111, 66, 193, 0.3);
+      }
+
+      .btn-secondary:hover {
+        background: linear-gradient(135deg, #5a32a3 0%, #d91a72 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(111, 66, 193, 0.4);
       }
 
       .status-indicator {
         display: inline-block;
-        width: 10px;
-        height: 10px;
+        width: 12px;
+        height: 12px;
         border-radius: 50%;
         margin-right: 8px;
+        position: relative;
       }
 
+      /* 运行状态 - 绿色脉冲 */
       .status-running {
         background: #28a745;
+        animation: pulse-green 2s infinite;
       }
 
+      .status-running::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background: #28a745;
+        animation: pulse-ring 2s infinite;
+      }
+
+      /* 停止状态 - 红色 */
       .status-stopped {
         background: #dc3545;
+        animation: pulse-red 3s infinite;
       }
 
+      /* 空闲状态 - 黄色脉冲 */
       .status-idle {
         background: #ffc107;
+        animation: pulse-yellow 2.5s infinite;
+      }
+
+      /* 脉冲动画 */
+      @keyframes pulse-green {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.6; }
+      }
+
+      @keyframes pulse-red {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+      }
+
+      @keyframes pulse-yellow {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+      }
+
+      @keyframes pulse-ring {
+        0% {
+          transform: scale(1);
+          opacity: 1;
+        }
+        100% {
+          transform: scale(1.8);
+          opacity: 0;
+        }
       }
       /* 渠道列表样式 */
       .channels-list {
@@ -1025,12 +1106,18 @@
             <p>正在获取状态...</p>
           </div>
           <div class="sync-controls">
-            <button type="button" class="btn-sync" onclick="triggerManualSync()">手动同步</button>
-            <button type="button" class="btn-control" id="syncControlBtn" onclick="toggleSyncService()">
-              控制服务
+            <button type="button" class="btn-sync" onclick="triggerManualSync()">
+              🔄 手动同步
             </button>
-            <button type="button" class="btn-refresh" onclick="refreshSyncStatus()">刷新状态</button>
-            <button type="button" class="btn-warning" onclick="cleanupAndResetModels()">清理并重置</button>
+            <button type="button" class="btn-control" id="syncControlBtn" onclick="toggleSyncService()">
+              ⚙️ 控制服务
+            </button>
+            <button type="button" class="btn-refresh" onclick="refreshSyncStatus()">
+              🔄 刷新状态
+            </button>
+            <button type="button" class="btn-warning" onclick="cleanupAndResetModels()">
+              🗑️ 清理重置
+            </button>
           </div>
         </div>
 
@@ -1041,9 +1128,15 @@
             <p>正在获取统计...</p>
           </div>
           <div class="sync-controls">
-            <button type="button" class="btn-refresh" onclick="refreshTempGroupsStats()">刷新统计</button>
-            <button type="button" class="btn-warning" onclick="cleanupAllTempGroups()">清理所有临时分组</button>
-            <button type="button" class="btn-secondary" onclick="cleanupOldTempGroups()">清理24小时前的分组</button>
+            <button type="button" class="btn-refresh" onclick="refreshTempGroupsStats()">
+              📊 刷新统计
+            </button>
+            <button type="button" class="btn-warning" onclick="cleanupAllTempGroups()">
+              🗑️ 清理所有分组
+            </button>
+            <button type="button" class="btn-secondary" onclick="cleanupOldTempGroups()">
+              ⏰ 清理24小时前
+            </button>
           </div>
         </div>
 
@@ -1054,12 +1147,18 @@
             <p>正在获取状态...</p>
           </div>
           <div class="sync-controls">
-            <button type="button" class="btn-sync" onclick="triggerChannelCheck()">健康检查</button>
-            <button type="button" class="btn-control" id="healthControlBtn" onclick="toggleHealthMonitor()">
-              控制服务
+            <button type="button" class="btn-sync" onclick="triggerChannelCheck()">
+              ❤️ 健康检查
             </button>
-            <button type="button" class="btn-warning" onclick="showFailedChannels()">查看失败渠道</button>
-            <button type="button" class="btn-refresh" onclick="refreshChannelHealthStatus()">刷新状态</button>
+            <button type="button" class="btn-control" id="healthControlBtn" onclick="toggleHealthMonitor()">
+              ⚙️ 控制服务
+            </button>
+            <button type="button" class="btn-warning" onclick="showFailedChannels()">
+              ⚠️ 查看失败渠道
+            </button>
+            <button type="button" class="btn-refresh" onclick="refreshChannelHealthStatus()">
+              🔄 刷新状态
+            </button>
           </div>
           <!-- 新增一个用于显示渠道列表的容器 -->
           <div id="channelListContainer" style="margin-top: 15px"></div>
@@ -1772,9 +1871,9 @@
                         <span class="channel-type-badge ${channelType.toLowerCase()}" data-type="${channelType.toLowerCase()}">${channelType.toUpperCase()}</span>
                     </div>
                     <div class="channel-details">
-                        <span class="detail-item">站点: ${siteName}</span>
-                        <span class="detail-item">实例: ${channel._instance.name}</span>
-                        <span class="detail-item">上游: ${channel.upstreams?.[0]?.url || 'N/A'}</span>
+                        <span class="detail-item">📍 站点: ${siteName}</span>
+                        <span class="detail-item">🖥️ 实例: ${channel._instance.name}</span>
+                        <span class="detail-item">🔗 上游: ${channel.upstreams?.[0]?.url || 'N/A'}</span>
                     </div>
                     <div class="channel-actions">
                         <div class="channel-action-group channel-reassign-group">
