@@ -37,19 +37,31 @@ class ModelsService implements IModelsService {
    * 从AI站点获取支持的模型列表
    * HttpClientFactory已处理重试机制和HTTPS配置
    */
-  async getModels(baseUrl: string, apiKey: string, maxRetries: number = 3): Promise<Model[]> {
+  async getModels(baseUrl: string, apiKey: string, maxRetries: number = 3, channelType: string = 'openai'): Promise<Model[]> {
     try {
       console.log(`正在从 ${baseUrl} 获取模型列表...`)
 
       // 构建模型列表请求URL
-      const modelsUrl = this.buildModelsUrl(baseUrl)
+      const modelsUrl = this.buildModelsUrl(baseUrl, channelType)
+
+      // 根据渠道类型构建请求配置
+      let requestConfig: any;
+      if (channelType === 'gemini') {
+        // Gemini API 使用 key 作为 URL 参数
+        requestConfig = {
+          params: { key: apiKey }
+        };
+      } else {
+        // OpenAI 和 Anthropic 兼容格式使用 Bearer token
+        requestConfig = {
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+          },
+        };
+      }
 
       // 使用统一的HTTP客户端发送请求
-      const response = await this.apiClient.get(modelsUrl, {
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-        },
-      })
+      const response = await this.apiClient.get(modelsUrl, requestConfig)
 
       // 解析响应数据
       const models = this.parseModelsResponse(response.data)
@@ -81,17 +93,17 @@ class ModelsService implements IModelsService {
   /**
    * 构建模型列表API的URL
    */
-  buildModelsUrl(baseUrl) {
+  buildModelsUrl(baseUrl: string, channelType: string = 'openai') {
     // 确保baseUrl以/结尾
     const normalizedBaseUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/'
 
-    // 如果baseUrl已经包含/v1，直接添加models
-    if (normalizedBaseUrl.includes('/v1/')) {
-      return normalizedBaseUrl + 'models'
+    // 针对 gemini 渠道使用 v1beta 路径
+    if (channelType === 'gemini') {
+      return normalizedBaseUrl + 'v1beta/models'
     }
 
-    // 如果baseUrl以/v1结尾，添加/models
-    if (normalizedBaseUrl.endsWith('/v1/')) {
+    // 如果baseUrl已经包含/v1，直接添加models
+    if (normalizedBaseUrl.includes('/v1/')) {
       return normalizedBaseUrl + 'models'
     }
 

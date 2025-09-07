@@ -148,7 +148,7 @@ class SiteConfigurationService {
       }
     } catch (error) {
       console.log('多实例获取失败，回退到直接调用...')
-      const models = await modelsService.getModels(request.baseUrl, request.apiKeys[0], 3)
+      const models = await modelsService.getModels(request.baseUrl, request.apiKeys[0], 3, request.channelTypes![0])
       return { models }
     }
   }
@@ -197,7 +197,7 @@ class SiteConfigurationService {
         console.warn(`⚠️ 实例 ${instance.name} 没有配置 token，代理访问可能会失败。`)
       }
 
-      const models = await modelsService.getModels(proxyUrl, authTokenForProxy, 3)
+      const models = await modelsService.getModels(proxyUrl, authTokenForProxy, 3, request.channelTypes![0])
       return {
         models,
         successfulInstance: instance.id,
@@ -220,7 +220,7 @@ class SiteConfigurationService {
         throw new Error(`现有渠道 ${existingChannel.name} 没有可用的API密钥，且请求中未提供新密钥`)
       }
 
-      const models = await modelsService.getModels(request.baseUrl, keysToUse[0], 3)
+      const models = await modelsService.getModels(request.baseUrl, keysToUse[0], 3, request.channelTypes![0])
       return { models }
     }
   }
@@ -241,6 +241,9 @@ class SiteConfigurationService {
     }
 
     console.log(`✅ 找到目标分组: ${targetChannel.name} (实例: ${targetChannel._instance.name})`)
+    
+    // 从渠道名称中提取渠道类型 (格式: siteName-channelType)
+    const channelType = this.extractChannelTypeFromName(targetChannel.name)
 
     try {
       const instance = gptloadService.manager.getInstance(targetChannel._instance.id)
@@ -264,7 +267,7 @@ class SiteConfigurationService {
       if (!authTokenForProxy) {
         console.warn(`⚠️ 实例 ${instance.name} 没有配置 token，代理访问可能会失败。`)
       }
-      const models = await modelsService.getModels(proxyUrl, authTokenForProxy, 3)
+      const models = await modelsService.getModels(proxyUrl, authTokenForProxy, 3, channelType)
 
       return {
         models,
@@ -288,9 +291,27 @@ class SiteConfigurationService {
         throw new Error(`渠道 ${targetChannel.name} 没有可用的API密钥，且请求中未提供新密钥`)
       }
 
-      const models = await modelsService.getModels(request.baseUrl, keysToUse[0], 3)
+      const models = await modelsService.getModels(request.baseUrl, keysToUse[0], 3, channelType)
       return { models }
     }
+  }
+
+  /**
+   * 从渠道名称中提取渠道类型
+   */
+  private extractChannelTypeFromName(channelName: string): string {
+    // 格式: siteName-channelType
+    const parts = channelName.split('-')
+    const lastPart = parts[parts.length - 1]
+    
+    // 验证是否是有效的渠道类型
+    const validChannelTypes = ['openai', 'anthropic', 'gemini']
+    if (validChannelTypes.includes(lastPart)) {
+      return lastPart
+    }
+    
+    // 默认返回 openai
+    return 'openai'
   }
 
   /**
