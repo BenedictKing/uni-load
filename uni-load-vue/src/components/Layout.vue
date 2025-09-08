@@ -71,7 +71,7 @@
     </v-app-bar>
 
     <!-- 主要内容区域 -->
-    <v-main class="main-content">
+    <v-main class="main-content" :transition="false">
       <v-container class="main-container">
         <slot />
       </v-container>
