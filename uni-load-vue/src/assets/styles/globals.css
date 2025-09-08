@@ -28,7 +28,11 @@ html {
 body {
   font-family: var(--font-sans);
   color: rgb(var(--color-text-primary));
-  background: linear-gradient(135deg, rgb(var(--color-background-primary)) 0%, rgb(var(--color-background-secondary)) 100%);
+  background: linear-gradient(
+    135deg,
+    rgb(var(--color-background-primary)) 0%,
+    rgb(var(--color-background-secondary)) 100%
+  );
   min-height: 100vh;
   margin: 0;
   padding: 0;
@@ -113,7 +117,8 @@ body {
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
@@ -330,7 +335,12 @@ body {
 
 /* Loading states */
 .loading-skeleton {
-  background: linear-gradient(90deg, rgb(var(--color-background-secondary)) 25%, rgb(var(--color-border-secondary)) 50%, rgb(var(--color-background-secondary)) 75%);
+  background: linear-gradient(
+    90deg,
+    rgb(var(--color-background-secondary)) 25%,
+    rgb(var(--color-border-secondary)) 50%,
+    rgb(var(--color-background-secondary)) 75%
+  );
   background-size: 200% 100%;
   animation: loading 1.5s infinite;
 }
@@ -347,24 +357,28 @@ body {
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
   body {
-    background: linear-gradient(135deg, rgb(var(--color-background-dark)) 0%, rgb(var(--color-background-secondary-dark)) 100%);
+    background: linear-gradient(
+      135deg,
+      rgb(var(--color-background-dark)) 0%,
+      rgb(var(--color-background-secondary-dark)) 100%
+    );
   }
-  
+
   .glass-effect {
     background: rgba(0, 0, 0, 0.2);
     border-color: rgba(255, 255, 255, 0.1);
   }
-  
+
   .v-card {
     background-color: rgb(var(--color-surface-dark)) !important;
     border: 1px solid rgb(var(--color-border-secondary)) !important;
   }
-  
+
   .v-data-table__th {
     background-color: rgb(var(--color-surface-dark)) !important;
     color: rgb(var(--color-text-primary-dark)) !important;
   }
-  
+
   .v-data-table__td {
     border-bottom-color: rgb(var(--color-border-secondary)) !important;
   }
@@ -390,16 +404,16 @@ body {
     background-color: rgb(var(--color-surface-dark)) !important;
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
   }
-  
+
   .v-expansion-panel {
     background-color: rgba(0, 0, 0, 0.2) !important;
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
   }
-  
+
   .v-field__outline {
     --v-field-border-opacity: 0.3 !important;
   }
-  
+
   .v-alert {
     background-color: rgba(0, 0, 0, 0.2) !important;
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
