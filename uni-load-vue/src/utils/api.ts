@@ -9,10 +9,6 @@ import type {
 import type { ApiResponse } from '@/types/api'
 import { ApiError } from '@/types/api'
 
-// API 基础配置
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3002'
-const API_TIMEOUT = import.meta.env.VITE_API_TIMEOUT || 30000
-
 // 请求队列和取消令牌
 const pendingRequests = new Map<string, AbortController>()
 
@@ -26,8 +22,8 @@ class ApiClient {
 
   constructor() {
     this.instance = axios.create({
-      baseURL: API_BASE_URL,
-      timeout: API_TIMEOUT,
+      baseURL: '/', // 使用相对路径
+      timeout: 30000, // 设置一个合理的默认超时
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
