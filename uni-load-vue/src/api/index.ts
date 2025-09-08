@@ -199,13 +199,6 @@ export class ServiceApi {
   }
 
   /**
-   * 获取渠道健康状态
-   */
-  static async getChannelHealthStatus(): Promise<ApiResponse<ChannelHealthStatus>> {
-    return get('/api/service/channel-health/status')
-  }
-
-  /**
    * 控制渠道健康检查
    */
   static async controlChannelHealth(request: ServiceControlRequest): Promise<ApiResponse<void>> {

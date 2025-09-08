@@ -369,7 +369,7 @@ const { data: channelsData, execute: loadChannels } = useApi(
 )
 
 const { data: healthData, execute: loadHealthStatus } = useApi(
-  () => Api.Service.getChannelHealthStatus(),
+  () => Api.Service.getServiceStatus(),
   { immediate: false }
 )
 
@@ -486,7 +486,7 @@ const refreshData = async () => {
     }
     
     if (healthData.value) {
-      healthStatus.value = healthData.value
+      healthStatus.value = (healthData.value as any).channelHealth
     }
   } catch (error) {
     console.error('刷新数据失败:', error)
