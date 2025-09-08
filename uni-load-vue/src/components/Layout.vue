@@ -220,7 +220,7 @@ onMounted(() => {
 
 /* 头部样式 */
 .header {
-  background: linear-gradient(135deg, var(--v-theme-primary) 0%, var(--v-theme-secondary) 100%) !important;
+  background: linear-gradient(135deg, rgb(var(--color-gray-900)) 0%, rgb(var(--color-gray-800)) 100%) !important;
 }
 
 .header-content {
