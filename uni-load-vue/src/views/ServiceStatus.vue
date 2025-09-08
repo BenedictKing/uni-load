@@ -615,7 +615,7 @@ const { execute: loadSystemInfo } = useApi(
 )
 
 const { execute: loadSystemMetrics } = useApi(
-  () => Api.Service.getArchitectureStats(),
+  () => Api.System.getSystemMetrics(),
   { immediate: false }
 )
 
