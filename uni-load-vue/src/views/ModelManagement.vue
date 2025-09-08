@@ -1,6 +1,6 @@
 <template>
-  <div class="model-management">
-    <div class="management-container">
+  <div class="page-container">
+    <div class="content-wrapper">
       <!-- 页面头部 -->
       <v-card class="page-header" rounded="lg">
         <v-card-text class="header-content">
@@ -29,155 +29,160 @@
       </v-card>
 
       <!-- 搜索和筛选 -->
-      <v-card class="search-section" rounded="lg">
-        <v-card-text>
-          <div class="search-controls">
-            <v-text-field
-              v-model="searchQuery"
-              label="搜索模型..."
-              variant="outlined"
-              density="comfortable"
-              hide-details
-              class="search-input"
-            >
-              <template v-slot:prepend-inner>
-                <v-icon size="18">mdi-magnify</v-icon>
-              </template>
-            </v-text-field>
-            <v-select
-              v-model="filterProvider"
-              :items="[
-                { title: '所有提供商', value: '' },
-                { title: 'OpenAI', value: 'openai' },
-                { title: 'Anthropic', value: 'anthropic' },
-                { title: 'Google', value: 'gemini' }
-              ]"
-              label="提供商"
-              variant="outlined"
-              density="comfortable"
-              hide-details
-              class="filter-select"
-            />
-          </div>
-        </v-card-text>
-      </v-card>
-
       <!-- 模型列表 -->
-      <v-card class="models-section" rounded="lg">
-        <v-card-text>
-          <div v-if="filteredModels.length === 0" class="empty-state">
-            <v-icon size="64" color="grey-lighten-2">mdi-robot</v-icon>
-            <p class="text-body-1 text-grey mt-4">
-              {{ searchQuery || filterProvider ? '没有找到匹配的模型' : '暂无模型数据' }}
-            </p>
+      <v-card class="content-panel" rounded="lg">
+        <v-card-text class="pa-0">
+          <div class="panel-header">
+            <div class="d-flex align-center gap-2">
+              <v-icon size="24" color="primary">mdi-format-list-bulleted</v-icon>
+              <h3 class="text-h6 font-weight-medium mb-0">模型列表</h3>
+            </div>
+            <div class="search-controls">
+              <v-text-field
+                v-model="searchQuery"
+                label="搜索模型..."
+                variant="outlined"
+                density="compact"
+                hide-details
+                class="search-input"
+              >
+                <template v-slot:prepend-inner>
+                  <v-icon size="18">mdi-magnify</v-icon>
+                </template>
+              </v-text-field>
+              <v-select
+                v-model="filterProvider"
+                :items="[
+                  { title: '所有提供商', value: '' },
+                  { title: 'OpenAI', value: 'openai' },
+                  { title: 'Anthropic', value: 'anthropic' },
+                  { title: 'Google', value: 'gemini' }
+                ]"
+                label="提供商"
+                variant="outlined"
+                density="compact"
+                hide-details
+                class="filter-select"
+              />
+            </div>
           </div>
 
-          <div v-else class="models-grid">
-            <v-card
-              v-for="model in filteredModels"
-              :key="model.id"
-              class="model-card"
-              :class="getProviderColor(model.provider)"
-              elevation="2"
-            >
-              <v-card-text>
-                <div class="card-header">
-                  <div class="model-info">
-                    <h3 class="model-name">{{ model.name }}</h3>
-                    <div class="model-badges">
-                      <v-chip
-                        :color="getProviderColor(model.provider)"
-                        size="small"
-                        class="provider-badge"
-                      >
-                        {{ getProviderLabel(model.provider) }}
-                      </v-chip>
-                      <v-chip
-                        :color="model.isActive ? 'success' : 'error'"
-                        variant="outlined"
-                        size="small"
-                        class="status-badge"
-                      >
-                        <v-icon size="14" class="mr-1">
-                          {{ model.isActive ? 'mdi-check-circle' : 'mdi-close-circle' }}
-                        </v-icon>
-                        {{ model.isActive ? '活跃' : '未激活' }}
-                      </v-chip>
+          <div class="panel-content">
+            <div v-if="filteredModels.length === 0" class="empty-state">
+              <v-icon size="64" color="grey-lighten-2">mdi-robot</v-icon>
+              <p class="text-body-1 text-grey mt-4">
+                {{ searchQuery || filterProvider ? '没有找到匹配的模型' : '暂无模型数据' }}
+              </p>
+            </div>
+
+            <div v-else class="models-grid">
+              <v-card
+                v-for="model in filteredModels"
+                :key="model.id"
+                class="model-card"
+                :class="getProviderColor(model.provider)"
+                elevation="2"
+              >
+                <v-card-text>
+                  <div class="card-header">
+                    <div class="model-info">
+                      <h3 class="model-name">{{ model.name }}</h3>
+                      <div class="model-badges">
+                        <v-chip
+                          :color="getProviderColor(model.provider)"
+                          size="small"
+                          class="provider-badge"
+                        >
+                          {{ getProviderLabel(model.provider) }}
+                        </v-chip>
+                        <v-chip
+                          :color="model.isActive ? 'success' : 'error'"
+                          variant="outlined"
+                          size="small"
+                          class="status-badge"
+                        >
+                          <v-icon size="14" class="mr-1">
+                            {{ model.isActive ? 'mdi-check-circle' : 'mdi-close-circle' }}
+                          </v-icon>
+                          {{ model.isActive ? '活跃' : '未激活' }}
+                        </v-chip>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div class="card-content">
-                  <div class="model-details">
-                    <div class="detail-item">
-                      <v-icon size="16" class="mr-2">mdi-identifier</v-icon>
-                      <span class="detail-label">模型ID:</span>
-                      <span class="detail-value">{{ model.id }}</span>
-                    </div>
-                    <div v-if="model.description" class="detail-item">
-                      <v-icon size="16" class="mr-2">mdi-text</v-icon>
-                      <span class="detail-label">描述:</span>
-                      <span class="detail-value">{{ model.description }}</span>
-                    </div>
-                    <div v-if="model.maxTokens" class="detail-item">
-                      <v-icon size="16" class="mr-2">mdi-counter</v-icon>
-                      <span class="detail-label">最大令牌:</span>
-                      <span class="detail-value">{{ model.maxTokens.toLocaleString() }}</span>
-                    </div>
-                    <div v-if="model.pricing" class="detail-item">
-                      <v-icon size="16" class="mr-2">mdi-currency-usd</v-icon>
-                      <span class="detail-label">定价:</span>
-                      <span class="detail-value">
-                        输入: ${{ model.pricing.input }}/1K · 输出: ${{ model.pricing.output }}/1K
-                      </span>
-                    </div>
-                    <div v-if="model.createdAt" class="detail-item">
-                      <v-icon size="16" class="mr-2">mdi-clock</v-icon>
-                      <span class="detail-label">创建时间:</span>
-                      <span class="detail-value">{{ formatTime(model.createdAt) }}</span>
+                  <div class="card-content">
+                    <div class="model-details">
+                      <div class="detail-item">
+                        <v-icon size="16" class="mr-2">mdi-identifier</v-icon>
+                        <span class="detail-label">模型ID:</span>
+                        <span class="detail-value">{{ model.id }}</span>
+                      </div>
+                      <div v-if="model.description" class="detail-item">
+                        <v-icon size="16" class="mr-2">mdi-text</v-icon>
+                        <span class="detail-label">描述:</span>
+                        <span class="detail-value">{{ model.description }}</span>
+                      </div>
+                      <div v-if="model.maxTokens" class="detail-item">
+                        <v-icon size="16" class="mr-2">mdi-counter</v-icon>
+                        <span class="detail-label">最大令牌:</span>
+                        <span class="detail-value">{{ model.maxTokens.toLocaleString() }}</span>
+                      </div>
+                      <div v-if="model.pricing" class="detail-item">
+                        <v-icon size="16" class="mr-2">mdi-currency-usd</v-icon>
+                        <span class="detail-label">定价:</span>
+                        <span class="detail-value">
+                          输入: ${{ model.pricing.input }}/1K · 输出: ${{ model.pricing.output }}/1K
+                        </span>
+                      </div>
+                      <div v-if="model.createdAt" class="detail-item">
+                        <v-icon size="16" class="mr-2">mdi-clock</v-icon>
+                        <span class="detail-label">创建时间:</span>
+                        <span class="detail-value">{{ formatTime(model.createdAt) }}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <v-divider></v-divider>
+                  <v-divider></v-divider>
 
-                <div class="card-actions">
-                  <v-btn
-                    v-if="!model.isActive"
-                    @click="activateModel(model.id)"
-                    color="success"
-                    variant="outlined"
-                    size="small"
-                    class="activate-btn"
-                  >
-                    <v-icon size="16" class="mr-1">mdi-play</v-icon>
-                    激活
-                  </v-btn>
-                  <v-btn
-                    v-else
-                    @click="deactivateModel(model.id)"
-                    color="warning"
-                    variant="outlined"
-                    size="small"
-                    class="deactivate-btn"
-                  >
-                    <v-icon size="16" class="mr-1">mdi-pause</v-icon>
-                    停用
-                  </v-btn>
-                  <v-btn
-                    @click="viewModelDetails(model)"
-                    color="info"
-                    variant="outlined"
-                    size="small"
-                    class="info-btn"
-                  >
-                    <v-icon size="16" class="mr-1">mdi-information</v-icon>
-                    详情
-                  </v-btn>
-                </div>
-              </v-card-text>
-            </v-card>
+                  <div class="card-actions">
+                    <v-btn
+                      v-if="!model.isActive"
+                      @click="activateModel(model.id)"
+                      color="success"
+                      variant="outlined"
+                      size="small"
+                      class="activate-btn"
+                    >
+                      <v-icon size="16" class="mr-1">mdi-play</v-icon>
+                      激活
+                    </v-btn>
+                    <v-btn
+                      v-else
+                      @click="deactivateModel(model.id)"
+                      color="warning"
+                      variant="outlined"
+                      size="small"
+                      class="deactivate-btn"
+                    >
+                      <v-icon size="16" class="mr-1">mdi-pause</v-icon>
+                      停用
+                    </v-btn>
+                    <v-btn
+                      @click="viewModelDetails(model)"
+                      color="info"
+                      variant="outlined"
+                      size="small"
+                      class="info-btn"
+                    >
+                      <v-icon size="16" class="mr-1">mdi-information</v-icon>
+                      详情
+                    </v-btn>
+                  </div>
+                </v-card-text>
+              </v-card>
+            </div>
           </div>
+
         </v-card-text>
       </v-card>
     </div>
@@ -464,31 +469,20 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.model-management {
+.page-container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0;
+  padding: 2rem 1rem;
 }
 
-.management-container {
-  background: transparent;
-  border-radius: 0;
-  box-shadow: none;
-  overflow: hidden;
+.content-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
 .page-header {
-  padding: 2rem;
-  background: var(--v-theme-surface);
-  border-radius: 20px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-/* 确保头部文字为深色 */
-.page-header h2,
-.page-header p {
-  color: var(--v-theme-on-surface) !important;
+  padding: 1rem;
 }
 
 .header-content {
@@ -500,37 +494,28 @@ onMounted(() => {
   padding: 0;
 }
 
-.header-info {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
 .header-info h2 {
-  margin: 0 0 0.5rem 0;
   font-size: 1.8rem;
-  font-weight: 600;
 }
 
-.header-info p {
-  margin: 0;
-  opacity: 0.9;
+.content-panel {
+  background: rgb(var(--v-theme-surface));
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border-radius: 16px !important;
 }
 
-.header-actions {
+.panel-header {
   display: flex;
-  gap: 0.5rem;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
 }
 
-.action-btn {
-  text-transform: none;
-  letter-spacing: 0.5px;
-  font-weight: 500;
-}
-
-.search-section {
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-  background: transparent;
+.panel-content {
+  padding: 1.5rem;
 }
 
 .search-controls {
@@ -548,15 +533,10 @@ onMounted(() => {
   width: 200px;
 }
 
-.models-section {
-  background: transparent;
-  padding: 0;
-}
-
 .empty-state {
   text-align: center;
   padding: 3rem;
-  color: var(--v-theme-grey);
+  color: rgba(var(--v-theme-on-surface), 0.5);
 }
 
 .models-grid {
@@ -566,16 +546,17 @@ onMounted(() => {
 }
 
 .model-card {
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 12px;
+  border-radius: 12px !important;
   overflow: hidden;
   transition: all 0.3s ease;
-  background: white;
+  position: relative;
+  padding-left: 4px;
+  border: 1px solid transparent;
 }
 
 .model-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   transform: translateY(-2px);
+  box-shadow: var(--v-shadow-lg) !important;
 }
 
 .model-card::before {
@@ -585,42 +566,22 @@ onMounted(() => {
   left: 0;
   width: 4px;
   height: 100%;
-  background: var(--v-theme-grey);
-  transition: all 0.3s ease;
+  background-color: grey;
 }
-
-.model-card.openai::before {
-  background: var(--v-theme-success);
-}
-
-.model-card.anthropic::before {
-  background: var(--v-theme-purple);
-}
-
-.model-card.gemini::before {
-  background: var(--v-theme-info);
-}
+.model-card.green::before { background-color: rgb(var(--v-theme-success)); }
+.model-card.purple::before { background-color: rgb(var(--v-theme-purple)); }
+.model-card.blue::before { background-color: rgb(var(--v-theme-info)); }
 
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 1rem;
-  gap: 1rem;
-}
-
-.model-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  flex: 1;
 }
 
 .model-name {
-  margin: 0;
   font-size: 1.2rem;
   font-weight: 600;
-  color: var(--v-theme-on-surface);
 }
 
 .model-badges {
@@ -630,43 +591,13 @@ onMounted(() => {
   align-items: flex-end;
 }
 
-.provider-badge {
-  font-weight: 600;
-  text-transform: uppercase;
+.card-content .detail-label {
+  font-weight: 500;
+  min-width: 70px;
 }
 
-.status-badge {
-  font-weight: 600;
-}
-
-.card-content {
-  margin-bottom: 1rem;
-}
-
-.model-details {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.detail-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-  font-size: 0.9rem;
-  color: var(--v-theme-on-surface-variant);
-}
-
-.detail-label {
-  font-weight: 600;
-  color: var(--v-theme-on-surface);
-  white-space: nowrap;
-  min-width: 80px;
-}
-
-.detail-value {
-  color: var(--v-theme-on-surface-variant);
-  flex: 1;
+.card-content .detail-value {
+  color: rgba(var(--v-theme-on-surface), 0.7);
   word-break: break-all;
 }
 
@@ -676,119 +607,23 @@ onMounted(() => {
   padding-top: 1rem;
 }
 
-.activate-btn,
-.deactivate-btn,
-.info-btn {
-  text-transform: none;
-  letter-spacing: 0.5px;
-  font-weight: 500;
-  flex: 1;
-}
-
-/* 模态框样式 */
-.model-info {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
 .info-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 1rem;
 }
 
-.info-item {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
 .info-label {
-  font-size: 0.85rem;
   font-weight: 600;
-  color: var(--v-theme-on-surface);
 }
 
 .info-value {
-  font-size: 0.95rem;
-  color: var(--v-theme-on-surface-variant);
+  color: rgba(var(--v-theme-on-surface), 0.7);
 }
 
-.capabilities-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.capability-chip {
-  font-weight: 500;
-}
-
-.model-description {
-  line-height: 1.6;
-  color: var(--v-theme-on-surface-variant);
-}
-
-/* 响应式设计 */
 @media (max-width: 768px) {
-  .model-management {
-    padding: 0;
-  }
-
-  .header-content {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .search-controls {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .search-input,
-  .filter-select {
-    width: 100%;
-  }
-
-  .models-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .card-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
-
-  .model-badges {
-    flex-direction: row;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .card-actions {
-    flex-direction: column;
-  }
-
-  .info-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* 暗色主题优化 */
-.v-theme--dark .model-card {
-  background: var(--v-theme-surface);
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-.v-theme--dark .detail-value {
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.v-theme--dark .model-name {
-  color: rgba(255, 255, 255, 0.9);
+  .page-container { padding: 1rem; }
+  .panel-header { flex-direction: column; align-items: stretch; }
+  .search-input, .filter-select { width: 100%; }
 }
 </style>

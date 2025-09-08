@@ -1,6 +1,6 @@
 <template>
-  <div class="site-config-page">
-    <div class="config-container">
+  <div class="page-container">
+    <div class="content-wrapper">
       <!-- 页面头部 -->
       <v-card class="page-header" rounded="lg">
         <v-card-text class="header-content">
@@ -20,13 +20,12 @@
       </v-card>
 
       <!-- 配置表单卡片 -->
-      <v-card class="config-card">
-
-      <v-card-text>
+      <v-card class="content-panel">
         <v-form 
           @submit.prevent="handleSubmit" 
           v-model="validForm"
           ref="formRef"
+          class="panel-content"
         >
           <!-- 基础地址输入 -->
           <v-text-field
@@ -154,11 +153,10 @@
             </v-btn>
           </div>
         </v-form>
-      </v-card-text>
     </v-card>
 
     <!-- 配置结果 -->
-    <v-card v-if="result" class="result-card enhanced-card mt-6">
+    <v-card v-if="result" class="content-panel result-card mt-6">
       <v-card-title class="result-header">
         <v-icon :color="result.success ? 'success' : 'error'" class="mr-2">
           {{ result.success ? 'mdi-check-circle' : 'mdi-close-circle' }}
@@ -509,121 +507,20 @@ const handleSubmit = async () => {
 </script>
 
 <style scoped>
-.site-config-page {
-  max-width: 800px;
+.page-container {
+  max-width: 1200px;
   margin: 0 auto;
   padding: 2rem 1rem;
 }
 
-.config-card {
-  border-radius: 16px;
-}
-
-.help-text {
-  font-size: 0.875rem;
-  color: #666;
-  margin-bottom: 1rem;
-}
-
-.channel-types-group {
+.content-wrapper {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.validation-endpoints {
-  background: #f5f5f5;
-  border-radius: 8px;
-  padding: 1rem;
-  margin-bottom: 1rem;
-}
-
-.result-card {
-  border-radius: 16px;
-}
-
-.result-header {
-  display: flex;
-  align-items: center;
-  font-size: 1.25rem;
-  font-weight: 600;
-}
-
-.result-list {
-  background: transparent;
-}
-
-.models-section {
-  background: #f5f5f5;
-  border-radius: 8px;
-  padding: 1rem;
-  margin-top: 1rem;
-}
-
-.models-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.submit-btn {
-  min-width: 200px;
-  border-radius: 8px;
-}
-
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .site-config-page {
-    padding: 1rem;
-  }
-  
-  .channel-types-group {
-    justify-content: center;
-  }
-  
-  .submit-btn {
-    width: 100%;
-  }
-}
-
-@media (max-width: 480px) {
-  .help-text {
-    font-size: 0.75rem;
-  }
-}
-
-/* 暗色主题支持 */
-.v-theme--dark .validation-endpoints,
-.v-theme--dark .models-section {
-  background: #1e1e1e;
-}
-
-/* 页面头部样式 */
-.site-config-page {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0;
-}
-
-.config-container {
-  background: transparent;
-  border-radius: 0;
-  box-shadow: none;
-  overflow: hidden;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
 .page-header {
-  padding: 2rem;
-  background: var(--v-theme-surface);
-  border-radius: 20px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-/* 确保头部文字为深色 */
-.page-header h2,
-.page-header p {
-  color: var(--v-theme-on-surface) !important;
+  padding: 1rem;
 }
 
 .header-content {
@@ -635,35 +532,64 @@ const handleSubmit = async () => {
   padding: 0;
 }
 
-.header-info {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
 .header-info h2 {
-  margin: 0 0 0.5rem 0;
   font-size: 1.8rem;
-  font-weight: 600;
 }
 
-.header-info p {
-  margin: 0;
-  opacity: 0.9;
+.content-panel {
+  background: rgb(var(--v-theme-surface));
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border-radius: 16px !important;
 }
 
-.header-actions {
+.panel-content {
+  padding: 1.5rem;
+}
+
+.help-text {
+  font-size: 0.875rem;
+  color: rgba(var(--v-theme-on-surface), 0.6);
+  margin-top: -0.5rem;
+}
+
+.channel-types-group {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
 }
 
-.action-btn {
-  text-transform: none;
-  letter-spacing: 0.5px;
-  font-weight: 500;
+.submit-btn {
+  min-width: 200px;
+  border-radius: 8px;
 }
 
-.v-theme--dark .help-text {
-  color: rgba(255, 255, 255, 0.7);
+.result-card .result-header {
+  display: flex;
+  align-items: center;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.result-card .result-list {
+  background: transparent;
+}
+
+.result-card .models-section {
+  background: rgba(var(--v-border-color), 0.1);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.result-card .models-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  .page-container {
+    padding: 1rem;
+  }
 }
 </style>

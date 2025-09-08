@@ -1,6 +1,6 @@
 <template>
-  <div class="channel-management">
-    <div class="management-container">
+  <div class="page-container">
+    <div class="content-wrapper">
       <!-- 页面头部 -->
       <v-card class="page-header" rounded="lg">
         <v-card-text class="header-content">
@@ -38,8 +38,8 @@
       </v-card>
 
       <!-- 健康监控面板 -->
-      <v-card class="health-panel" rounded="lg">
-        <v-card-text>
+      <v-card class="content-panel" rounded="lg">
+        <v-card-text class="pa-0">
           <div class="panel-header">
             <div class="d-flex align-center gap-2">
               <v-icon size="24" color="primary">mdi-stethoscope</v-icon>
@@ -65,58 +65,58 @@
               </v-btn>
             </div>
           </div>
-
-          <v-alert
-            v-if="healthStatus"
-            :type="healthStatus.isRunning ? 'info' : healthStatus.hasInterval ? 'success' : 'error'"
-            variant="tonal"
-            class="health-status"
-          >
-            <template v-slot:prepend>
-              <v-icon :icon="healthStatus.isRunning ? 'mdi-sync' : healthStatus.hasInterval ? 'mdi-check-circle' : 'mdi-close-circle'"></v-icon>
-            </template>
-            <template v-slot:text>
-              <div class="status-info">
-                <div class="status-text">
-                  {{ getHealthStatusText(healthStatus) }}
+          <div class="panel-content">
+            <v-alert
+              v-if="healthStatus"
+              :type="healthStatus.isRunning ? 'info' : healthStatus.hasInterval ? 'success' : 'error'"
+              variant="tonal"
+            >
+              <template v-slot:prepend>
+                <v-icon :icon="healthStatus.isRunning ? 'mdi-sync' : healthStatus.hasInterval ? 'mdi-check-circle' : 'mdi-close-circle'"></v-icon>
+              </template>
+              <template v-slot:text>
+                <div class="status-info">
+                  <div class="status-text">
+                    {{ getHealthStatusText(healthStatus) }}
+                  </div>
+                  <div class="status-details">
+                    <div class="detail-item">
+                      <v-icon size="16" class="mr-1">mdi-clock-outline</v-icon>
+                      检查间隔: {{ healthStatus.intervalMinutes }} 分钟
+                    </div>
+                    <div class="detail-item">
+                      <v-icon size="16" class="mr-1">mdi-alert-circle-outline</v-icon>
+                      失败阈值: {{ healthStatus.failureThreshold }} 次
+                    </div>
+                    <div v-if="healthStatus.failureCount > 0" class="detail-item text-error">
+                      <v-icon size="16" class="mr-1">mdi-alert</v-icon>
+                      {{ healthStatus.failureCount }} 个渠道存在失败记录
+                    </div>
+                    <div v-if="healthStatus.nextCheck" class="detail-item">
+                      <v-icon size="16" class="mr-1">mdi-calendar-clock</v-icon>
+                      下次检查: {{ formatTime(healthStatus.nextCheck) }}
+                    </div>
+                  </div>
                 </div>
-                <div class="status-details">
-                  <div class="detail-item">
-                    <v-icon size="16" class="mr-1">mdi-clock-outline</v-icon>
-                    检查间隔: {{ healthStatus.intervalMinutes }} 分钟
-                  </div>
-                  <div class="detail-item">
-                    <v-icon size="16" class="mr-1">mdi-alert-circle-outline</v-icon>
-                    失败阈值: {{ healthStatus.failureThreshold }} 次
-                  </div>
-                  <div v-if="healthStatus.failureCount > 0" class="detail-item text-error">
-                    <v-icon size="16" class="mr-1">mdi-alert</v-icon>
-                    {{ healthStatus.failureCount }} 个渠道存在失败记录
-                  </div>
-                  <div v-if="healthStatus.nextCheck" class="detail-item">
-                    <v-icon size="16" class="mr-1">mdi-calendar-clock</v-icon>
-                    下次检查: {{ formatTime(healthStatus.nextCheck) }}
-                  </div>
-                </div>
-              </div>
-            </template>
-          </v-alert>
+              </template>
+            </v-alert>
 
-          <v-alert v-else type="info" variant="tonal">
-            <template v-slot:text>
-              <div class="d-flex align-center">
-                <v-progress-circular indeterminate size="16" class="mr-2"></v-progress-circular>
-                获取健康状态...
-              </div>
-            </template>
-          </v-alert>
+            <v-alert v-else type="info" variant="tonal">
+              <template v-slot:text>
+                <div class="d-flex align-center">
+                  <v-progress-circular indeterminate size="16" class="mr-2"></v-progress-circular>
+                  获取健康状态...
+                </div>
+              </template>
+            </v-alert>
+          </div>
         </v-card-text>
       </v-card>
 
       <!-- 渠道列表 -->
-      <v-card class="channels-section" rounded="0">
-        <v-card-text>
-          <div class="section-header">
+      <v-card class="content-panel" rounded="lg">
+        <v-card-text class="pa-0">
+          <div class="panel-header">
             <div class="d-flex align-center gap-2">
               <v-icon size="24" color="primary">mdi-format-list-bulleted</v-icon>
               <h3 class="text-h6 font-weight-medium mb-0">已配置的渠道</h3>
@@ -150,123 +150,125 @@
             </div>
           </div>
 
-          <div v-if="filteredChannels.length === 0" class="empty-state">
-            <v-icon size="64" color="grey-lighten-2">mdi-inbox</v-icon>
-            <p class="text-body-1 text-grey mt-4">
-              {{ searchQuery || filterType ? '没有找到匹配的渠道' : '暂无已配置的渠道' }}
-            </p>
-          </div>
+          <div class="panel-content">
+            <div v-if="filteredChannels.length === 0" class="empty-state">
+              <v-icon size="64" color="grey-lighten-2">mdi-inbox</v-icon>
+              <p class="text-body-1 text-grey mt-4">
+                {{ searchQuery || filterType ? '没有找到匹配的渠道' : '暂无已配置的渠道' }}
+              </p>
+            </div>
 
-          <div v-else class="channels-grid">
-            <v-card
-              v-for="channel in filteredChannels"
-              :key="channel.name"
-              class="channel-card"
-              :class="getChannelTypeClass(channel)"
-              elevation="2"
-            >
-              <v-card-text>
-                <div class="card-header">
-                  <div class="channel-info">
-                    <h4 class="channel-name">{{ channel.name }}</h4>
-                    <v-chip
-                      :color="getChannelTypeColor(channel)"
-                      size="small"
-                      class="channel-type-badge"
-                    >
-                      {{ getChannelTypeLabel(channel) }}
-                    </v-chip>
-                  </div>
-                  <div class="channel-status">
-                    <v-tooltip :text="getChannelHealthText(channel)" location="top">
-                      <template v-slot:activator="{ props }">
-                        <v-icon
-                          v-bind="props"
-                          :color="getChannelHealthColor(channel)"
-                          size="20"
-                        >
-                          mdi-circle
-                        </v-icon>
-                      </template>
-                    </v-tooltip>
-                  </div>
-                </div>
-
-                <div class="card-content">
-                  <div class="channel-details">
-                    <div class="detail-item">
-                      <v-icon size="16" class="mr-2">mdi-map-marker</v-icon>
-                      <span class="detail-label">站点:</span>
-                      <span class="detail-value">{{ getSiteName(channel) }}</span>
+            <div v-else class="channels-grid">
+              <v-card
+                v-for="channel in filteredChannels"
+                :key="channel.name"
+                class="channel-card"
+                :class="getChannelTypeClass(channel)"
+                elevation="2"
+              >
+                <v-card-text>
+                  <div class="card-header">
+                    <div class="channel-info">
+                      <h4 class="channel-name">{{ channel.name }}</h4>
+                      <v-chip
+                        :color="getChannelTypeColor(channel)"
+                        size="small"
+                        class="channel-type-badge"
+                      >
+                        {{ getChannelTypeLabel(channel) }}
+                      </v-chip>
                     </div>
-                    <div class="detail-item">
-                      <v-icon size="16" class="mr-2">mdi-server</v-icon>
-                      <span class="detail-label">实例:</span>
-                      <span class="detail-value">{{ channel._instance?.name || 'N/A' }}</span>
-                    </div>
-                    <div class="detail-item">
-                      <v-icon size="16" class="mr-2">mdi-link</v-icon>
-                      <span class="detail-label">上游:</span>
-                      <span class="detail-value">{{ channel.upstreams?.[0]?.url || 'N/A' }}</span>
-                    </div>
-                    <div v-if="channel.lastCheck" class="detail-item">
-                      <v-icon size="16" class="mr-2">mdi-clock</v-icon>
-                      <span class="detail-label">最后检查:</span>
-                      <span class="detail-value">{{ formatTime(channel.lastCheck) }}</span>
+                    <div class="channel-status">
+                      <v-tooltip :text="getChannelHealthText(channel)" location="top">
+                        <template v-slot:activator="{ props }">
+                          <v-icon
+                            v-bind="props"
+                            :color="getChannelHealthColor(channel)"
+                            size="20"
+                          >
+                            mdi-circle
+                          </v-icon>
+                        </template>
+                      </v-tooltip>
                     </div>
                   </div>
-                </div>
 
-                <v-divider></v-divider>
+                  <div class="card-content">
+                    <div class="channel-details">
+                      <div class="detail-item">
+                        <v-icon size="16" class="mr-2">mdi-map-marker</v-icon>
+                        <span class="detail-label">站点:</span>
+                        <span class="detail-value">{{ getSiteName(channel) }}</span>
+                      </div>
+                      <div class="detail-item">
+                        <v-icon size="16" class="mr-2">mdi-server</v-icon>
+                        <span class="detail-label">实例:</span>
+                        <span class="detail-value">{{ channel._instance?.name || 'N/A' }}</span>
+                      </div>
+                      <div class="detail-item">
+                        <v-icon size="16" class="mr-2">mdi-link</v-icon>
+                        <span class="detail-label">上游:</span>
+                        <span class="detail-value">{{ channel.upstreams?.[0]?.url || 'N/A' }}</span>
+                      </div>
+                      <div v-if="channel.lastCheck" class="detail-item">
+                        <v-icon size="16" class="mr-2">mdi-clock</v-icon>
+                        <span class="detail-label">最后检查:</span>
+                        <span class="detail-value">{{ formatTime(channel.lastCheck) }}</span>
+                      </div>
+                    </div>
+                  </div>
 
-                <div class="card-actions">
-                  <div class="action-group">
-                    <v-btn
-                      @click="reassignChannel(channel.name, 'promote')"
-                      color="info"
-                      variant="outlined"
-                      size="small"
-                      class="promote-btn"
-                    >
-                      <v-icon size="16" class="mr-1">mdi-arrow-up</v-icon>
-                      提级
-                    </v-btn>
-                    <v-btn
-                      @click="reassignChannel(channel.name, 'demote')"
-                      color="warning"
-                      variant="outlined"
-                      size="small"
-                      class="demote-btn"
-                    >
-                      <v-icon size="16" class="mr-1">mdi-arrow-down</v-icon>
-                      降级
-                    </v-btn>
+                  <v-divider></v-divider>
+
+                  <div class="card-actions">
+                    <div class="action-group">
+                      <v-btn
+                        @click="reassignChannel(channel.name, 'promote')"
+                        color="info"
+                        variant="outlined"
+                        size="small"
+                        class="promote-btn"
+                      >
+                        <v-icon size="16" class="mr-1">mdi-arrow-up</v-icon>
+                        提级
+                      </v-btn>
+                      <v-btn
+                        @click="reassignChannel(channel.name, 'demote')"
+                        color="warning"
+                        variant="outlined"
+                        size="small"
+                        class="demote-btn"
+                      >
+                        <v-icon size="16" class="mr-1">mdi-arrow-down</v-icon>
+                        降级
+                      </v-btn>
+                    </div>
+                    <div class="action-group">
+                      <v-btn
+                        @click="showUpdateModal(channel)"
+                        color="success"
+                        variant="outlined"
+                        size="small"
+                        class="update-btn"
+                      >
+                        <v-icon size="16" class="mr-1">mdi-refresh</v-icon>
+                        更新
+                      </v-btn>
+                      <v-btn
+                        @click="deleteChannel(channel.name)"
+                        color="error"
+                        variant="outlined"
+                        size="small"
+                        class="delete-btn"
+                      >
+                        <v-icon size="16" class="mr-1">mdi-delete</v-icon>
+                        删除
+                      </v-btn>
+                    </div>
                   </div>
-                  <div class="action-group">
-                    <v-btn
-                      @click="showUpdateModal(channel)"
-                      color="success"
-                      variant="outlined"
-                      size="small"
-                      class="update-btn"
-                    >
-                      <v-icon size="16" class="mr-1">mdi-refresh</v-icon>
-                      更新
-                    </v-btn>
-                    <v-btn
-                      @click="deleteChannel(channel.name)"
-                      color="error"
-                      variant="outlined"
-                      size="small"
-                      class="delete-btn"
-                    >
-                      <v-icon size="16" class="mr-1">mdi-delete</v-icon>
-                      删除
-                    </v-btn>
-                  </div>
-                </div>
-              </v-card-text>
-            </v-card>
+                </v-card-text>
+              </v-card>
+            </div>
           </div>
         </v-card-text>
       </v-card>
@@ -626,31 +628,20 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.channel-management {
+.page-container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0;
+  padding: 2rem 1rem;
 }
 
-.management-container {
-  background: transparent;
-  border-radius: 0;
-  box-shadow: none;
-  overflow: hidden;
+.content-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
 .page-header {
-  padding: 2rem;
-  background: var(--v-theme-surface);
-  border-radius: 20px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-/* 确保头部文字为深色 */
-.page-header h2,
-.page-header p {
-  color: var(--v-theme-on-surface) !important;
+  padding: 1rem;
 }
 
 .header-content {
@@ -662,103 +653,56 @@ onMounted(() => {
   padding: 0;
 }
 
-.header-info {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
 .header-info h2 {
-  margin: 0 0 0.5rem 0;
   font-size: 1.8rem;
-  font-weight: 600;
 }
 
-.header-info p {
-  margin: 0;
-  opacity: 0.9;
-}
-
-.header-actions {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.action-btn {
-  text-transform: none;
-  letter-spacing: 0.5px;
-  font-weight: 500;
-}
-
-.health-panel {
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-  background: transparent;
+.content-panel {
+  background: rgb(var(--v-theme-surface));
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border-radius: 16px !important;
 }
 
 .panel-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
-  padding: 0;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
 }
 
-.panel-controls {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.health-status {
-  margin: 0;
+.panel-content {
+  padding: 1.5rem;
 }
 
 .status-info {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.5rem;
 }
 
 .status-text {
   font-weight: 500;
-  margin-bottom: 0.5rem;
 }
 
 .status-details {
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
+  font-size: 0.9rem;
 }
 
 .detail-item {
   display: flex;
   align-items: center;
   gap: 0.25rem;
-  font-size: 0.9rem;
-}
-
-.detail-item.text-error {
-  color: var(--v-theme-error);
-  font-weight: 600;
-}
-
-.channels-section {
-  background: transparent;
-  padding: 0;
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-  flex-wrap: wrap;
-  gap: 1rem;
-  padding: 0;
 }
 
 .search-filter {
   display: flex;
-  gap: 0.5rem;
+  gap: 1rem;
   align-items: center;
 }
 
@@ -767,13 +711,13 @@ onMounted(() => {
 }
 
 .filter-select {
-  width: 150px;
+  width: 180px;
 }
 
 .empty-state {
   text-align: center;
   padding: 3rem;
-  color: var(--v-theme-grey);
+  color: rgba(var(--v-theme-on-surface), 0.5);
 }
 
 .channels-grid {
@@ -783,16 +727,12 @@ onMounted(() => {
 }
 
 .channel-card {
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 12px;
+  border-radius: 12px !important;
   overflow: hidden;
   transition: all 0.3s ease;
-  background: white;
-}
-
-.channel-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
+  position: relative;
+  padding-left: 4px;
+  border: none;
 }
 
 .channel-card::before {
@@ -802,21 +742,11 @@ onMounted(() => {
   left: 0;
   width: 4px;
   height: 100%;
-  background: var(--v-theme-grey);
-  transition: all 0.3s ease;
+  background-color: grey;
 }
-
-.channel-card.openai::before {
-  background: var(--v-theme-success);
-}
-
-.channel-card.anthropic::before {
-  background: var(--v-theme-purple);
-}
-
-.channel-card.gemini::before {
-  background: var(--v-theme-info);
-}
+.channel-card.openai::before { background-color: rgb(var(--v-theme-success)); }
+.channel-card.anthropic::before { background-color: rgb(var(--v-theme-purple)); }
+.channel-card.gemini::before { background-color: rgb(var(--v-theme-info)); }
 
 .card-header {
   display: flex;
@@ -828,58 +758,28 @@ onMounted(() => {
 .channel-info {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
 .channel-name {
-  margin: 0;
   font-size: 1.1rem;
   font-weight: 600;
-  color: var(--v-theme-on-surface);
 }
 
-.channel-type-badge {
-  font-weight: 600;
-  text-transform: uppercase;
+.card-content .detail-label {
+  font-weight: 500;
+  min-width: 70px;
 }
 
-.channel-status {
-  display: flex;
-  align-items: center;
-}
-
-.card-content {
-  margin-bottom: 1rem;
-}
-
-.channel-details {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.detail-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-  font-size: 0.9rem;
-  color: var(--v-theme-on-surface-variant);
-}
-
-.detail-label {
-  font-weight: 600;
-  color: var(--v-theme-on-surface);
-  white-space: nowrap;
-}
-
-.detail-value {
-  color: var(--v-theme-on-surface-variant);
+.card-content .detail-value {
+  color: rgba(var(--v-theme-on-surface), 0.7);
   word-break: break-all;
 }
 
 .card-actions {
   display: flex;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 0.5rem;
   padding-top: 1rem;
 }
@@ -889,133 +789,17 @@ onMounted(() => {
   gap: 0.5rem;
 }
 
-.promote-btn,
-.demote-btn,
-.update-btn,
-.delete-btn {
-  text-transform: none;
-  letter-spacing: 0.5px;
-  font-weight: 500;
-}
-
-/* 模态框样式 */
-.info-group {
-  margin-bottom: 1rem;
-}
-
-.info-group label {
-  display: block;
-  font-weight: 600;
-  color: var(--v-theme-on-surface);
-  margin-bottom: 0.5rem;
-}
-
 .info-display {
-  background: var(--v-theme-surface-variant);
+  background: rgba(var(--v-border-color), 0.1);
   padding: 0.75rem;
   border-radius: 6px;
-  color: var(--v-theme-on-surface-variant);
   font-family: 'Courier New', monospace;
   word-break: break-all;
-  border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
-.form-group {
-  margin-bottom: 1rem;
-}
-
-.form-group label {
-  display: flex;
-  align-items: center;
-  font-weight: 600;
-  color: var(--v-theme-on-surface);
-  margin-bottom: 0.5rem;
-}
-
-/* 响应式设计 */
 @media (max-width: 768px) {
-  .channel-management {
-    padding: 0;
-  }
-
-  .header-content {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .section-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
-  }
-
-  .search-filter {
-    width: 100%;
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .search-input,
-  .filter-select {
-    width: 100%;
-  }
-
-  .channels-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .status-details {
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .card-actions {
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .action-group {
-    justify-content: center;
-  }
-}
-
-@media (max-width: 480px) {
-  .header-info {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
-
-  .panel-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
-  }
-
-  .panel-controls {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .channel-info {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.25rem;
-  }
-}
-
-/* 暗色主题优化 */
-.v-theme--dark .channel-card {
-  background: var(--v-theme-surface);
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-.v-theme--dark .info-display {
-  background: var(--v-theme-surface-variant);
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-.v-theme--dark .detail-value {
-  color: rgba(255, 255, 255, 0.7);
+  .page-container { padding: 1rem; }
+  .panel-header, .search-filter { flex-direction: column; align-items: stretch; }
+  .search-input, .filter-select { width: 100%; }
 }
 </style>
