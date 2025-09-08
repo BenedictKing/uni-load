@@ -108,7 +108,9 @@ export function useApi<T = any>(
       // 使用重试机制
       const result = await retryHelper.executeWithRetry(async () => {
         const response = await requestFn()
-        return response.data
+        // 如果响应是 { success: true, data: ... } 格式, 返回 data
+        // 否则, 认为响应本身就是数据
+        return response && typeof response === 'object' && 'data' in response ? response.data : response
       }, retryCount)
 
       data.value = result ?? null

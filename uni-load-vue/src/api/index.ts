@@ -68,7 +68,7 @@ class MaintenanceApi {
   static getTempGroupStats(): Promise<ApiResponse<any>> {
     return get('/api/temp-groups/stats')
   }
-  static cleanupTempGroups(request: TempGroupCleanupRequest): Promise<ApiResponse<any>> {
+  static cleanupTempGroups(request: TempGroupCleanupRequest = {}): Promise<ApiResponse<any>> {
     return post('/api/temp-groups/cleanup', request)
   }
   static cleanupOldTempGroups(request: TempGroupCleanupRequest): Promise<ApiResponse<any>> {
