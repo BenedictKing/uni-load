@@ -1,6 +1,6 @@
 
 diff --git a/internal/keypool/cron_checker.go b/internal/keypool/cron_checker.go
-index 62b11d4..7f27229 100644
+index 81786b1..59aabe0 100644
 --- a/internal/keypool/cron_checker.go
 +++ b/internal/keypool/cron_checker.go
 @@ -91,16 +91,26 @@ func (s *CronChecker) submitValidationJobs() {

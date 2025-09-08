@@ -1,5 +1,5 @@
 diff --git a/internal/models/types.go b/internal/models/types.go
-index e65b038..d9dd8d0 100644
+index 4035ade..0f383c8 100644
 --- a/internal/models/types.go
 +++ b/internal/models/types.go
 @@ -49,7 +49,7 @@ type HeaderRule struct {
@@ -7,7 +7,7 @@ index e65b038..d9dd8d0 100644
  // Group 对应 groups 表
  type Group struct {
 -	ID                 uint                 `gorm:"primaryKey;autoIncrement" json:"id"`
-+	ID                 uint                 `gorm:"primaryKey;autoIncrement;index:idx_groups_sort_id,priority:2" json:"id"`
++	ID                 uint                 `gorm:"primaryKey;autoIncrement;index;index:idx_groups_sort_id,priority:2" json:"id"`
  	EffectiveConfig    types.SystemSettings `gorm:"-" json:"effective_config,omitempty"`
  	Name               string               `gorm:"type:varchar(255);not null;unique" json:"name"`
  	Endpoint           string               `gorm:"-" json:"endpoint"`
@@ -20,13 +20,13 @@ index e65b038..d9dd8d0 100644
  	TestModel          string               `gorm:"type:varchar(255);not null" json:"test_model"`
  	ParamOverrides     datatypes.JSONMap    `gorm:"type:json" json:"param_overrides"`
  	Config             datatypes.JSONMap    `gorm:"type:json" json:"config"`
-@@ -78,8 +78,8 @@ type Group struct {
- type APIKey struct {
+@@ -79,8 +79,8 @@ type APIKey struct {
  	ID           uint       `gorm:"primaryKey;autoIncrement" json:"id"`
- 	KeyValue     string     `gorm:"type:varchar(700);not null;uniqueIndex:idx_group_key" json:"key_value"`
--	GroupID      uint       `gorm:"not null;uniqueIndex:idx_group_key" json:"group_id"`
+ 	KeyValue     string     `gorm:"type:text;not null" json:"key_value"`
+ 	KeyHash      string     `gorm:"type:varchar(128);index" json:"key_hash"`
+-	GroupID      uint       `gorm:"not null;index" json:"group_id"`
 -	Status       string     `gorm:"type:varchar(50);not null;default:'active'" json:"status"`
-+	GroupID      uint       `gorm:"not null;uniqueIndex:idx_group_key;index:idx_api_keys_group_status,priority:1" json:"group_id"`
++	GroupID      uint       `gorm:"not null;index:idx_api_keys_group_status,priority:1" json:"group_id"`
 +	Status       string     `gorm:"type:varchar(50);not null;default:'active';index:idx_api_keys_group_status,priority:2" json:"status"`
  	RequestCount int64      `gorm:"not null;default:0" json:"request_count"`
  	FailureCount int64      `gorm:"not null;default:0" json:"failure_count"`

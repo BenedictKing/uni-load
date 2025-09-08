@@ -149,15 +149,48 @@ done
 # 3. 启动 uni-load
 echo "🚀 启动 uni-load..."
 cd /uni-load
-node dist/server.js &
+
+# 检查是否存在构建后的服务器文件，按优先级选择启动方式
+if [ -f "dist/server.js" ]; then
+    echo "  - 使用构建后的服务器文件启动"
+    node dist/server.js &
+elif [ -f "backend-dist/server.js" ]; then
+    echo "  - 使用后端构建文件启动"
+    node backend-dist/server.js &
+elif [ -f "server.ts" ]; then
+    echo "  - 使用 TypeScript 文件启动"
+    # 检查是否安装了 bun
+    if command -v bun >/dev/null 2>&1; then
+        bun run server.ts &
+    # 否则使用 tsx 或 ts-node
+    elif command -v tsx >/dev/null 2>&1; then
+        tsx server.ts &
+    elif command -v ts-node >/dev/null 2>&1; then
+        ts-node server.ts &
+    else
+        echo "❌ 无法找到 TypeScript 运行时 (bun/tsx/ts-node)"
+        exit 1
+    fi
+else
+    echo "❌ 无法找到服务器启动文件"
+    echo "  - 检查路径: $(pwd)"
+    echo "  - 文件列表:"
+    ls -la
+    exit 1
+fi
+
 PID_UNI_LOAD=$!
 echo "uni-load PID: $PID_UNI_LOAD"
 
 echo "🎉 所有服务启动完成！"
 echo "📊 服务端口："
 echo "  - gpt-load:  http://localhost:3001"
-echo "  - uni-load:  http://localhost:3002"
-echo "  - uni-api:   http://localhost:3003"  
+echo "  - uni-load:  http://localhost:3002 (后端API + Vue前端)"
+echo "  - uni-api:   http://localhost:3003"
+echo ""
+echo "💡 提示："
+echo "  - Vue前端文件已构建并通过uni-load后端服务提供"
+echo "  - 前端资源路径: /uni-load/public"  
 
 # 读取 gpt-load 的密钥用于提示
 GPTLOAD_AUTH_KEY=$(grep '^AUTH_KEY=' /gpt-load/.env | cut -d'=' -f2)

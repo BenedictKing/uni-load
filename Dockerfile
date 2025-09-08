@@ -26,7 +26,6 @@ RUN git clone https://github.com/tbphp/gpt-load.git .
 RUN apt-get update && apt-get install -y patch && rm -rf /var/lib/apt/lists/*
 
 COPY patches/gpt-load-*.patch .
-RUN patch -p1 < gpt-load-group_handler.patch
 RUN patch -p1 < gpt-load-cron_checker.patch
 RUN patch -p1 < gpt-load-models-types.patch
 
@@ -57,17 +56,45 @@ RUN git clone https://github.com/yym68686/uni-api-core.git core
 COPY patches/uni-api-utils.patch uni-api-utils.patch
 RUN patch -p1 < uni-api-utils.patch
 
-# --- 阶段 3: 构建 uni-load (本项目) ---
-FROM oven/bun:latest AS uni-load-builder
+# --- 阶段 3: 构建 uni-load Vue 前端 ---
+FROM oven/bun:latest AS vue-frontend-builder
 
 WORKDIR /src
-COPY package.json ./
+
+# 复制Vue项目文件
+COPY uni-load-vue/package.json ./
+COPY uni-load-vue/.prettierrc ./
 
 # 使用官方npm仓库
 RUN echo '[install]\nregistry = "https://registry.npmjs.org/"' > ./bunfig.toml
 RUN bun install
+
+# 复制Vue源代码
+COPY uni-load-vue/ ./
+
+# 构建Vue项目（跳过类型检查）
+RUN bun run build:docker
+
+# --- 阶段 4: 构建 uni-load 后端 ---
+FROM oven/bun:latest AS uni-load-backend-builder
+
+WORKDIR /src
+
+# 复制后端项目文件（排除Vue项目）
+COPY package.json ./
+COPY bunfig.toml ./
+
+# 使用官方npm仓库
+RUN echo '[install]\nregistry = "https://registry.npmjs.org/"' > ./bunfig.toml
+RUN bun install
+
+# 复制后端源代码
 COPY . ./
-RUN bun run build
+# 排除Vue项目目录避免冲突
+RUN rm -rf uni-load-vue
+
+# 构建后端项目（如果有构建脚本）
+RUN if [ -f "package.json" ] && grep -q '"build"' package.json; then bun run build; fi
 
 # --- 最终阶段: 组合所有服务 ---
 FROM node:18-slim
@@ -93,12 +120,18 @@ COPY --from=gpt-load-builder /app/gpt-load /gpt-load/gpt-load
 COPY --from=gpt-load-builder /src/web/dist /gpt-load/web/dist
 COPY --from=gpt-load-builder /src/.env.example /gpt-load/.env.example
 
-COPY --from=uni-load-builder /src/dist /uni-load/dist
-COPY --from=uni-load-builder /src/public /uni-load/public
-COPY --from=uni-load-builder /src/.env.example /uni-load/.env.example
-COPY --from=uni-load-builder /src/package.json /uni-load/package.json
-COPY --from=uni-load-builder /src/node_modules /uni-load/node_modules
-COPY --from=uni-load-builder /src/start.sh /start.sh
+# 复制Vue前端构建结果
+COPY --from=vue-frontend-builder /src/dist /uni-load/public
+COPY --from=vue-frontend-builder /src/dist /uni-load/dist
+
+# 复制后端文件
+COPY --from=uni-load-backend-builder /src/dist /uni-load/backend-dist
+COPY --from=uni-load-backend-builder /src/.env.example /uni-load/.env.example
+COPY --from=uni-load-backend-builder /src/package.json /uni-load/package.json
+COPY --from=uni-load-backend-builder /src/node_modules /uni-load/node_modules
+COPY --from=uni-load-backend-builder /src/server.ts /uni-load/server.ts
+COPY --from=uni-load-backend-builder /src/src /uni-load/src
+COPY --from=uni-load-backend-builder /src/start.sh /start.sh
 
 # 按照uni-api的Dockerfile构建（使用项目自己的pyproject.toml）
 COPY --from=uni-api-builder /src/pyproject.toml /uni-api/

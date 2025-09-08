@@ -580,6 +580,26 @@ app.post('/api/temp-groups/cleanup-old', async (req, res) => {
   }
 })
 
+// SPA回退支持 - 对于所有非API路由，返回index.html
+// 这必须放在所有其他路由定义之后
+app.get('*', (req, res) => {
+  // 跳过API路径
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ error: 'API路径不存在' })
+  }
+  
+  // 对于其他路径，返回Vue应用的index.html
+  const publicPath = path.join(__dirname, __dirname.endsWith('dist') ? '../public' : 'public')
+  const indexPath = path.join(publicPath, 'index.html')
+  
+  // 检查index.html是否存在
+  if (require('fs').existsSync(indexPath)) {
+    res.sendFile(indexPath)
+  } else {
+    res.status(404).send('Vue应用文件不存在，请确保已正确构建前端项目')
+  }
+})
+
 // 优雅退出处理
 const gracefulShutdown = () => {
   console.log('\n🔄 正在优雅关闭服务器...')

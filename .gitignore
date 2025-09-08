@@ -12,3 +12,5 @@ dist/
 *.lock
 .aider*
 *.json
+
+!uni-load-vue/
