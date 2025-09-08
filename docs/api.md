@@ -309,13 +309,48 @@ GET /api/channels/site-groups
 }
 ```
 
-#### 4.2 手动渠道健康检查
+#### 4.2 重新分配渠道实例 (提级/降级)
+
+此接口提供了一种便捷的方式来更改渠道分组分配的实例，从而有效地将其**提级**到更高优先级的实例或**降级**到更低优先级的实例。
+
+```http
+POST /api/channels/reassign
+Content-Type: application/json
+
+{
+  "channelName": "deepseek-openai",
+  "action": "demote"
+}
+```
+
+**请求参数**:
+- `channelName` (必需): 要重新分配的渠道分组的名称。
+- `action` (必需): 要执行的操作。可选值：
+  - `demote`: 将渠道分配到**更高优先级**的实例 (例如，从优先级2的实例移至优先级1的实例)。
+  - `promote`: 将渠道分配到**更低优先级**的实例 (例如，从优先级1的实例移至优先级2的实例)。
+
+> ⚠️ **注意**: `action` 参数的行为与名称的直观含义相反。`demote` 会提升渠道的实际优先级，而 `promote` 会降低它。
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "渠道 deepseek-openai 已成功提级到实例 本地 gpt-load",
+  "data": {
+    "channelName": "deepseek-openai",
+    "previousInstanceName": "美国代理 gpt-load",
+    "newInstanceName": "本地 gpt-load"
+  }
+}
+```
+
+#### 4.3 手动渠道健康检查
 
 ```http
 POST /api/check-channels
 ```
 
-#### 4.3 渠道健康检查控制
+#### 4.4 渠道健康检查控制
 
 ```http
 POST /api/check-channels/control
@@ -326,7 +361,7 @@ Content-Type: application/json
 }
 ```
 
-#### 4.4 获取失败的渠道
+#### 4.5 获取失败的渠道
 
 ```http
 GET /api/failed-channels
@@ -346,7 +381,7 @@ GET /api/failed-channels
 }
 ```
 
-#### 4.5 重置渠道失败次数
+#### 4.6 重置渠道失败次数
 
 ```http
 POST /api/reset-channel-failures
@@ -357,7 +392,7 @@ Content-Type: application/json
 }
 ```
 
-#### 4.6 删除渠道
+#### 4.7 删除渠道
 
 彻底删除一个渠道及其所有相关配置。
 
