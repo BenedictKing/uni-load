@@ -2,22 +2,22 @@
   <div class="model-management">
     <div class="management-container">
       <!-- 页面头部 -->
-      <v-card class="page-header" rounded="0">
+      <v-card class="page-header" rounded="lg">
         <v-card-text class="header-content">
           <div class="header-info">
             <div class="d-flex align-center gap-3">
-              <v-icon size="32" color="white">mdi-robot</v-icon>
+              <v-icon size="32" color="primary">mdi-robot</v-icon>
               <div>
-                <h2 class="text-h4 font-weight-bold text-white mb-1">模型管理</h2>
-                <p class="text-body-2 text-white opacity-90">查看和管理AI模型列表</p>
+                <h2 class="text-h4 font-weight-bold mb-1 text-on-surface">模型管理</h2>
+                <p class="text-body-2 opacity-90 text-on-surface">查看和管理AI模型列表</p>
               </div>
             </div>
           </div>
           <div class="header-actions">
             <v-btn
               @click="refreshModels"
-              color="white"
-              variant="text"
+              color="primary"
+              variant="outlined"
               :loading="isLoading"
               class="action-btn"
             >
@@ -478,8 +478,17 @@ onMounted(() => {
 }
 
 .page-header {
-  background: linear-gradient(135deg, var(--v-theme-primary) 0%, var(--v-theme-secondary) 100%);
-  margin-bottom: 0;
+  padding: 2rem;
+  background: var(--v-theme-surface);
+  border-radius: 20px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* 确保头部文字为深色 */
+.page-header h2,
+.page-header p {
+  color: var(--v-theme-on-surface) !important;
 }
 
 .header-content {
@@ -495,6 +504,17 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 1rem;
+}
+
+.header-info h2 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.8rem;
+  font-weight: 600;
+}
+
+.header-info p {
+  margin: 0;
+  opacity: 0.9;
 }
 
 .header-actions {

@@ -1,16 +1,26 @@
 <template>
   <div class="site-config-page">
-    <!-- 配置表单卡片 -->
-    <v-card class="config-card enhanced-card">
-      <v-card-title class="card-header">
-        <div class="header-content">
-          <v-icon size="32" color="primary">mdi-cog</v-icon>
-          <div class="header-text">
-            <h3>AI站点配置</h3>
-            <p class="subtitle">配置新的AI站点，自动创建渠道和模型分组</p>
+    <div class="config-container">
+      <!-- 页面头部 -->
+      <v-card class="page-header" rounded="lg">
+        <v-card-text class="header-content">
+          <div class="header-info">
+            <div class="d-flex align-center gap-3">
+              <v-icon size="32" color="primary">mdi-cog</v-icon>
+              <div>
+                <h2 class="text-h4 font-weight-bold mb-1 text-on-surface">AI站点配置</h2>
+                <p class="text-body-2 opacity-90 text-on-surface">配置新的AI站点，自动创建渠道和模型分组</p>
+              </div>
+            </div>
           </div>
-        </div>
-      </v-card-title>
+          <div class="header-actions">
+            <!-- 可以在这里添加头部操作按钮 -->
+          </div>
+        </v-card-text>
+      </v-card>
+
+      <!-- 配置表单卡片 -->
+      <v-card class="config-card">
 
       <v-card-text>
         <v-form 
@@ -130,14 +140,14 @@
           </div>
 
           <!-- 提交按钮 -->
-          <div class="d-flex justify-center">
+          <div class="d-flex justify-center mt-6">
             <v-btn
               color="primary"
               size="large"
               :loading="isSubmitting"
               :disabled="isSubmitting || !validForm"
               @click="handleSubmit"
-              class="submit-btn enhanced-button"
+              class="submit-btn"
             >
               <v-icon class="mr-2">mdi-cog</v-icon>
               {{ isSubmitting ? '配置中...' : '开始配置' }}
@@ -243,6 +253,7 @@
         </div>
       </v-card-text>
     </v-card>
+    </div>
   </div>
 </template>
 
@@ -499,46 +510,19 @@ const handleSubmit = async () => {
 
 <style scoped>
 .site-config-page {
-  max-width: 1200px;
+  max-width: 800px;
   margin: 0 auto;
   padding: 2rem 1rem;
 }
 
 .config-card {
-  border-radius: 16px !important;
-  background: rgba(255, 255, 255, 0.95) !important;
-  backdrop-filter: blur(10px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
-}
-
-.card-header {
-  text-align: center;
-  padding: 1.5rem;
-}
-
-.header-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.header-text h3 {
-  font-size: 1.5rem;
-  font-weight: 600;
-  margin: 0;
-}
-
-.header-text .subtitle {
-  color: #666;
-  font-size: 0.9rem;
-  margin: 0;
+  border-radius: 16px;
 }
 
 .help-text {
   font-size: 0.875rem;
-  color: #6c757d;
+  color: #666;
+  margin-bottom: 1rem;
 }
 
 .channel-types-group {
@@ -547,32 +531,21 @@ const handleSubmit = async () => {
   gap: 0.5rem;
 }
 
-.channel-type-chip {
-  border-radius: 20px !important;
-}
-
-.site-name-chip {
-  border-radius: 16px !important;
-}
-
 .validation-endpoints {
-  background: rgba(0, 0, 0, 0.02);
+  background: #f5f5f5;
   border-radius: 8px;
   padding: 1rem;
+  margin-bottom: 1rem;
 }
 
 .result-card {
-  border-radius: 16px !important;
-  background: rgba(255, 255, 255, 0.95) !important;
-  backdrop-filter: blur(10px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
+  border-radius: 16px;
 }
 
 .result-header {
   display: flex;
   align-items: center;
-  font-size: 1.2rem;
+  font-size: 1.25rem;
   font-weight: 600;
 }
 
@@ -581,9 +554,10 @@ const handleSubmit = async () => {
 }
 
 .models-section {
-  background: rgba(0, 0, 0, 0.02);
+  background: #f5f5f5;
   border-radius: 8px;
   padding: 1rem;
+  margin-top: 1rem;
 }
 
 .models-chips {
@@ -594,21 +568,13 @@ const handleSubmit = async () => {
 
 .submit-btn {
   min-width: 200px;
-  border-radius: 12px !important;
+  border-radius: 8px;
 }
 
 /* 响应式设计 */
 @media (max-width: 768px) {
   .site-config-page {
     padding: 1rem;
-  }
-  
-  .card-header {
-    padding: 1rem;
-  }
-  
-  .header-content {
-    align-items: flex-start;
   }
   
   .channel-types-group {
@@ -621,37 +587,83 @@ const handleSubmit = async () => {
 }
 
 @media (max-width: 480px) {
-  .header-text h3 {
-    font-size: 1.2rem;
-  }
-  
-  .header-text .subtitle {
-    font-size: 0.8rem;
-  }
-  
-  .site-name-chip {
+  .help-text {
     font-size: 0.75rem;
   }
 }
 
 /* 暗色主题支持 */
-.v-theme--dark .config-card,
-.v-theme--dark .result-card {
-  background: rgba(0, 0, 0, 0.7) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
-}
-
 .v-theme--dark .validation-endpoints,
 .v-theme--dark .models-section {
-  background: rgba(255, 255, 255, 0.05) !important;
+  background: #1e1e1e;
 }
 
-.v-theme--dark .header-text .subtitle {
-  color: rgba(255, 255, 255, 0.7) !important;
+/* 页面头部样式 */
+.site-config-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0;
+}
+
+.config-container {
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.page-header {
+  padding: 2rem;
+  background: var(--v-theme-surface);
+  border-radius: 20px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* 确保头部文字为深色 */
+.page-header h2,
+.page-header p {
+  color: var(--v-theme-on-surface) !important;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 0;
+}
+
+.header-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.header-info h2 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.8rem;
+  font-weight: 600;
+}
+
+.header-info p {
+  margin: 0;
+  opacity: 0.9;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.action-btn {
+  text-transform: none;
+  letter-spacing: 0.5px;
+  font-weight: 500;
 }
 
 .v-theme--dark .help-text {
-  color: rgba(255, 255, 255, 0.6) !important;
+  color: rgba(255, 255, 255, 0.7);
 }
 </style>
