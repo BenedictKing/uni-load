@@ -255,14 +255,12 @@ body {
   border-radius: var(--radius-xl) !important;
 }
 
-.v-overlay {
-}
-
 /* Naive UI specific enhancements */
 .n-button {
   border-radius: var(--radius-md) !important;
   font-weight: 500 !important;
   transition: var(--transition-transform) !important;
+}
 
 .n-button:hover {
   transform: translateY(-1px) !important;

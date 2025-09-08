@@ -2,22 +2,22 @@
   <div class="service-status">
     <div class="status-container">
       <!-- 页面头部 -->
-      <v-card class="page-header" rounded="0">
+      <v-card class="page-header" rounded="lg">
         <v-card-text class="header-content">
           <div class="header-info">
             <div class="d-flex align-center gap-3">
-              <v-icon size="32" color="white">mdi-chart-line</v-icon>
+              <v-icon size="32" color="primary">mdi-chart-line</v-icon>
               <div>
-                <h2 class="text-h4 font-weight-bold text-white mb-1">服务状态</h2>
-                <p class="text-body-2 text-white opacity-90">监控系统服务运行状态，执行维护操作</p>
+                <h2 class="text-h4 font-weight-bold mb-1 text-on-surface">服务状态</h2>
+                <p class="text-body-2 opacity-90 text-on-surface">监控系统服务运行状态，执行维护操作</p>
               </div>
             </div>
           </div>
           <div class="header-actions">
             <v-btn
               @click="refreshAllStatus"
-              color="white"
-              variant="text"
+              color="primary"
+              variant="outlined"
               :loading="isRefreshing"
               class="action-btn"
             >
@@ -26,8 +26,8 @@
             </v-btn>
             <v-btn
               @click="showSystemInfo"
-              color="white"
-              variant="text"
+              color="primary"
+              variant="outlined"
               class="action-btn"
             >
               <v-icon class="mr-2">mdi-laptop</v-icon>
@@ -53,8 +53,8 @@
               <v-card-text class="d-flex align-center gap-3">
                 <v-icon size="32">{{ overallStatus.icon }}</v-icon>
                 <div>
-                  <h4 class="text-subtitle-1 font-weight-medium mb-1">整体状态</h4>
-                  <p class="text-body-2 mb-0">{{ overallStatus.text }}</p>
+                  <h4 class="text-subtitle-1 font-weight-medium mb-1 text-on-surface">整体状态</h4>
+                  <p class="text-body-2 mb-0 text-on-surface">{{ overallStatus.text }}</p>
                 </div>
               </v-card-text>
             </v-card>
@@ -63,8 +63,8 @@
               <v-card-text class="d-flex align-center gap-3">
                 <v-icon size="32">mdi-clock-outline</v-icon>
                 <div>
-                  <h4 class="text-subtitle-1 font-weight-medium mb-1">系统运行时间</h4>
-                  <p class="text-body-2 mb-0">{{ systemUptime }}</p>
+                  <h4 class="text-subtitle-1 font-weight-medium mb-1 text-on-surface">系统运行时间</h4>
+                  <p class="text-body-2 mb-0 text-on-surface">{{ systemUptime }}</p>
                 </div>
               </v-card-text>
             </v-card>
@@ -77,8 +77,8 @@
               <v-card-text class="d-flex align-center gap-3">
                 <v-icon size="32">mdi-link</v-icon>
                 <div>
-                  <h4 class="text-subtitle-1 font-weight-medium mb-1">连接状态</h4>
-                  <p class="text-body-2 mb-0">{{ connectionStatus }}</p>
+                  <h4 class="text-subtitle-1 font-weight-medium mb-1 text-on-surface">连接状态</h4>
+                  <p class="text-body-2 mb-0 text-on-surface">{{ connectionStatus }}</p>
                 </div>
               </v-card-text>
             </v-card>
@@ -388,7 +388,7 @@
                 <v-card-text class="d-flex align-center gap-3">
                   <v-icon size="32" color="primary">mdi-memory</v-icon>
                   <div class="metric-content">
-                    <h4 class="text-subtitle-1 font-weight-medium mb-1">内存使用</h4>
+                    <h4 class="text-subtitle-1 font-weight-medium mb-1 text-on-surface">内存使用</h4>
                     <div class="metric-value">
                       {{ formatMemory(systemMetrics.memory?.used) }} / 
                       {{ formatMemory(systemMetrics.memory?.total) }}
@@ -408,7 +408,7 @@
                 <v-card-text class="d-flex align-center gap-3">
                   <v-icon size="32" color="primary">mdi-cpu-64-bit</v-icon>
                   <div class="metric-content">
-                    <h4 class="text-subtitle-1 font-weight-medium mb-1">CPU 使用率</h4>
+                    <h4 class="text-subtitle-1 font-weight-medium mb-1 text-on-surface">CPU 使用率</h4>
                     <div class="metric-value">{{ systemMetrics.cpu?.usage?.toFixed(1) }}%</div>
                     <v-progress-linear
                       :model-value="systemMetrics.cpu?.usage"
@@ -425,7 +425,7 @@
                 <v-card-text class="d-flex align-center gap-3">
                   <v-icon size="32" color="primary">mdi-harddisk</v-icon>
                   <div class="metric-content">
-                    <h4 class="text-subtitle-1 font-weight-medium mb-1">磁盘使用</h4>
+                    <h4 class="text-subtitle-1 font-weight-medium mb-1 text-on-surface">磁盘使用</h4>
                     <div class="metric-value">
                       {{ formatMemory(systemMetrics.disk?.used) }} / 
                       {{ formatMemory(systemMetrics.disk?.total) }}
@@ -445,7 +445,7 @@
                 <v-card-text class="d-flex align-center gap-3">
                   <v-icon size="32" color="primary">mdi-nodejs</v-icon>
                   <div class="metric-content">
-                    <h4 class="text-subtitle-1 font-weight-medium mb-1">Node.js 版本</h4>
+                    <h4 class="text-subtitle-1 font-weight-medium mb-1 text-on-surface">Node.js 版本</h4>
                     <div class="metric-value">{{ systemMetrics.nodeVersion }}</div>
                   </div>
                 </v-card-text>
@@ -610,12 +610,12 @@ const { execute: loadServiceStatus } = useApi(
 )
 
 const { execute: loadSystemInfo } = useApi(
-  () => Api.System.getSystemMetrics(),
+  () => Api.Service.getArchitectureStats(),
   { immediate: false }
 )
 
 const { execute: loadSystemMetrics } = useApi(
-  () => Api.System.getSystemMetrics(),
+  () => Api.Service.getArchitectureStats(),
   { immediate: false }
 )
 
@@ -1030,10 +1030,16 @@ onBeforeUnmount(() => {
 /* 页面头部样式 */
 .page-header {
   padding: 2rem;
-  background: linear-gradient(135deg, var(--v-theme-primary) 0%, var(--v-theme-secondary) 100%);
+  background: var(--v-theme-surface);
   border-radius: 20px;
-  color: white;
-  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* 确保头部文字为深色 */
+.page-header h2,
+.page-header p {
+  color: var(--v-theme-on-surface) !important;
 }
 
 .header-content {

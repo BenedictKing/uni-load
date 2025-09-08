@@ -1,11 +1,11 @@
 <template>
   <v-layout class="layout">
     <!-- 头部导航 -->
-    <v-app-bar app color="primary" :elevation="4" class="header">
+    <v-app-bar app color="primary" :elevation="2">
       <v-container class="header-content">
         <div class="header-left">
           <div class="logo">
-            <v-icon size="32" color="white">mdi-rocket-launch</v-icon>
+            <v-icon size="28" color="white">mdi-rocket-launch</v-icon>
             <span class="logo-text">uni-load</span>
           </div>
           <div class="subtitle">AI站点自动配置工具</div>
@@ -14,9 +14,9 @@
         <div class="header-right">
           <!-- 导航菜单 -->
           <v-tabs v-model="activeTab" bg-color="transparent" color="white" class="nav-tabs">
-            <v-tab v-for="route in routes" :key="route.path" :value="route.path" :to="route.path" class="nav-tab">
-              <v-icon size="18" class="nav-icon">{{ route.icon }}</v-icon>
-              <span class="nav-text">{{ route.name }}</span>
+            <v-tab v-for="route in routes" :key="route.path" :value="route.path" :to="route.path">
+              <v-icon size="18" class="mr-1">{{ route.icon }}</v-icon>
+              {{ route.name }}
             </v-tab>
           </v-tabs>
 
@@ -27,7 +27,6 @@
               icon
               variant="text"
               color="white"
-              size="small"
               @click="toggleTheme"
               :title="isDark ? '切换到亮色主题' : '切换到暗色主题'">
               <v-icon>{{ isDark ? 'mdi-weather-sunny' : 'mdi-weather-night' }}</v-icon>
@@ -37,7 +36,7 @@
             <div class="status-indicator">
               <v-tooltip :text="systemStatusText" location="bottom">
                 <template v-slot:activator="{ props }">
-                  <v-icon v-bind="props" size="16" :color="statusColor" class="status-icon"> mdi-circle </v-icon>
+                  <v-icon v-bind="props" size="14" :color="statusColor"> mdi-circle </v-icon>
                 </template>
               </v-tooltip>
             </div>
@@ -47,34 +46,35 @@
     </v-app-bar>
 
     <!-- 主要内容区域 -->
-    <v-main class="main-content">
-      <v-container class="main-container">
+    <v-main>
+      <v-container>
         <slot />
       </v-container>
     </v-main>
 
     <!-- 页脚 -->
-    <v-footer app color="surface" class="footer" elevation="2">
-      <div class="footer-content">
-        <div class="footer-info">
-          <span class="footer-text">© 2024 uni-load. 连接 uni-api 与 gpt-load</span>
-        </div>
+    <v-footer app color="surface" class="footer">
+      <v-container>
+        <div class="footer-content">
+          <div class="footer-info">
+            <span class="footer-text">© 2024 uni-load. 连接 uni-api 与 gpt-load</span>
+          </div>
 
-        <div class="footer-links">
-          <v-btn
-            v-for="link in footerLinks"
-            :key="link.text"
-            variant="text"
-            size="small"
-            color="on-surface"
-            :href="link.url"
-            target="_blank"
-            class="footer-link">
-            <v-icon size="14" class="link-icon">{{ link.icon }}</v-icon>
-            {{ link.text }}
-          </v-btn>
+          <div class="footer-links">
+            <v-btn
+              v-for="link in footerLinks"
+              :key="link.text"
+              variant="text"
+              size="small"
+              :href="link.url"
+              target="_blank"
+              class="footer-link">
+              <v-icon size="14" class="mr-1">{{ link.icon }}</v-icon>
+              {{ link.text }}
+            </v-btn>
+          </div>
         </div>
-      </div>
+      </v-container>
     </v-footer>
   </v-layout>
 </template>
@@ -116,19 +116,19 @@ const routes = [
 // 页脚链接
 const footerLinks = [
   {
-    text: '文档',
+    text: 'Github主页',
     icon: 'mdi-book-open-variant',
-    url: 'https://github.com',
+    url: 'https://github.com/BenedictKing/uni-load',
   },
   {
-    text: '支持',
+    text: '论坛交流',
     icon: 'mdi-forum',
-    url: 'https://github.com',
+    url: 'https://linux.do/t/topic/918825',
   },
   {
-    text: '反馈',
+    text: '问题反馈',
     icon: 'mdi-bug',
-    url: 'https://github.com',
+    url: 'https://github.com/BenedictKing/uni-load/issues',
   },
 ]
 
@@ -218,13 +218,6 @@ onMounted(() => {
   min-height: 100vh;
 }
 
-/* 头部样式 */
-.header {
-  background: linear-gradient(135deg, rgb(var(--v-theme-primary)) 0%, rgb(var(--v-theme-secondary)) 100%) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-  backdrop-filter: blur(10px) !important;
-}
-
 .header-content {
   display: flex;
   justify-content: space-between;
@@ -245,19 +238,15 @@ onMounted(() => {
 }
 
 .logo-text {
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   font-weight: 600;
-  background: linear-gradient(135deg, #ffffff 0%, #e0e7ff 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  color: white;
 }
 
 .subtitle {
   font-size: 0.875rem;
   opacity: 0.9;
-  font-weight: 400;
+  color: white;
 }
 
 .header-right {
@@ -266,45 +255,10 @@ onMounted(() => {
   gap: 16px;
 }
 
-/* 导航样式 */
 .nav-tabs {
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(5px);
-  padding: 4px;
-}
-
-.nav-tab {
-  text-transform: none;
-  letter-spacing: 0.5px;
-  font-weight: 500;
-  min-width: unset;
-  padding: 8px 16px;
   border-radius: 8px;
-  transition: all 0.3s ease;
-  color: rgba(255, 255, 255, 0.8) !important;
 }
 
-.nav-tab:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #ffffff !important;
-}
-
-.nav-tab.v-tab--selected {
-  background: rgba(255, 255, 255, 0.2);
-  color: #ffffff !important;
-  font-weight: 600;
-}
-
-.nav-icon {
-  margin-right: 4px;
-}
-
-.nav-text {
-  font-size: 0.875rem;
-}
-
-/* 头部操作 */
 .header-actions {
   display: flex;
   align-items: center;
@@ -315,79 +269,31 @@ onMounted(() => {
   position: relative;
 }
 
-.status-icon {
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.6;
-    transform: scale(0.8);
-  }
-}
-
-/* 主要内容区域 */
-.main-content {
-  background: transparent;
-}
-
-.main-container {
-  padding: 24px 16px;
-}
-
-/* 页脚样式 */
 .footer {
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .footer-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 16px;
-  max-width: 100%;
-  width: 100%;
-  margin: 0 auto;
-}
-
-.footer-info {
-  flex: 0 1 auto;
-  min-width: unset;
-  margin-right: 16px;
+  padding: 16px 0;
 }
 
 .footer-text {
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 0.8rem;
-  white-space: nowrap;
+  color: rgba(0, 0, 0, 0.6);
+  font-size: 0.875rem;
 }
 
 .footer-links {
   display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  flex: 0 1 auto;
-  max-width: 200px;
-  justify-content: flex-end;
+  gap: 8px;
 }
 
 .footer-link {
   text-transform: none;
-  letter-spacing: 0.5px;
-  font-weight: 500;
-  font-size: 0.8rem;
+  font-size: 0.875rem;
   padding: 4px 8px;
-  min-width: unset;
-}
-
-.link-icon {
-  margin-right: 4px;
 }
 
 /* 响应式设计 */
@@ -412,20 +318,11 @@ onMounted(() => {
     display: none;
   }
 
-  .main-container {
-    padding: 16px 8px;
-  }
-
   .footer-content {
     flex-direction: column;
     text-align: center;
-    gap: 6px;
-    padding: 8px 12px;
-  }
-
-  .footer-info {
-    margin-right: 0;
-    margin-bottom: 2px;
+    gap: 8px;
+    padding: 12px 0;
   }
 
   .footer-text {
@@ -438,19 +335,17 @@ onMounted(() => {
     justify-content: center;
     flex-wrap: wrap;
     gap: 4px;
-    max-width: 180px;
-    margin: 0 auto;
   }
 
   .footer-link {
-    font-size: 0.7rem;
-    padding: 1px 4px;
+    font-size: 0.75rem;
+    padding: 2px 6px;
   }
 }
 
 @media (max-width: 480px) {
   .logo-text {
-    font-size: 1.2rem;
+    font-size: 1.125rem;
   }
 
   .subtitle {
@@ -461,34 +356,23 @@ onMounted(() => {
     gap: 4px;
   }
 
-  .nav-tab {
-    padding: 0 8px;
-  }
-
   .footer-content {
     gap: 4px;
-    padding: 6px 8px;
   }
 
   .footer-links {
     gap: 3px;
-    max-width: 160px;
   }
 
   .footer-link {
-    font-size: 0.65rem;
-    padding: 1px 3px;
-  }
-
-  .link-icon {
-    margin-right: 1px;
-    font-size: 12px;
+    font-size: 0.625rem;
+    padding: 1px 4px;
   }
 }
 
 /* 暗色主题优化 */
 .v-theme--dark .footer {
-  background: rgba(0, 0, 0, 0.3) !important;
+  background: rgba(0, 0, 0, 0.2) !important;
   border-top-color: rgba(255, 255, 255, 0.1);
 }
 

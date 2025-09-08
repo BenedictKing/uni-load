@@ -115,6 +115,27 @@ app.get('/api/status', async (req, res) => {
   }
 })
 
+// 兼容性API：获取服务状态（前端调用路径）
+app.get('/api/service/status', async (req, res) => {
+  try {
+    const gptloadStatus = await gptloadService.getStatus()
+    const uniApiStatus = await yamlManager.getStatus()
+    const modelSyncStatus = modelSyncService.getStatus()
+    const channelHealthStatus = channelHealthMonitor.getStatus()
+    const channelCleanupStatus = channelCleanupService.getStatus()
+
+    res.json({
+      gptload: gptloadStatus,
+      uniApi: uniApiStatus,
+      modelSync: modelSyncStatus,
+      channelHealth: channelHealthStatus,
+      channelCleanup: channelCleanupStatus,
+    })
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
 // 手动触发模型同步
 app.post('/api/sync-models', async (req, res) => {
   try {
