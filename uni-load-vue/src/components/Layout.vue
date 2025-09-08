@@ -1,7 +1,7 @@
 <template>
   <v-layout class="layout">
     <!-- 头部导航 -->
-    <v-app-bar app color="primary" prominent :elevation="4" class="header">
+    <v-app-bar app color="primary" :elevation="4" class="header">
       <v-container class="header-content">
         <div class="header-left">
           <div class="logo">
