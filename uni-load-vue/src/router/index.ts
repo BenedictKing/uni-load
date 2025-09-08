@@ -9,38 +9,30 @@ const routes = [
     name: 'SiteConfig',
     component: SiteConfig,
     meta: {
-      title: '站点配置'
-    }
+      title: '站点配置',
+    },
   },
   {
     path: '/channels',
-    name: 'ChannelManagement', 
+    name: 'ChannelManagement',
     component: ChannelManagement,
     meta: {
-      title: '渠道管理'
-    }
+      title: '渠道管理',
+    },
   },
   {
     path: '/services',
     name: 'ServiceStatus',
     component: ServiceStatus,
     meta: {
-      title: '服务状态'
-    }
-  },
-  {
-    path: '/models',
-    name: 'ModelManagement',
-    component: () => import('@/views/ModelManagement.vue'),
-    meta: {
-      title: '模型管理'
-    }
+      title: '服务状态',
+    },
   },
   // 重定向到首页
   {
     path: '/:pathMatch(.*)*',
-    redirect: '/'
-  }
+    redirect: '/',
+  },
 ]
 
 const router = createRouter({
@@ -52,7 +44,7 @@ const router = createRouter({
     } else {
       return { top: 0 }
     }
-  }
+  },
 })
 
 // 路由守卫 - 设置页面标题
@@ -62,7 +54,7 @@ router.beforeEach((to, from, next) => {
   } else {
     document.title = 'uni-load - AI站点配置器'
   }
-  
+
   next()
 })
 

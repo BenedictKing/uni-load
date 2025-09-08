@@ -361,19 +361,21 @@ const siteNameTooltip = computed(() => {
 
 // API 调用
 const { execute: generateSiteName } = useApi(
-  () => Api.Site.generateSiteName(form.baseUrl),
+  () => Api.Site.previewName(form.baseUrl),
   { immediate: false }
 )
 
 const { execute: submitConfig } = useApi(
-  () => Api.Site.upsertSiteConfig({
-    siteName: siteName.value,
-    baseUrl: form.baseUrl,
-    apiKeys: parseApiKeys(form.apiKeys),
-    channelTypes: form.channelTypes,
-    customValidationEndpoints: form.customValidationEndpoints,
-    models: parseManualModels(form.manualModels) || undefined
-  }),
+  () =>
+    Api.Site.process({
+      siteName: siteName.value,
+      baseUrl: form.baseUrl,
+      channelTypes: form.channelTypes,
+      operationType: 'create',
+      apiKeys: parseApiKeys(form.apiKeys),
+      models: parseManualModels(form.manualModels),
+      customValidationEndpoints: form.customValidationEndpoints,
+    }),
   { immediate: false }
 )
 
@@ -396,7 +398,7 @@ const updateSiteName = async () => {
     const response = await generateSiteName()
     
     if (response) {
-      siteName.value = response
+      siteName.value = response.siteName
       siteNameStatus.value = 'success'
     } else {
       throw new Error('生成失败')

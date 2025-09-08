@@ -65,26 +65,26 @@ app.post(
   async (req: Request<{}, any, ProcessAiSiteRequest>, res: Response<ApiResponse | ApiErrorResponse>) => {
     try {
       // 将所有业务逻辑委托给站点配置服务处理
-      const result = await siteConfigurationService.processSiteConfiguration(req.body);
+      const result = await siteConfigurationService.processSiteConfiguration(req.body)
 
       // 根据服务返回的结果，向前端发送响应
       if (result.success) {
-        res.json(result);
+        res.json(result)
       } else {
         // 如果处理失败，返回 400 错误
         res.status(400).json({
           success: false,
           error: result.message,
-          details: result.data
-        });
+          details: result.data,
+        })
       }
     } catch (error) {
-      console.error('处理AI站点时发生意外错误:', error);
+      console.error('处理AI站点时发生意外错误:', error)
       res.status(500).json({
         success: false,
         error: '服务器内部错误',
         details: error.message,
-      });
+      })
     }
   }
 )
@@ -96,27 +96,6 @@ app.get('/api/health', (req, res) => {
 
 // 获取当前配置状态
 app.get('/api/status', async (req, res) => {
-  try {
-    const gptloadStatus = await gptloadService.getStatus()
-    const uniApiStatus = await yamlManager.getStatus()
-    const modelSyncStatus = modelSyncService.getStatus()
-    const channelHealthStatus = channelHealthMonitor.getStatus()
-    const channelCleanupStatus = channelCleanupService.getStatus()
-
-    res.json({
-      gptload: gptloadStatus,
-      uniApi: uniApiStatus,
-      modelSync: modelSyncStatus,
-      channelHealth: channelHealthStatus,
-      channelCleanup: channelCleanupStatus,
-    })
-  } catch (error) {
-    res.status(500).json({ error: error.message })
-  }
-})
-
-// 兼容性API：获取服务状态（前端调用路径）
-app.get('/api/service/status', async (req, res) => {
   try {
     const gptloadStatus = await gptloadService.getStatus()
     const uniApiStatus = await yamlManager.getStatus()
@@ -462,7 +441,9 @@ app.get('/api/architecture-stats', async (req, res) => {
 
 // 维护脚本：删除所有二三层分组 (sort=40/sort=30) 并清理uni-api配置
 app.post('/api/maintenance/delete-model-groups', async (req, res) => {
-  console.log(`🚨 开始执行维护任务：删除所有二三层分组 (sort=${layerConfigs.aggregateGroup.sort}/sort=${layerConfigs.modelChannelGroup.sort})`)
+  console.log(
+    `🚨 开始执行维护任务：删除所有二三层分组 (sort=${layerConfigs.aggregateGroup.sort}/sort=${layerConfigs.modelChannelGroup.sort})`
+  )
 
   try {
     const results = await modelSyncService.cleanupAndResetModels()
@@ -608,11 +589,11 @@ app.get('*', (req, res) => {
   if (req.path.startsWith('/api/')) {
     return res.status(404).json({ error: 'API路径不存在' })
   }
-  
+
   // 对于其他路径，返回Vue应用的index.html
   const publicPath = path.join(__dirname, __dirname.endsWith('dist') ? '../public' : 'public')
   const indexPath = path.join(publicPath, 'index.html')
-  
+
   // 检查index.html是否存在
   if (require('fs').existsSync(indexPath)) {
     res.sendFile(indexPath)

@@ -14,22 +14,11 @@
             </div>
           </div>
           <div class="header-actions">
-            <v-btn
-              @click="refreshData"
-              color="primary"
-              variant="outlined"
-              :loading="isLoading"
-              class="action-btn"
-            >
+            <v-btn @click="refreshData" color="primary" variant="outlined" :loading="isLoading" class="action-btn">
               <v-icon class="mr-2">mdi-refresh</v-icon>
               刷新
             </v-btn>
-            <v-btn
-              @click="showHealthCheck = !showHealthCheck"
-              color="primary"
-              variant="outlined"
-              class="action-btn"
-            >
+            <v-btn @click="showHealthCheck = !showHealthCheck" color="primary" variant="outlined" class="action-btn">
               <v-icon class="mr-2">mdi-heart-pulse</v-icon>
               健康检查
             </v-btn>
@@ -50,16 +39,10 @@
                 @click="toggleHealthMonitor"
                 :color="healthStatus?.hasInterval ? 'error' : 'primary'"
                 :variant="healthStatus?.hasInterval ? 'flat' : 'outlined'"
-                size="small"
-              >
+                size="small">
                 {{ healthStatus?.hasInterval ? '停止监控' : '启动监控' }}
               </v-btn>
-              <v-btn
-                @click="showFailedChannels"
-                color="warning"
-                variant="outlined"
-                size="small"
-              >
+              <v-btn @click="showFailedChannels" color="warning" variant="outlined" size="small">
                 <v-icon class="mr-1">mdi-alert</v-icon>
                 失败渠道
               </v-btn>
@@ -69,10 +52,16 @@
             <v-alert
               v-if="healthStatus"
               :type="healthStatus.isRunning ? 'info' : healthStatus.hasInterval ? 'success' : 'error'"
-              variant="tonal"
-            >
+              variant="tonal">
               <template v-slot:prepend>
-                <v-icon :icon="healthStatus.isRunning ? 'mdi-sync' : healthStatus.hasInterval ? 'mdi-check-circle' : 'mdi-close-circle'"></v-icon>
+                <v-icon
+                  :icon="
+                    healthStatus.isRunning
+                      ? 'mdi-sync'
+                      : healthStatus.hasInterval
+                        ? 'mdi-check-circle'
+                        : 'mdi-close-circle'
+                  "></v-icon>
               </template>
               <template v-slot:text>
                 <div class="status-info">
@@ -128,8 +117,7 @@
                 variant="outlined"
                 density="compact"
                 hide-details
-                class="search-input"
-              >
+                class="search-input">
                 <template v-slot:prepend-inner>
                   <v-icon size="18">mdi-magnify</v-icon>
                 </template>
@@ -140,13 +128,12 @@
                   { title: '所有类型', value: '' },
                   { title: 'OpenAI', value: 'openai' },
                   { title: 'Anthropic', value: 'anthropic' },
-                  { title: 'Gemini', value: 'gemini' }
+                  { title: 'Gemini', value: 'gemini' },
                 ]"
                 variant="outlined"
                 density="compact"
                 hide-details
-                class="filter-select"
-              />
+                class="filter-select" />
             </div>
           </div>
 
@@ -164,30 +151,19 @@
                 :key="channel.name"
                 class="channel-card"
                 :class="getChannelTypeClass(channel)"
-                elevation="2"
-              >
+                elevation="2">
                 <v-card-text>
                   <div class="card-header">
                     <div class="channel-info">
                       <h4 class="channel-name">{{ channel.name }}</h4>
-                      <v-chip
-                        :color="getChannelTypeColor(channel)"
-                        size="small"
-                        class="channel-type-badge"
-                      >
+                      <v-chip :color="getChannelTypeColor(channel)" size="small" class="channel-type-badge">
                         {{ getChannelTypeLabel(channel) }}
                       </v-chip>
                     </div>
                     <div class="channel-status">
                       <v-tooltip :text="getChannelHealthText(channel)" location="top">
                         <template v-slot:activator="{ props }">
-                          <v-icon
-                            v-bind="props"
-                            :color="getChannelHealthColor(channel)"
-                            size="20"
-                          >
-                            mdi-circle
-                          </v-icon>
+                          <v-icon v-bind="props" :color="getChannelHealthColor(channel)" size="20"> mdi-circle </v-icon>
                         </template>
                       </v-tooltip>
                     </div>
@@ -227,8 +203,7 @@
                         color="info"
                         variant="outlined"
                         size="small"
-                        class="promote-btn"
-                      >
+                        class="promote-btn">
                         <v-icon size="16" class="mr-1">mdi-arrow-up</v-icon>
                         提级
                       </v-btn>
@@ -237,8 +212,7 @@
                         color="warning"
                         variant="outlined"
                         size="small"
-                        class="demote-btn"
-                      >
+                        class="demote-btn">
                         <v-icon size="16" class="mr-1">mdi-arrow-down</v-icon>
                         降级
                       </v-btn>
@@ -249,8 +223,7 @@
                         color="success"
                         variant="outlined"
                         size="small"
-                        class="update-btn"
-                      >
+                        class="update-btn">
                         <v-icon size="16" class="mr-1">mdi-refresh</v-icon>
                         更新
                       </v-btn>
@@ -259,8 +232,7 @@
                         color="error"
                         variant="outlined"
                         size="small"
-                        class="delete-btn"
-                      >
+                        class="delete-btn">
                         <v-icon size="16" class="mr-1">mdi-delete</v-icon>
                         删除
                       </v-btn>
@@ -275,22 +247,13 @@
     </div>
 
     <!-- 更新渠道模态框 -->
-    <v-dialog
-      v-model="showUpdateModalVisible"
-      max-width="500"
-      persistent
-    >
+    <v-dialog v-model="showUpdateModalVisible" max-width="500" persistent>
       <v-card>
         <v-card-title class="d-flex align-center">
           <v-icon size="24" class="mr-2">mdi-refresh</v-icon>
           更新渠道配置
           <v-spacer></v-spacer>
-          <v-btn
-            icon
-            variant="text"
-            size="small"
-            @click="closeUpdateModal"
-          >
+          <v-btn icon variant="text" size="small" @click="closeUpdateModal">
             <v-icon>mdi-close</v-icon>
           </v-btn>
         </v-card-title>
@@ -300,12 +263,12 @@
             <label class="text-body-2 font-weight-medium mb-2 d-block">渠道名称</label>
             <div class="info-display">{{ selectedChannel?.name }}</div>
           </div>
-          
+
           <div class="info-group mb-4">
             <label class="text-body-2 font-weight-medium mb-2 d-block">原始地址</label>
             <div class="info-display">{{ selectedChannel?.upstreams?.[0]?.url }}</div>
           </div>
-          
+
           <div class="form-group mb-4">
             <label class="text-body-2 font-weight-medium mb-2 d-block">
               <v-icon size="16" class="mr-1">mdi-key</v-icon>
@@ -318,19 +281,12 @@
               rows="4"
               placeholder="留空则保持现有密钥不变&#10;如需添加新密钥，请输入:&#10;sk-xxx...&#10;sk-yyy..."
               hint="留空则保持现有API密钥不变，填写则会添加新的密钥到现有密钥中"
-              persistent-hint
-            />
+              persistent-hint />
           </div>
         </v-card-text>
 
         <v-card-actions>
-          <v-btn
-            @click="submitUpdate"
-            color="primary"
-            variant="flat"
-            :loading="isUpdating"
-            block
-          >
+          <v-btn @click="submitUpdate" color="primary" variant="flat" :loading="isUpdating" block>
             <v-icon class="mr-2">mdi-refresh</v-icon>
             更新配置
           </v-btn>
@@ -342,7 +298,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import { useApi, usePaginatedApi } from '@/composables/useApi'
+import { useApi } from '@/composables/useApi'
 import { Api } from '@/api'
 import type { Channel, SiteGroup } from '@/types/api'
 
@@ -359,19 +315,18 @@ const showUpdateModalVisible = ref(false)
 const selectedChannel = ref<Channel | null>(null)
 const isUpdating = ref(false)
 const updateForm = reactive({
-  apiKeys: ''
+  apiKeys: '',
 })
 
 // API 调用
-const { data: channelsData, execute: loadChannels } = useApi(
-  () => Api.Channel.getChannels(),
-  { immediate: false }
-)
 
-const { data: healthData, execute: loadHealthStatus } = useApi(
-  () => Api.Service.getServiceStatus(),
-  { immediate: false }
-)
+const { data: channelsData, execute: loadChannels } = useApi<any>(() => Api.Channel.getSiteGroups(), {
+  immediate: false,
+})
+
+const { data: healthData, execute: loadHealthStatus } = useApi<any>(() => Api.Service.getStatus(), {
+  immediate: false,
+})
 
 // 计算属性
 const filteredChannels = computed(() => {
@@ -379,9 +334,8 @@ const filteredChannels = computed(() => {
 
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
-    filtered = filtered.filter(channel => 
-      channel.name.toLowerCase().includes(query) ||
-      channel.upstreams?.[0]?.url.toLowerCase().includes(query)
+    filtered = filtered.filter(
+      channel => channel.name.toLowerCase().includes(query) || channel.upstreams?.[0]?.url.toLowerCase().includes(query)
     )
   }
 
@@ -407,7 +361,7 @@ const getChannelTypeLabel = (channel: Channel) => {
   const typeMap: Record<string, string> = {
     openai: 'OpenAI',
     anthropic: 'Anthropic',
-    gemini: 'Gemini'
+    gemini: 'Gemini',
   }
   return typeMap[type] || type.toUpperCase()
 }
@@ -430,7 +384,7 @@ const getChannelTypeColor = (channel: Channel) => {
   const colorMap: Record<string, string> = {
     openai: 'green',
     anthropic: 'purple',
-    gemini: 'blue'
+    gemini: 'blue',
   }
   return colorMap[type] || 'grey'
 }
@@ -476,17 +430,14 @@ const formatTime = (time: string | Date) => {
 const refreshData = async () => {
   isLoading.value = true
   try {
-    await Promise.all([
-      loadChannels(),
-      loadHealthStatus()
-    ])
-    
+    await Promise.all([loadChannels(), loadHealthStatus()])
+
     if (channelsData.value) {
-      channels.value = channelsData.value
+      channels.value = channelsData.value.siteGroups || []
     }
-    
+
     if (healthData.value) {
-      healthStatus.value = (healthData.value as any).channelHealth
+      healthStatus.value = healthData.value.channelHealth
     }
   } catch (error) {
     console.error('刷新数据失败:', error)
@@ -501,8 +452,9 @@ const toggleHealthMonitor = async () => {
     const action = healthStatus.value?.hasInterval ? 'stop' : 'start'
     await Api.Service.controlChannelHealth({ action })
     await refreshData()
-  } catch (error) {
+  } catch (error: any) {
     console.error('切换健康监控失败:', error)
+    alert(`❌ 切换健康监控失败: ${error.response?.data?.message || error.message || '未知错误'}`)
   }
 }
 
@@ -510,7 +462,7 @@ const toggleHealthMonitor = async () => {
 const showFailedChannels = async () => {
   try {
     const response = await Api.Service.getFailedChannels()
-    
+
     if (response?.data?.length === 0) {
       alert('✅ 当前没有失败的渠道')
       return
@@ -530,8 +482,9 @@ const showFailedChannels = async () => {
     if (confirm(message)) {
       await resetAllChannelFailures()
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('获取失败渠道失败:', error)
+    alert(`❌ 获取失败渠道失败: ${error.response?.data?.message || error.message || '未知错误'}`)
   }
 }
 
@@ -541,8 +494,9 @@ const resetAllChannelFailures = async () => {
     await Api.Service.resetChannelFailures()
     alert('✅ 重置成功')
     await refreshData()
-  } catch (error) {
+  } catch (error: any) {
     console.error('重置失败计数失败:', error)
+    alert(`❌ 重置失败计数失败: ${error.response?.data?.message || error.message || '未知错误'}`)
   }
 }
 
@@ -554,11 +508,12 @@ const reassignChannel = async (channelName: string, action: 'promote' | 'demote'
   }
 
   try {
-    await Api.Channel.reassignChannel({ channelName, action })
+    await Api.Channel.reassign({ channelName, action })
     alert(`✅ ${actionText}成功`)
     await refreshData()
-  } catch (error) {
+  } catch (error: any) {
     console.error(`${actionText}失败:`, error)
+    alert(`❌ ${actionText}失败: ${error.response?.data?.message || error.message || '未知错误'}`)
   }
 }
 
@@ -582,25 +537,26 @@ const submitUpdate = async () => {
 
   try {
     isUpdating.value = true
-    
-    const channelType = getChannelType(selectedChannel.value)
-    const apiKeys = updateForm.apiKeys.trim() ? 
-      updateForm.apiKeys.split(/[\n\r\s,;]+/).filter(k => k.trim()) : 
-      []
 
-    await Api.Channel.updateChannelConfig({
+    const channelType = getChannelType(selectedChannel.value)
+    const apiKeys = updateForm.apiKeys.trim() ? updateForm.apiKeys.split(/[\n\r\s,;]+/).filter(k => k.trim()) : []
+    const siteName = getSiteName(selectedChannel.value)
+
+    await Api.Site.process({
+      siteName: siteName,
       baseUrl: selectedChannel.value.upstreams?.[0]?.url || '',
       channelTypes: [channelType],
       targetChannelName: selectedChannel.value.name,
       operationType: 'update',
-      apiKeys: apiKeys.length > 0 ? apiKeys : undefined
+      apiKeys: apiKeys.length > 0 ? apiKeys : [],
     })
 
     alert('✅ 更新成功')
     closeUpdateModal()
     await refreshData()
-  } catch (error) {
+  } catch (error: any) {
     console.error('更新失败:', error)
+    alert(`❌ 更新失败: ${error.response?.data?.message || error.message || '未知错误'}`)
   } finally {
     isUpdating.value = false
   }
@@ -613,11 +569,12 @@ const deleteChannel = async (channelName: string) => {
   }
 
   try {
-    await Api.Channel.deleteChannel(channelName)
+    await Api.Channel.delete(channelName)
     alert(`✅ 渠道 "${channelName}" 已成功删除`)
     await refreshData()
-  } catch (error) {
+  } catch (error: any) {
     console.error('删除失败:', error)
+    alert(`❌ 删除失败: ${error.response?.data?.message || error.message || '未知错误'}`)
   }
 }
 
@@ -744,9 +701,15 @@ onMounted(() => {
   height: 100%;
   background-color: grey;
 }
-.channel-card.openai::before { background-color: rgb(var(--v-theme-success)); }
-.channel-card.anthropic::before { background-color: rgb(var(--v-theme-purple)); }
-.channel-card.gemini::before { background-color: rgb(var(--v-theme-info)); }
+.channel-card.openai::before {
+  background-color: rgb(var(--v-theme-success));
+}
+.channel-card.anthropic::before {
+  background-color: rgb(var(--v-theme-purple));
+}
+.channel-card.gemini::before {
+  background-color: rgb(var(--v-theme-info));
+}
 
 .card-header {
   display: flex;
@@ -798,8 +761,17 @@ onMounted(() => {
 }
 
 @media (max-width: 768px) {
-  .page-container { padding: 1rem; }
-  .panel-header, .search-filter { flex-direction: column; align-items: stretch; }
-  .search-input, .filter-select { width: 100%; }
+  .page-container {
+    padding: 1rem;
+  }
+  .panel-header,
+  .search-filter {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .search-input,
+  .filter-select {
+    width: 100%;
+  }
 }
 </style>

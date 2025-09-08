@@ -605,22 +605,22 @@ const overallStatus = computed(() => {
 
 // API 调用
 const { execute: loadServiceStatus } = useApi(
-  () => Api.Service.getServiceStatus(),
+  () => Api.Service.getStatus(),
   { immediate: false }
 )
 
 const { execute: loadSystemInfo } = useApi(
-  () => Api.Service.getArchitectureStats(),
+  () => Api.Service.getStatus(),
   { immediate: false }
 )
 
 const { execute: loadSystemMetrics } = useApi(
-  () => Api.System.getSystemMetrics(),
+  () => Api.Service.getStatus(),
   { immediate: false }
 )
 
 const { execute: loadTempGroupStats } = useApi(
-  () => Api.TempGroup.getTempGroupStats(),
+  () => Api.Maintenance.getTempGroupStats(),
   { immediate: false }
 )
 
@@ -872,7 +872,7 @@ const cleanupAndReset = async () => {
   }
 
   try {
-    await Api.System.cleanupModels()
+    await Api.Maintenance.cleanupModelGroups()
     alert('✅ 清理重置成功')
     await refreshServiceStatus()
   } catch (error) {
@@ -939,7 +939,7 @@ const cleanupOldTempGroups = async () => {
   }
 
   try {
-    await Api.TempGroup.cleanupTempGroups({ hoursOld: 24 })
+    await Api.Maintenance.cleanupOldTempGroups({ hoursOld: 24 })
     alert('✅ 清理过期临时分组成功')
     await refreshTempGroupStats()
   } catch (error) {
@@ -954,7 +954,7 @@ const cleanupAllTempGroups = async () => {
   }
 
   try {
-    await Api.TempGroup.cleanupTempGroups()
+    await Api.Maintenance.cleanupTempGroups({})
     alert('✅ 清理所有临时分组成功')
     await refreshTempGroupStats()
   } catch (error) {
