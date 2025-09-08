@@ -1,7 +1,7 @@
 /* CSS 变量系统 */
 :root {
   /* ========== 颜色系统 ========== */
-  
+
   /* 品牌色彩 */
   --color-brand-50: 239 246 255;
   --color-brand-100: 219 234 254;
@@ -14,7 +14,7 @@
   --color-brand-800: 30 64 175;
   --color-brand-900: 30 58 138;
   --color-brand-950: 23 37 84;
-  
+
   /* 中性色彩 */
   --color-gray-50: 249 250 251;
   --color-gray-100: 243 244 246;
@@ -27,90 +27,90 @@
   --color-gray-800: 31 41 55;
   --color-gray-900: 17 24 39;
   --color-gray-950: 3 7 18;
-  
+
   /* 语义化色彩 */
   --color-success-50: 240 253 244;
   --color-success-100: 220 252 231;
   --color-success-500: 34 197 94;
   --color-success-600: 22 163 74;
   --color-success-700: 21 128 61;
-  
+
   --color-warning-50: 254 252 232;
   --color-warning-100: 254 249 195;
   --color-warning-500: 234 179 8;
   --color-warning-600: 202 138 4;
   --color-warning-700: 161 98 7;
-  
+
   --color-error-50: 254 242 242;
   --color-error-100: 254 226 226;
   --color-error-500: 239 68 68;
   --color-error-600: 220 38 38;
   --color-error-700: 185 28 28;
-  
+
   --color-info-50: 239 246 255;
   --color-info-100: 219 234 254;
   --color-info-500: 59 130 246;
   --color-info-600: 37 99 235;
   --color-info-700: 29 78 216;
-  
+
   /* ========== 应用色彩变量 ========== */
-  
+
   /* 主色调 */
   --color-primary: var(--color-brand-500);
   --color-primary-hover: var(--color-brand-600);
   --color-primary-active: var(--color-brand-700);
   --color-primary-light: var(--color-brand-100);
   --color-primary-dark: var(--color-brand-800);
-  
+
   /* 文本色彩 */
   --color-text-primary: var(--color-gray-900);
   --color-text-secondary: var(--color-gray-600);
   --color-text-tertiary: var(--color-gray-500);
   --color-text-disabled: var(--color-gray-400);
   --color-text-inverse: var(--color-gray-50);
-  
+
   /* 背景色彩 */
   --color-background-primary: var(--color-gray-50);
   --color-background-secondary: var(--color-gray-100);
   --color-background-tertiary: var(--color-gray-200);
   --color-background-inverse: var(--color-gray-900);
   --color-background-overlay: rgba(0, 0, 0, 0.5);
-  
+
   /* 边框色彩 */
   --color-border-primary: var(--color-gray-200);
   --color-border-secondary: var(--color-gray-300);
   --color-border-hover: var(--color-gray-400);
   --color-border-focus: var(--color-brand-500);
-  
+
   /* 状态色彩 */
   --color-success: var(--color-success-500);
   --color-warning: var(--color-warning-500);
   --color-error: var(--color-error-500);
   --color-info: var(--color-info-500);
-  
+
   /* ========== 间距系统 ========== */
   --spacing-0: 0;
   --spacing-px: 1px;
-  --spacing-0-5: 0.125rem;  /* 2px */
-  --spacing-1: 0.25rem;     /* 4px */
-  --spacing-1-5: 0.375rem;  /* 6px */
-  --spacing-2: 0.5rem;      /* 8px */
-  --spacing-2-5: 0.625rem;  /* 10px */
-  --spacing-3: 0.75rem;     /* 12px */
-  --spacing-3-5: 0.875rem;  /* 14px */
-  --spacing-4: 1rem;        /* 16px */
-  --spacing-5: 1.25rem;     /* 20px */
-  --spacing-6: 1.5rem;      /* 24px */
-  --spacing-7: 1.75rem;     /* 28px */
-  --spacing-8: 2rem;        /* 32px */
-  --spacing-9: 2.25rem;     /* 36px */
-  --spacing-10: 2.5rem;     /* 40px */
-  --spacing-12: 3rem;       /* 48px */
-  --spacing-14: 3.5rem;     /* 56px */
-  --spacing-16: 4rem;       /* 64px */
-  --spacing-20: 5rem;       /* 80px */
-  --spacing-24: 6rem;       /* 96px */
-  
+  --spacing-0-5: 0.125rem; /* 2px */
+  --spacing-1: 0.25rem; /* 4px */
+  --spacing-1-5: 0.375rem; /* 6px */
+  --spacing-2: 0.5rem; /* 8px */
+  --spacing-2-5: 0.625rem; /* 10px */
+  --spacing-3: 0.75rem; /* 12px */
+  --spacing-3-5: 0.875rem; /* 14px */
+  --spacing-4: 1rem; /* 16px */
+  --spacing-5: 1.25rem; /* 20px */
+  --spacing-6: 1.5rem; /* 24px */
+  --spacing-7: 1.75rem; /* 28px */
+  --spacing-8: 2rem; /* 32px */
+  --spacing-9: 2.25rem; /* 36px */
+  --spacing-10: 2.5rem; /* 40px */
+  --spacing-12: 3rem; /* 48px */
+  --spacing-14: 3.5rem; /* 56px */
+  --spacing-16: 4rem; /* 64px */
+  --spacing-20: 5rem; /* 80px */
+  --spacing-24: 6rem; /* 96px */
+
   /* 语义化间距 */
   --spacing-xs: var(--spacing-1);
   --spacing-sm: var(--spacing-2);
@@ -119,25 +119,28 @@
   --spacing-xl: var(--spacing-8);
   --spacing-2xl: var(--spacing-12);
   --spacing-3xl: var(--spacing-16);
-  
+
   /* ========== 字体系统 ========== */
-  
+
   /* 字体族 */
-  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
-  
+  --font-sans:
+    'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    'Noto Sans', sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+
   /* 字体大小 */
-  --font-size-xs: 0.75rem;     /* 12px */
-  --font-size-sm: 0.875rem;    /* 14px */
-  --font-size-base: 1rem;      /* 16px */
-  --font-size-lg: 1.125rem;    /* 18px */
-  --font-size-xl: 1.25rem;     /* 20px */
-  --font-size-2xl: 1.5rem;     /* 24px */
-  --font-size-3xl: 1.875rem;   /* 30px */
-  --font-size-4xl: 2.25rem;    /* 36px */
-  --font-size-5xl: 3rem;       /* 48px */
-  --font-size-6xl: 3.75rem;    /* 60px */
-  
+  --font-size-xs: 0.75rem; /* 12px */
+  --font-size-sm: 0.875rem; /* 14px */
+  --font-size-base: 1rem; /* 16px */
+  --font-size-lg: 1.125rem; /* 18px */
+  --font-size-xl: 1.25rem; /* 20px */
+  --font-size-2xl: 1.5rem; /* 24px */
+  --font-size-3xl: 1.875rem; /* 30px */
+  --font-size-4xl: 2.25rem; /* 36px */
+  --font-size-5xl: 3rem; /* 48px */
+  --font-size-6xl: 3.75rem; /* 60px */
+
   /* 字体粗细 */
   --font-weight-thin: 100;
   --font-weight-light: 300;
@@ -146,25 +149,25 @@
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
   --font-weight-extrabold: 800;
-  
+
   /* 行高 */
   --line-height-tight: 1.25;
   --line-height-normal: 1.5;
   --line-height-relaxed: 1.75;
   --line-height-loose: 2;
-  
+
   /* ========== 尺寸系统 ========== */
-  
+
   /* 圆角 */
   --radius-none: 0;
-  --radius-sm: 0.25rem;   /* 4px */
+  --radius-sm: 0.25rem; /* 4px */
   --radius-base: 0.375rem; /* 6px */
-  --radius-md: 0.5rem;    /* 8px */
-  --radius-lg: 0.75rem;   /* 12px */
-  --radius-xl: 1rem;      /* 16px */
-  --radius-2xl: 1.5rem;   /* 24px */
+  --radius-md: 0.5rem; /* 8px */
+  --radius-lg: 0.75rem; /* 12px */
+  --radius-xl: 1rem; /* 16px */
+  --radius-2xl: 1.5rem; /* 24px */
   --radius-full: 9999px;
-  
+
   /* 阴影 */
   --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
@@ -173,16 +176,16 @@
   --shadow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
   --shadow-xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
   --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
-  
+
   /* 边框宽度 */
   --border-width-0: 0px;
   --border-width-1: 1px;
   --border-width-2: 2px;
   --border-width-4: 4px;
   --border-width-8: 8px;
-  
+
   /* ========== 动画系统 ========== */
-  
+
   /* 过渡时间 */
   --duration-75: 75ms;
   --duration-100: 100ms;
@@ -192,21 +195,23 @@
   --duration-500: 500ms;
   --duration-700: 700ms;
   --duration-1000: 1000ms;
-  
+
   /* 过渡函数 */
   --ease-linear: linear;
   --ease-in: cubic-bezier(0.4, 0, 1, 1);
   --ease-out: cubic-bezier(0, 0, 0.2, 1);
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
-  
+
   /* 语义化过渡 */
   --transition-fast: var(--duration-150) var(--ease-out);
   --transition-normal: var(--duration-200) var(--ease-in-out);
   --transition-slow: var(--duration-300) var(--ease-in-out);
-  --transition-colors: color var(--duration-150) var(--ease-in-out), background-color var(--duration-150) var(--ease-in-out), border-color var(--duration-150) var(--ease-in-out);
+  --transition-colors:
+    color var(--duration-150) var(--ease-in-out), background-color var(--duration-150) var(--ease-in-out),
+    border-color var(--duration-150) var(--ease-in-out);
   --transition-transform: transform var(--duration-150) var(--ease-in-out);
   --transition-opacity: opacity var(--duration-150) var(--ease-in-out);
-  
+
   /* ========== Z-Index 层级 ========== */
   --z-hide: -1;
   --z-auto: auto;
@@ -224,7 +229,7 @@
 }
 
 /* ========== 暗色主题变量 ========== */
-[data-theme="dark"],
+[data-theme='dark'],
 .dark {
   /* 品牌色彩调整 */
   --color-primary: var(--color-brand-400);
@@ -232,27 +237,27 @@
   --color-primary-active: var(--color-brand-200);
   --color-primary-light: var(--color-brand-900);
   --color-primary-dark: var(--color-brand-100);
-  
+
   /* 文本色彩 */
   --color-text-primary: var(--color-gray-100);
   --color-text-secondary: var(--color-gray-300);
   --color-text-tertiary: var(--color-gray-400);
   --color-text-disabled: var(--color-gray-600);
   --color-text-inverse: var(--color-gray-900);
-  
+
   /* 背景色彩 */
   --color-background-primary: var(--color-gray-900);
   --color-background-secondary: var(--color-gray-800);
   --color-background-tertiary: var(--color-gray-700);
   --color-background-inverse: var(--color-gray-50);
   --color-background-overlay: rgba(0, 0, 0, 0.7);
-  
+
   /* 边框色彩 */
   --color-border-primary: var(--color-gray-700);
   --color-border-secondary: var(--color-gray-600);
   --color-border-hover: var(--color-gray-500);
   --color-border-focus: var(--color-brand-400);
-  
+
   /* 状态色彩调整 */
   --color-success: var(--color-success-400);
   --color-warning: var(--color-warning-400);

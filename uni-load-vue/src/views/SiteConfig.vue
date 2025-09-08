@@ -506,6 +506,10 @@ const handleSubmit = async () => {
 
 .config-card {
   border-radius: 16px !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
 }
 
 .card-header {
@@ -559,6 +563,10 @@ const handleSubmit = async () => {
 
 .result-card {
   border-radius: 16px !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
 }
 
 .result-header {
@@ -624,5 +632,26 @@ const handleSubmit = async () => {
   .site-name-chip {
     font-size: 0.75rem;
   }
+}
+
+/* 暗色主题支持 */
+.v-theme--dark .config-card,
+.v-theme--dark .result-card {
+  background: rgba(0, 0, 0, 0.7) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+}
+
+.v-theme--dark .validation-endpoints,
+.v-theme--dark .models-section {
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+.v-theme--dark .header-text .subtitle {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.v-theme--dark .help-text {
+  color: rgba(255, 255, 255, 0.6) !important;
 }
 </style>
