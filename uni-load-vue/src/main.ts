@@ -1,4 +1,5 @@
 import './assets/styles/globals.css'
+import '@mdi/font/css/materialdesignicons.css'
 
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'

@@ -2,7 +2,7 @@ import 'vuetify/styles'
 import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
-import { aliases, mdi } from 'vuetify/iconsets/mdi-svg'
+import { mdi } from 'vuetify/iconsets/mdi'
 
 // 自定义主题
 const lightTheme = {
@@ -53,7 +53,6 @@ export const vuetify = createVuetify({
   },
   icons: {
     defaultSet: 'mdi',
-    aliases,
     sets: {
       mdi,
     },
