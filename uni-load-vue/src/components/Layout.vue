@@ -106,11 +106,6 @@ const routes = [
     name: '服务状态',
     icon: 'mdi-chart-line',
   },
-  {
-    path: '/models',
-    name: '模型管理',
-    icon: 'mdi-robot',
-  },
 ]
 
 // 页脚链接

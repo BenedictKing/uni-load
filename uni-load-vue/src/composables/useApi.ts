@@ -110,15 +110,19 @@ export function useApi<T = any>(
         const response = await requestFn()
         // 如果响应是 { success: true, data: ... } 格式, 返回 data
         // 否则, 认为响应本身就是数据
-        return response && typeof response === 'object' && 'data' in response ? response.data : response
+        if (response && typeof response === 'object' && 'success' in response && 'data' in response) {
+          return response.data as T
+        }
+        return response as T
       }, retryCount)
 
-      data.value = result ?? null
+      const typedResult: T | null = result ?? null
+      data.value = typedResult
       lastUpdated.value = Date.now()
       
-      onSuccess?.(result)
+      onSuccess?.(typedResult)
       
-      return result ?? null
+      return typedResult
     } catch (err) {
       const apiError = err instanceof ApiError ? err : errorManager.wrapError(err)
       error.value = apiError
