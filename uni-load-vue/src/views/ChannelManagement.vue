@@ -5,7 +5,7 @@
       <v-card class="page-header" rounded="lg">
         <v-card-text class="header-content">
           <div class="header-info">
-            <div class="d-flex align-center gap-3">
+            <div class="d-flex align-center gap-6">
               <v-icon size="32" color="primary">mdi-connection</v-icon>
               <div>
                 <h2 class="text-h4 font-weight-bold mb-1 text-on-surface">渠道管理</h2>

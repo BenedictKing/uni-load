@@ -5,7 +5,7 @@
       <v-card class="page-header" rounded="lg">
         <v-card-text class="header-content">
           <div class="header-info">
-            <div class="d-flex align-center gap-3">
+            <div class="d-flex align-center gap-6">
               <v-icon size="32" color="primary">mdi-cog</v-icon>
               <div>
                 <h2 class="text-h4 font-weight-bold mb-1 text-on-surface">AI站点配置</h2>
@@ -21,12 +21,7 @@
 
       <!-- 配置表单卡片 -->
       <v-card class="content-panel">
-        <v-form 
-          @submit.prevent="handleSubmit" 
-          v-model="validForm"
-          ref="formRef"
-          class="panel-content"
-        >
+        <v-form @submit.prevent="handleSubmit" v-model="validForm" ref="formRef" class="panel-content">
           <!-- 基础地址输入 -->
           <v-text-field
             v-model="form.baseUrl"
@@ -36,51 +31,37 @@
             variant="outlined"
             density="comfortable"
             @input="debouncedUpdateSiteName"
-            class="mb-4"
-          >
+            class="mb-4">
             <template v-slot:append-inner>
-              <v-chip
-                :color="siteNameChipColor"
-                size="small"
-                :title="siteNameTooltip"
-                class="site-name-chip"
-              >
+              <v-chip :color="siteNameChipColor" size="small" :title="siteNameTooltip" class="site-name-chip">
                 <v-icon size="14" class="mr-1">{{ siteNameChipIcon }}</v-icon>
                 {{ siteNameDisplay }}
               </v-chip>
             </template>
           </v-text-field>
-          <div class="help-text mb-4">
-            AI站点的API地址，系统会自动生成站点名称
-          </div>
+          <div class="help-text mb-4">AI站点的API地址，系统会自动生成站点名称</div>
 
           <!-- API格式类型选择 -->
           <div class="mb-4">
-            <label class="text-subtitle-1 font-weight-medium mb-2 d-block">
-              API 格式类型
-            </label>
+            <label class="text-subtitle-1 font-weight-medium mb-2 d-block"> API 格式类型 </label>
             <v-chip-group
               v-model="form.channelTypes"
               multiple
               selected-class="text-primary"
               @update:model-value="updateValidationEndpoints"
-              class="channel-types-group"
-            >
+              class="channel-types-group">
               <v-chip
                 v-for="type in channelTypes"
                 :key="type.value"
                 :value="type.value"
                 filter
                 variant="outlined"
-                class="channel-type-chip"
-              >
+                class="channel-type-chip">
                 <v-icon size="16" class="mr-1">{{ type.icon }}</v-icon>
                 {{ type.label }}
               </v-chip>
             </v-chip-group>
-            <div class="help-text">
-              选择该AI站点支持的API格式（可多选）
-            </div>
+            <div class="help-text">选择该AI站点支持的API格式（可多选）</div>
           </div>
 
           <!-- API密钥输入 -->
@@ -93,11 +74,8 @@
             rows="6"
             placeholder="sk-xxx...&#10;sk-yyy..., sk-zzz...&#10;sk-aaa... sk-bbb...; sk-ccc...&#10;&#10;支持分隔符：换行、空格、逗号、分号"
             counter="10000"
-            class="mb-4"
-          />
-          <div class="help-text mb-4">
-            每行一个密钥，支持多种分隔符（换行、空格、逗号、分号）
-          </div>
+            class="mb-4" />
+          <div class="help-text mb-4">每行一个密钥，支持多种分隔符（换行、空格、逗号、分号）</div>
 
           <!-- 手动指定模型 - 可折叠 -->
           <v-expansion-panels v-model="activePanels" class="mb-4">
@@ -109,32 +87,22 @@
                   variant="outlined"
                   density="comfortable"
                   rows="4"
-                  placeholder="如果站点无法自动获取模型列表，可以手动指定：&#10;gpt-3.5-turbo&#10;gpt-4&#10;claude-3-sonnet&#10;deepseek-chat&#10;&#10;每行一个模型名称"
-                />
-                <div class="help-text">
-                  仅当自动获取模型失败时使用。每行一个模型名称。
-                </div>
+                  placeholder="如果站点无法自动获取模型列表，可以手动指定：&#10;gpt-3.5-turbo&#10;gpt-4&#10;claude-3-sonnet&#10;deepseek-chat&#10;&#10;每行一个模型名称" />
+                <div class="help-text">仅当自动获取模型失败时使用。每行一个模型名称。</div>
               </v-expansion-panel-text>
             </v-expansion-panel>
           </v-expansion-panels>
 
           <!-- 验证端点配置 -->
           <div v-if="form.channelTypes.length > 0" class="validation-endpoints mb-4">
-            <div 
-              v-for="type in form.channelTypes" 
-              :key="type"
-              class="mb-3"
-            >
+            <div v-for="type in form.channelTypes" :key="type" class="mb-3">
               <v-text-field
                 v-model="form.customValidationEndpoints[type]"
                 :label="`验证端点 (${getChannelTypeLabel(type)} 格式)`"
                 :placeholder="getValidationEndpointPlaceholder(type)"
                 variant="outlined"
-                density="comfortable"
-              />
-              <div class="help-text">
-                用于 {{ getChannelTypeLabel(type) }} 格式的健康检查端点，留空则使用默认值
-              </div>
+                density="comfortable" />
+              <div class="help-text">用于 {{ getChannelTypeLabel(type) }} 格式的健康检查端点，留空则使用默认值</div>
             </div>
           </div>
 
@@ -146,111 +114,96 @@
               :loading="isSubmitting"
               :disabled="isSubmitting || !validForm"
               @click="handleSubmit"
-              class="submit-btn"
-            >
+              class="submit-btn">
               <v-icon class="mr-2">mdi-cog</v-icon>
               {{ isSubmitting ? '配置中...' : '开始配置' }}
             </v-btn>
           </div>
         </v-form>
-    </v-card>
+      </v-card>
 
-    <!-- 配置结果 -->
-    <v-card v-if="result" class="content-panel result-card mt-6">
-      <v-card-title class="result-header">
-        <v-icon :color="result.success ? 'success' : 'error'" class="mr-2">
-          {{ result.success ? 'mdi-check-circle' : 'mdi-close-circle' }}
-        </v-icon>
-        {{ result.success ? '配置成功！' : '配置失败' }}
-      </v-card-title>
-      
-      <v-card-text>
-        <div v-if="result.success">
-          <!-- 成功信息展示 -->
-          <v-list class="result-list">
-            <v-list-item>
-              <v-list-item-title>站点名称</v-list-item-title>
-              <v-list-item-subtitle>{{ result.data.siteName }}</v-list-item-subtitle>
-            </v-list-item>
-            <v-list-item>
-              <v-list-item-title>API格式</v-list-item-title>
-              <v-list-item-subtitle>{{ result.data.channelTypes.join(', ') }}</v-list-item-subtitle>
-            </v-list-item>
-            <v-list-item>
-              <v-list-item-title>创建分组</v-list-item-title>
-              <v-list-item-subtitle>{{ result.data.groupsCreated }} 个</v-list-item-subtitle>
-            </v-list-item>
-            <v-list-item>
-              <v-list-item-title>发现模型</v-list-item-title>
-              <v-list-item-subtitle>
-                {{ result.data.modelsCount }} 个
-                <v-chip v-if="result.data.usingManualModels" color="info" size="small" class="ml-2">
-                  手动指定
-                </v-chip>
-              </v-list-item-subtitle>
-            </v-list-item>
-          </v-list>
-          
-          <!-- 模型列表展示 -->
-          <div v-if="result.data.modelsByChannel" class="models-section mt-4">
-            <h4 class="text-subtitle-1 font-weight-medium mb-3">模型列表:</h4>
-            <v-expansion-panels v-model="modelsPanels">
-              <v-expansion-panel 
-                v-for="(models, channelType) in result.data.modelsByChannel" 
-                :key="channelType"
-                :value="channelType"
-              >
-                <v-expansion-panel-title>
-                  {{ getChannelTypeLabel(String(channelType)) }} 格式模型 ({{ models.length }}个)
-                </v-expansion-panel-title>
-                <v-expansion-panel-text>
-                  <div class="models-chips">
-                    <v-chip
-                      v-for="model in models" 
-                      :key="model" 
-                      size="small"
-                      variant="outlined"
-                      class="ma-1"
-                    >
-                      {{ model }}
-                    </v-chip>
-                  </div>
-                </v-expansion-panel-text>
-              </v-expansion-panel>
-            </v-expansion-panels>
+      <!-- 配置结果 -->
+      <v-card v-if="result" class="content-panel result-card mt-6">
+        <v-card-title class="result-header">
+          <v-icon :color="result.success ? 'success' : 'error'" class="mr-2">
+            {{ result.success ? 'mdi-check-circle' : 'mdi-close-circle' }}
+          </v-icon>
+          {{ result.success ? '配置成功！' : '配置失败' }}
+        </v-card-title>
+
+        <v-card-text>
+          <div v-if="result.success">
+            <!-- 成功信息展示 -->
+            <v-list class="result-list">
+              <v-list-item>
+                <v-list-item-title>站点名称</v-list-item-title>
+                <v-list-item-subtitle>{{ result.data.siteName }}</v-list-item-subtitle>
+              </v-list-item>
+              <v-list-item>
+                <v-list-item-title>API格式</v-list-item-title>
+                <v-list-item-subtitle>{{ result.data.channelTypes.join(', ') }}</v-list-item-subtitle>
+              </v-list-item>
+              <v-list-item>
+                <v-list-item-title>创建分组</v-list-item-title>
+                <v-list-item-subtitle>{{ result.data.groupsCreated }} 个</v-list-item-subtitle>
+              </v-list-item>
+              <v-list-item>
+                <v-list-item-title>发现模型</v-list-item-title>
+                <v-list-item-subtitle>
+                  {{ result.data.modelsCount }} 个
+                  <v-chip v-if="result.data.usingManualModels" color="info" size="small" class="ml-2">
+                    手动指定
+                  </v-chip>
+                </v-list-item-subtitle>
+              </v-list-item>
+            </v-list>
+
+            <!-- 模型列表展示 -->
+            <div v-if="result.data.modelsByChannel" class="models-section mt-4">
+              <h4 class="text-subtitle-1 font-weight-medium mb-3">模型列表:</h4>
+              <v-expansion-panels v-model="modelsPanels">
+                <v-expansion-panel
+                  v-for="(models, channelType) in result.data.modelsByChannel"
+                  :key="channelType"
+                  :value="channelType">
+                  <v-expansion-panel-title>
+                    {{ getChannelTypeLabel(String(channelType)) }} 格式模型 ({{ models.length }}个)
+                  </v-expansion-panel-title>
+                  <v-expansion-panel-text>
+                    <div class="models-chips">
+                      <v-chip v-for="model in models" :key="model" size="small" variant="outlined" class="ma-1">
+                        {{ model }}
+                      </v-chip>
+                    </div>
+                  </v-expansion-panel-text>
+                </v-expansion-panel>
+              </v-expansion-panels>
+            </div>
+
+            <!-- 成功提示 -->
+            <v-alert type="success" variant="tonal" class="mt-4">
+              <template v-slot:text>
+                <div class="d-flex align-center">
+                  <v-icon class="mr-2">mdi-sparkles</v-icon>
+                  现在可以通过 uni-api 访问这些模型了！
+                </div>
+              </template>
+            </v-alert>
           </div>
-          
-          <!-- 成功提示 -->
-          <v-alert
-            type="success"
-            variant="tonal"
-            class="mt-4"
-          >
-            <template v-slot:text>
-              <div class="d-flex align-center">
-                <v-icon class="mr-2">mdi-sparkles</v-icon>
-                现在可以通过 uni-api 访问这些模型了！
-              </div>
-            </template>
-          </v-alert>
-        </div>
-        
-        <!-- 失败信息展示 -->
-        <div v-else>
-          <v-alert
-            type="error"
-            variant="tonal"
-          >
-            <template v-slot:text>
-              <div>
-                <strong>{{ result.error }}</strong>
-                <p class="mb-0 mt-2">请检查输入的信息是否正确，或查看控制台获取更多详情。</p>
-              </div>
-            </template>
-          </v-alert>
-        </div>
-      </v-card-text>
-    </v-card>
+
+          <!-- 失败信息展示 -->
+          <div v-else>
+            <v-alert type="error" variant="tonal">
+              <template v-slot:text>
+                <div>
+                  <strong>{{ result.error }}</strong>
+                  <p class="mb-0 mt-2">请检查输入的信息是否正确，或查看控制台获取更多详情。</p>
+                </div>
+              </template>
+            </v-alert>
+          </div>
+        </v-card-text>
+      </v-card>
     </div>
   </div>
 </template>
@@ -264,7 +217,7 @@ import { Api } from '@/api'
 const channelTypes = [
   { value: 'openai', label: 'OpenAI 兼容格式', icon: 'mdi-robot' },
   { value: 'anthropic', label: 'Anthropic Claude 格式', icon: 'mdi-brain' },
-  { value: 'gemini', label: 'Google Gemini 格式', icon: 'mdi-crystal-ball' }
+  { value: 'gemini', label: 'Google Gemini 格式', icon: 'mdi-crystal-ball' },
 ]
 
 // 表单数据
@@ -273,7 +226,7 @@ const form = reactive({
   channelTypes: ['openai'] as string[],
   apiKeys: '',
   manualModels: '',
-  customValidationEndpoints: {} as Record<string, string>
+  customValidationEndpoints: {} as Record<string, string>,
 })
 
 // 站点名称相关状态
@@ -302,12 +255,12 @@ const baseUrlRules = [
     } catch {
       return '请输入正确的URL格式'
     }
-  }
+  },
 ]
 
 const apiKeysRules = [
   (v: string) => !!v || '请输入API密钥',
-  (v: string) => v.length >= 10 || 'API密钥长度不能少于10个字符'
+  (v: string) => v.length >= 10 || 'API密钥长度不能少于10个字符',
 ]
 
 // 站点名称显示
@@ -360,10 +313,7 @@ const siteNameTooltip = computed(() => {
 })
 
 // API 调用
-const { execute: generateSiteName } = useApi(
-  () => Api.Site.previewName(form.baseUrl),
-  { immediate: false }
-)
+const { execute: generateSiteName } = useApi(() => Api.Site.previewName(form.baseUrl), { immediate: false })
 
 const { execute: submitConfig } = useApi(
   () =>
@@ -396,7 +346,7 @@ const updateSiteName = async () => {
   try {
     siteNameStatus.value = 'loading'
     const response = await generateSiteName()
-    
+
     if (response) {
       siteName.value = response.siteName
       siteNameStatus.value = 'success'
@@ -430,7 +380,7 @@ const getValidationEndpointPlaceholder = (type: string) => {
   const placeholders = {
     openai: '留空则使用默认值 /v1/chat/completions',
     anthropic: '留空则使用默认值 /v1/messages',
-    gemini: '留空则使用默认值 /v1beta/models'
+    gemini: '留空则使用默认值 /v1beta/models',
   }
   return placeholders[type as keyof typeof placeholders] || '留空则使用默认值'
 }
@@ -479,13 +429,13 @@ const handleSubmit = async () => {
     result.value = null
 
     const response = await submitConfig()
-    
+
     if (response) {
       result.value = {
         success: true,
-        data: response
+        data: response,
       }
-      
+
       // 重置表单
       form.baseUrl = ''
       form.channelTypes = ['openai']
@@ -500,7 +450,7 @@ const handleSubmit = async () => {
   } catch (error) {
     result.value = {
       success: false,
-      error: error instanceof Error ? error.message : '配置失败'
+      error: error instanceof Error ? error.message : '配置失败',
     }
   } finally {
     isSubmitting.value = false
