@@ -83,7 +83,7 @@
       class="footer"
       elevation="2"
     >
-      <v-container class="footer-content">
+      <div class="footer-content">
         <div class="footer-info">
           <span class="footer-text">© 2024 uni-load. 连接 uni-api 与 gpt-load</span>
         </div>
@@ -99,11 +99,11 @@
             target="_blank"
             class="footer-link"
           >
-            <v-icon size="16" class="link-icon">{{ link.icon }}</v-icon>
+            <v-icon size="14" class="link-icon">{{ link.icon }}</v-icon>
             {{ link.text }}
           </v-btn>
         </div>
-      </v-container>
+      </div>
     </v-footer>
   </v-layout>
 </template>
@@ -355,29 +355,40 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 0;
+  padding: 12px 16px;
+  max-width: 100%;
+  width: 100%;
+  margin: 0 auto;
 }
 
 .footer-info {
-  flex: 1;
-  min-width: 200px;
+  flex: 0 1 auto;
+  min-width: unset;
+  margin-right: 16px;
 }
 
 .footer-text {
   color: rgba(255, 255, 255, 0.8);
-  font-size: 0.875rem;
+  font-size: 0.8rem;
+  white-space: nowrap;
 }
 
 .footer-links {
   display: flex;
-  gap: 16px;
+  gap: 6px;
+  flex-wrap: wrap;
+  flex: 0 1 auto;
+  max-width: 200px;
+  justify-content: flex-end;
 }
 
 .footer-link {
   text-transform: none;
   letter-spacing: 0.5px;
   font-weight: 500;
-  font-size: 0.875rem;
+  font-size: 0.8rem;
+  padding: 4px 8px;
+  min-width: unset;
 }
 
 .link-icon {
@@ -413,12 +424,32 @@ onMounted(() => {
   .footer-content {
     flex-direction: column;
     text-align: center;
-    gap: 12px;
+    gap: 6px;
+    padding: 8px 12px;
+  }
+
+  .footer-info {
+    margin-right: 0;
+    margin-bottom: 2px;
+  }
+
+  .footer-text {
+    white-space: normal;
+    text-align: center;
+    font-size: 0.75rem;
   }
 
   .footer-links {
     justify-content: center;
     flex-wrap: wrap;
+    gap: 4px;
+    max-width: 180px;
+    margin: 0 auto;
+  }
+
+  .footer-link {
+    font-size: 0.7rem;
+    padding: 1px 4px;
   }
 }
 
@@ -437,6 +468,25 @@ onMounted(() => {
 
   .nav-tab {
     padding: 0 8px;
+  }
+
+  .footer-content {
+    gap: 6px;
+    padding: 8px 0;
+  }
+
+  .footer-links {
+    gap: 6px;
+  }
+
+  .footer-link {
+    font-size: 0.7rem;
+    padding: 2px 4px;
+  }
+
+  .link-icon {
+    margin-right: 2px;
+    font-size: 14px;
   }
 }
 
