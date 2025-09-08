@@ -164,18 +164,6 @@ body {
   }
 }
 
-/* 工具类增强 */
-.glass-effect {
-  backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.1);
-  border: var(--border-width-1) solid rgba(255, 255, 255, 0.2);
-}
-
-.dark .glass-effect {
-  background: rgba(0, 0, 0, 0.1);
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
 .shadow-custom {
   box-shadow: var(--shadow-lg);
 }
@@ -268,7 +256,6 @@ body {
 }
 
 .v-overlay {
-  backdrop-filter: blur(4px) !important;
 }
 
 /* Naive UI specific enhancements */
@@ -276,7 +263,6 @@ body {
   border-radius: var(--radius-md) !important;
   font-weight: 500 !important;
   transition: var(--transition-transform) !important;
-}
 
 .n-button:hover {
   transform: translateY(-1px) !important;
