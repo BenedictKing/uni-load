@@ -185,31 +185,24 @@ export class ServiceApi {
   }
 
   /**
-   * 获取模型同步状态
-   */
-  static async getModelSyncStatus(): Promise<ApiResponse<ModelSyncStatus>> {
-    return get('/api/service/model-sync/status')
-  }
-
-  /**
    * 控制模型同步
    */
   static async controlModelSync(request: ServiceControlRequest): Promise<ApiResponse<void>> {
-    return post('/api/service/model-sync/control', request)
+    return post('/api/sync-models/control', request)
   }
 
   /**
    * 控制渠道健康检查
    */
   static async controlChannelHealth(request: ServiceControlRequest): Promise<ApiResponse<void>> {
-    return post('/api/service/channel-health/control', request)
+    return post('/api/check-channels/control', request)
   }
 
   /**
    * 获取失败的渠道
    */
   static async getFailedChannels(): Promise<ApiResponse<FailedChannel[]>> {
-    return get('/api/service/failed-channels')
+    return get('/api/failed-channels')
   }
 
   /**
@@ -237,14 +230,14 @@ export class ServiceApi {
    * 启动模型同步
    */
   static async startModelSync(): Promise<ApiResponse<void>> {
-    return post('/api/service/model-sync/start')
+    return post('/api/sync-models', {})
   }
 
   /**
    * 停止模型同步
    */
   static async stopModelSync(): Promise<ApiResponse<void>> {
-    return post('/api/service/model-sync/stop')
+    return post('/api/sync-models/control', { action: 'stop' })
   }
 
   /**
@@ -258,21 +251,21 @@ export class ServiceApi {
    * 清理临时分组
    */
   static async cleanupTempGroups(): Promise<ApiResponse<void>> {
-    return post('/api/service/cleanup-temp-groups')
+    return post('/api/temp-groups/cleanup')
   }
 
   /**
    * 重置渠道失败状态
    */
   static async resetChannelFailures(): Promise<ApiResponse<void>> {
-    return post('/api/service/reset-channel-failures')
+    return post('/api/reset-channel-failures')
   }
 
   /**
    * 触发渠道检查
    */
   static async triggerChannelCheck(): Promise<ApiResponse<void>> {
-    return post('/api/service/trigger-channel-check')
+    return post('/api/check-channels')
   }
 }
 
