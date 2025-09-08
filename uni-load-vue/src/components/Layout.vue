@@ -1,12 +1,7 @@
 <template>
   <v-layout class="layout">
     <!-- 头部导航 -->
-    <v-app-bar
-      color="primary"
-      prominent
-      :elevation="4"
-      class="header"
-    >
+    <v-app-bar app color="primary" prominent :elevation="4" class="header">
       <v-container class="header-content">
         <div class="header-left">
           <div class="logo">
@@ -18,19 +13,8 @@
 
         <div class="header-right">
           <!-- 导航菜单 -->
-          <v-tabs
-            v-model="activeTab"
-            bg-color="transparent"
-            color="white"
-            class="nav-tabs"
-          >
-            <v-tab
-              v-for="route in routes"
-              :key="route.path"
-              :value="route.path"
-              :to="route.path"
-              class="nav-tab"
-            >
+          <v-tabs v-model="activeTab" bg-color="transparent" color="white" class="nav-tabs">
+            <v-tab v-for="route in routes" :key="route.path" :value="route.path" :to="route.path" class="nav-tab">
               <v-icon size="18" class="nav-icon">{{ route.icon }}</v-icon>
               <span class="nav-text">{{ route.name }}</span>
             </v-tab>
@@ -45,8 +29,7 @@
               color="white"
               size="small"
               @click="toggleTheme"
-              :title="isDark ? '切换到亮色主题' : '切换到暗色主题'"
-            >
+              :title="isDark ? '切换到亮色主题' : '切换到暗色主题'">
               <v-icon>{{ isDark ? 'mdi-weather-sunny' : 'mdi-weather-night' }}</v-icon>
             </v-btn>
 
@@ -54,14 +37,7 @@
             <div class="status-indicator">
               <v-tooltip :text="systemStatusText" location="bottom">
                 <template v-slot:activator="{ props }">
-                  <v-icon
-                    v-bind="props"
-                    size="16"
-                    :color="statusColor"
-                    class="status-icon"
-                  >
-                    mdi-circle
-                  </v-icon>
+                  <v-icon v-bind="props" size="16" :color="statusColor" class="status-icon"> mdi-circle </v-icon>
                 </template>
               </v-tooltip>
             </div>
@@ -71,23 +47,19 @@
     </v-app-bar>
 
     <!-- 主要内容区域 -->
-    <v-main class="main-content" :transition="false">
+    <v-main class="main-content">
       <v-container class="main-container">
         <slot />
       </v-container>
     </v-main>
 
     <!-- 页脚 -->
-    <v-footer
-      color="surface"
-      class="footer"
-      elevation="2"
-    >
+    <v-footer app color="surface" class="footer" elevation="2">
       <div class="footer-content">
         <div class="footer-info">
           <span class="footer-text">© 2024 uni-load. 连接 uni-api 与 gpt-load</span>
         </div>
-        
+
         <div class="footer-links">
           <v-btn
             v-for="link in footerLinks"
@@ -97,8 +69,7 @@
             color="on-surface"
             :href="link.url"
             target="_blank"
-            class="footer-link"
-          >
+            class="footer-link">
             <v-icon size="14" class="link-icon">{{ link.icon }}</v-icon>
             {{ link.text }}
           </v-btn>
@@ -123,23 +94,23 @@ const routes = [
   {
     path: '/',
     name: '站点配置',
-    icon: 'mdi-cog'
+    icon: 'mdi-cog',
   },
   {
     path: '/channels',
     name: '渠道管理',
-    icon: 'mdi-connection'
+    icon: 'mdi-connection',
   },
   {
     path: '/services',
     name: '服务状态',
-    icon: 'mdi-chart-line'
+    icon: 'mdi-chart-line',
   },
   {
     path: '/models',
     name: '模型管理',
-    icon: 'mdi-robot'
-  }
+    icon: 'mdi-robot',
+  },
 ]
 
 // 页脚链接
@@ -147,18 +118,18 @@ const footerLinks = [
   {
     text: '文档',
     icon: 'mdi-book-open-variant',
-    url: 'https://github.com'
+    url: 'https://github.com',
   },
   {
     text: '支持',
     icon: 'mdi-forum',
-    url: 'https://github.com'
+    url: 'https://github.com',
   },
   {
     text: '反馈',
     icon: 'mdi-bug',
-    url: 'https://github.com'
-  }
+    url: 'https://github.com',
+  },
 ]
 
 // 主题状态
@@ -167,7 +138,7 @@ const isDark = ref(false)
 // 当前激活的标签
 const activeTab = computed({
   get: () => route.path,
-  set: (path) => router.push(path)
+  set: path => router.push(path),
 })
 
 // 系统状态
@@ -218,9 +189,12 @@ const checkSystemStatus = async () => {
 }
 
 // 监听路由变化
-watch(() => route.path, (newPath) => {
-  activeTab.value = newPath
-})
+watch(
+  () => route.path,
+  newPath => {
+    activeTab.value = newPath
+  }
+)
 
 // 初始化
 onMounted(() => {
@@ -233,7 +207,7 @@ onMounted(() => {
 
   // 检查系统状态
   checkSystemStatus()
-  
+
   // 定期检查系统状态
   setInterval(checkSystemStatus, 30000) // 每30秒检查一次
 })
@@ -326,11 +300,12 @@ onMounted(() => {
 }
 
 @keyframes pulse {
-  0%, 100% { 
-    opacity: 1; 
+  0%,
+  100% {
+    opacity: 1;
     transform: scale(1);
   }
-  50% { 
+  50% {
     opacity: 0.6;
     transform: scale(0.8);
   }
@@ -471,22 +446,23 @@ onMounted(() => {
   }
 
   .footer-content {
-    gap: 6px;
-    padding: 8px 0;
+    gap: 4px;
+    padding: 6px 8px;
   }
 
   .footer-links {
-    gap: 6px;
+    gap: 3px;
+    max-width: 160px;
   }
 
   .footer-link {
-    font-size: 0.7rem;
-    padding: 2px 4px;
+    font-size: 0.65rem;
+    padding: 1px 3px;
   }
 
   .link-icon {
-    margin-right: 2px;
-    font-size: 14px;
+    margin-right: 1px;
+    font-size: 12px;
   }
 }
 
