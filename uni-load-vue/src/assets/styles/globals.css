@@ -1,0 +1,457 @@
+/* Vuetify base styles */
+@import 'vuetify/styles';
+
+/* 导入CSS变量系统 */
+@import './variables.css';
+
+/* 导入响应式工具类 */
+@import './responsive.css';
+
+/* 导入UNOCSS重置样式 */
+@import '@unocss/reset/tailwind.css';
+
+/* 导入UNOCSS */
+@unocss all;
+
+/* 全局基础样式 */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: rgb(var(--color-text-primary));
+  background: linear-gradient(135deg, rgb(var(--color-background-primary)) 0%, rgb(var(--color-background-secondary)) 100%);
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  line-height: var(--line-height-normal);
+}
+
+/* Vuetify integration */
+.v-application {
+  font-family: var(--font-sans) !important;
+}
+
+/* Naive UI integration */
+.n-config-provider {
+  font-family: var(--font-sans);
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: var(--spacing-1-5);
+  height: var(--spacing-1-5);
+}
+
+::-webkit-scrollbar-track {
+  background: rgb(var(--color-background-secondary));
+  border-radius: var(--radius-sm);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--color-border-secondary));
+  border-radius: var(--radius-sm);
+  transition: var(--transition-colors);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--color-border-hover));
+}
+
+/* 焦点样式 */
+:focus-visible {
+  outline: var(--border-width-2) solid rgb(var(--color-border-focus));
+  outline-offset: var(--border-width-2);
+  border-radius: var(--radius-sm);
+}
+
+/* 选择文本样式 */
+::selection {
+  background-color: rgb(var(--color-primary));
+  color: rgb(var(--color-text-inverse));
+}
+
+/* 动画类 */
+.animate-fade-in {
+  animation: fadeIn var(--duration-300) var(--ease-in-out);
+}
+
+.animate-slide-up {
+  animation: slideUp var(--duration-300) var(--ease-out);
+}
+
+.animate-pulse-slow {
+  animation: pulse var(--duration-1000) var(--ease-in-out) infinite;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* 工具类 */
+.text-balance {
+  text-wrap: balance;
+}
+
+.text-pretty {
+  text-wrap: pretty;
+}
+
+.screen-reader-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* 响应式容器 */
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--spacing-md);
+}
+
+@media (min-width: 640px) {
+  .container {
+    padding: 0 var(--spacing-lg);
+  }
+}
+
+@media (min-width: 1024px) {
+  .container {
+    padding: 0 var(--spacing-xl);
+  }
+}
+
+/* 工具类增强 */
+.glass-effect {
+  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.1);
+  border: var(--border-width-1) solid rgba(255, 255, 255, 0.2);
+}
+
+.dark .glass-effect {
+  background: rgba(0, 0, 0, 0.1);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.shadow-custom {
+  box-shadow: var(--shadow-lg);
+}
+
+.text-gradient {
+  background: linear-gradient(135deg, rgb(var(--color-primary)), rgb(var(--color-brand-600)));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Vuetify specific enhancements */
+.v-card {
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-md) !important;
+  transition: var(--transition-transform) !important;
+}
+
+.v-card:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+
+.v-btn {
+  border-radius: var(--radius-md) !important;
+  font-weight: 500 !important;
+  text-transform: none !important;
+  letter-spacing: 0.5px !important;
+  transition: var(--transition-transform) !important;
+}
+
+.v-btn:hover {
+  transform: translateY(-1px) !important;
+}
+
+.v-field__field {
+  border-radius: var(--radius-md) !important;
+}
+
+.v-data-table__th {
+  font-weight: 600 !important;
+  color: rgb(var(--color-text-primary)) !important;
+  background-color: rgb(var(--color-background-secondary)) !important;
+}
+
+.v-data-table__td {
+  border-bottom: 1px solid rgb(var(--color-border-secondary)) !important;
+}
+
+/* Vuetify app bar enhancement */
+.v-app-bar {
+  border-radius: 0 !important;
+}
+
+.v-tabs {
+  border-radius: var(--radius-md) !important;
+}
+
+.v-tab {
+  text-transform: none !important;
+  letter-spacing: 0.5px !important;
+  font-weight: 500 !important;
+  border-radius: var(--radius-md) !important;
+}
+
+.v-expansion-panel {
+  border-radius: var(--radius-lg) !important;
+  margin-bottom: var(--spacing-2) !important;
+}
+
+.v-expansion-panel-text {
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg) !important;
+}
+
+.v-alert {
+  border-radius: var(--radius-md) !important;
+}
+
+.v-progress-linear {
+  border-radius: var(--radius-sm) !important;
+}
+
+.v-chip {
+  border-radius: var(--radius-full) !important;
+  font-weight: 500 !important;
+}
+
+.v-dialog .v-card {
+  border-radius: var(--radius-xl) !important;
+}
+
+.v-overlay {
+  backdrop-filter: blur(4px) !important;
+}
+
+/* Naive UI specific enhancements */
+.n-button {
+  border-radius: var(--radius-md) !important;
+  font-weight: 500 !important;
+  transition: var(--transition-transform) !important;
+}
+
+.n-button:hover {
+  transform: translateY(-1px) !important;
+}
+
+.n-input {
+  border-radius: var(--radius-md) !important;
+}
+
+.n-card {
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-md) !important;
+  transition: var(--transition-transform) !important;
+}
+
+.n-card:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+
+/* Status badges for both frameworks */
+.status-badge {
+  padding: var(--spacing-1) var(--spacing-3);
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1);
+}
+
+.status-badge.success {
+  background-color: rgb(var(--color-success-100));
+  color: rgb(var(--color-success-700));
+}
+
+.status-badge.warning {
+  background-color: rgb(var(--color-warning-100));
+  color: rgb(var(--color-warning-700));
+}
+
+.status-badge.error {
+  background-color: rgb(var(--color-error-100));
+  color: rgb(var(--color-error-700));
+}
+
+.status-badge.info {
+  background-color: rgb(var(--color-info-100));
+  color: rgb(var(--color-info-700));
+}
+
+/* Loading states */
+.loading-skeleton {
+  background: linear-gradient(90deg, rgb(var(--color-background-secondary)) 25%, rgb(var(--color-border-secondary)) 50%, rgb(var(--color-background-secondary)) 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  body {
+    background: linear-gradient(135deg, rgb(var(--color-background-dark)) 0%, rgb(var(--color-background-secondary-dark)) 100%);
+  }
+  
+  .glass-effect {
+    background: rgba(0, 0, 0, 0.2);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  .v-card {
+    background-color: rgb(var(--color-surface-dark)) !important;
+    border: 1px solid rgb(var(--color-border-secondary)) !important;
+  }
+  
+  .v-data-table__th {
+    background-color: rgb(var(--color-surface-dark)) !important;
+    color: rgb(var(--color-text-primary-dark)) !important;
+  }
+  
+  .v-data-table__td {
+    border-bottom-color: rgb(var(--color-border-secondary)) !important;
+  }
+
+  .v-expansion-panel {
+    background-color: rgb(var(--color-surface-dark)) !important;
+    border: 1px solid rgb(var(--color-border-secondary)) !important;
+  }
+
+  .v-field {
+    background-color: rgb(var(--color-surface-dark)) !important;
+  }
+
+  .v-alert {
+    background-color: rgb(var(--color-surface-dark)) !important;
+    border: 1px solid rgb(var(--color-border-secondary)) !important;
+  }
+}
+
+/* Vuetify dark mode theme integration */
+.v-theme--dark {
+  .v-card {
+    background-color: rgb(var(--color-surface-dark)) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  }
+  
+  .v-expansion-panel {
+    background-color: rgba(0, 0, 0, 0.2) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  }
+  
+  .v-field__outline {
+    --v-field-border-opacity: 0.3 !important;
+  }
+  
+  .v-alert {
+    background-color: rgba(0, 0, 0, 0.2) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  }
+
+  .v-tabs .v-tab {
+    color: rgba(255, 255, 255, 0.7) !important;
+  }
+
+  .v-tabs .v-tab.v-tab--selected {
+    color: white !important;
+  }
+
+  .v-app-bar {
+    background: linear-gradient(135deg, var(--v-theme-primary) 0%, var(--v-theme-secondary) 100%) !important;
+  }
+
+  .v-footer {
+    background-color: rgba(0, 0, 0, 0.3) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+  }
+}
+
+/* Framework integration utilities */
+.framework-integrated {
+  /* Ensures both Vuetify and Naive UI components work harmoniously */
+  font-family: var(--font-sans) !important;
+}
+
+.framework-integrated .v-card,
+.framework-integrated .n-card {
+  transition: var(--transition-transform), var(--transition-shadow) !important;
+}
+
+.framework-integrated .v-btn,
+.framework-integrated .n-button {
+  transition: var(--transition-transform) !important;
+}
+
+/* Enhanced focus visible for better accessibility */
+.framework-integrated :focus-visible {
+  outline: var(--border-width-2) solid rgb(var(--color-primary)) !important;
+  outline-offset: var(--border-width-2) !important;
+}
+
+/* Consistent spacing utilities */
+.spacing-consistent .v-card,
+.spacing-consistent .n-card {
+  margin-bottom: var(--spacing-4) !important;
+}
+
+.spacing-consistent .v-expansion-panel,
+.spacing-consistent .n-collapse-item {
+  margin-bottom: var(--spacing-2) !important;
+}

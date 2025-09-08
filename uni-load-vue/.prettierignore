@@ -1,0 +1,60 @@
+# 依赖
+node_modules/
+bower_components/
+
+# 构建输出
+dist/
+build/
+*.min.js
+*.min.css
+
+# 日志文件
+*.log
+logs/
+
+# 环境变量
+.env
+.env.local
+.env.*.local
+
+# IDE配置
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 操作系统生成的文件
+.DS_Store
+Thumbs.db
+
+# 测试覆盖率报告
+coverage/
+.nyc_output/
+
+# 缓存
+.cache/
+.temp/
+.tmp/
+
+# 锁文件
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+bun.lock
+
+# TypeScript构建信息
+*.tsbuildinfo
+
+# Vue DevTools
+__devtools__/
+
+# UnoCSS检查器
+__unocss__/
+
+# 文档生成
+docs/api/
+
+# 自动生成的文件
+auto-imports.d.ts
+components.d.ts
