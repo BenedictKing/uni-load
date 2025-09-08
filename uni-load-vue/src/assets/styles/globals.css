@@ -10,9 +10,6 @@
 /* 导入UNOCSS重置样式 */
 @import '@unocss/reset/tailwind.css';
 
-/* 导入UNOCSS */
-@unocss all;
-
 /* 全局基础样式 */
 * {
   box-sizing: border-box;
