@@ -220,7 +220,9 @@ onMounted(() => {
 
 /* 头部样式 */
 .header {
-  background: linear-gradient(135deg, rgb(var(--color-gray-900)) 0%, rgb(var(--color-gray-800)) 100%) !important;
+  background: linear-gradient(135deg, rgb(var(--v-theme-primary)) 0%, rgb(var(--v-theme-secondary)) 100%) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(10px) !important;
 }
 
 .header-content {
@@ -245,10 +247,11 @@ onMounted(() => {
 .logo-text {
   font-size: 1.5rem;
   font-weight: 600;
-  background: linear-gradient(135deg, #ffffff 0%, #e8f5e8 100%);
+  background: linear-gradient(135deg, #ffffff 0%, #e0e7ff 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .subtitle {
@@ -265,7 +268,10 @@ onMounted(() => {
 
 /* 导航样式 */
 .nav-tabs {
-  border-radius: 8px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(5px);
+  padding: 4px;
 }
 
 .nav-tab {
@@ -273,7 +279,21 @@ onMounted(() => {
   letter-spacing: 0.5px;
   font-weight: 500;
   min-width: unset;
-  padding: 0 12px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.nav-tab:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff !important;
+}
+
+.nav-tab.v-tab--selected {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff !important;
+  font-weight: 600;
 }
 
 .nav-icon {
