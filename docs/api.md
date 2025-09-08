@@ -46,6 +46,7 @@ POST /api/process-ai-site
 Content-Type: application/json
 
 {
+  "siteName": "deepseek",
   "baseUrl": "https://api.deepseek.com/v1",
   "apiKeys": ["sk-xxx", "sk-yyy"],
   "channelTypes": ["openai"],
@@ -102,28 +103,12 @@ Content-Type: application/json
     "channelTypes": ["openai"],
     "groupsCreated": 1,
     "modelsCount": 5,
-    "models": ["deepseek-chat", "deepseek-coder"],
-    "siteGroups": [
-      {
-        "name": "deepseek-openai",
-        "id": "123",
-        "upstreams": [{"url": "https://api.deepseek.com/v1", "weight": 1}],
-        "_instance": {
-          "id": "local",
-          "name": "本地 gpt-load",
-          "url": "http://localhost:3001",
-          "priority": 1
-        }
-      }
-    ],
-    "modelGroups": 5,
     "usingManualModels": false,
-    "selectedInstance": {
-      "id": "local",
-      "name": "本地 gpt-load",
-      "url": "http://localhost:3001",
-      "priority": 1,
-      "healthStatus": "healthy"
+    "modelsByChannel": {
+      "openai": [
+        "deepseek-chat",
+        "deepseek-coder"
+      ]
     }
   }
 }
