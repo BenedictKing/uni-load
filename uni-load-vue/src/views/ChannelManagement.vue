@@ -2,7 +2,7 @@
   <div class="page-container">
     <div class="content-wrapper">
       <!-- 页面头部 -->
-      <v-card class="page-header" rounded="lg">
+      <v-card class="content-panel page-header" rounded="lg">
         <v-card-text class="header-content">
           <div class="header-info">
             <div class="d-flex align-center gap-6">
@@ -293,6 +293,14 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- 通知 Snackbar -->
+    <v-snackbar v-model="snackbar" :color="snackbarColor" :timeout="4000" location="top" elevation="24">
+      {{ snackbarText }}
+      <template v-slot:actions>
+        <v-btn variant="text" @click="snackbar = false">关闭</v-btn>
+      </template>
+    </v-snackbar>
   </div>
 </template>
 
@@ -317,6 +325,18 @@ const isUpdating = ref(false)
 const updateForm = reactive({
   apiKeys: '',
 })
+
+// 通知状态
+const snackbar = ref(false)
+const snackbarText = ref('')
+const snackbarColor = ref('success')
+
+// 显示通知
+const showNotification = (text: string, color: string = 'success') => {
+  snackbarText.value = text
+  snackbarColor.value = color
+  snackbar.value = true
+}
 
 // API 调用
 
@@ -454,7 +474,7 @@ const toggleHealthMonitor = async () => {
     await refreshData()
   } catch (error: any) {
     console.error('切换健康监控失败:', error)
-    alert(`❌ 切换健康监控失败: ${error.response?.data?.message || error.message || '未知错误'}`)
+    showNotification(`❌ 切换健康监控失败: ${error.response?.data?.message || error.message || '未知错误'}`, 'error')
   }
 }
 
@@ -464,7 +484,7 @@ const showFailedChannels = async () => {
     const response = await Api.Service.getFailedChannels()
 
     if (response?.data?.length === 0) {
-      alert('✅ 当前没有失败的渠道')
+      showNotification('✅ 当前没有失败的渠道', 'success')
       return
     }
 
@@ -484,7 +504,7 @@ const showFailedChannels = async () => {
     }
   } catch (error: any) {
     console.error('获取失败渠道失败:', error)
-    alert(`❌ 获取失败渠道失败: ${error.response?.data?.message || error.message || '未知错误'}`)
+    showNotification(`❌ 获取失败渠道失败: ${error.response?.data?.message || error.message || '未知错误'}`, 'error')
   }
 }
 
@@ -492,11 +512,11 @@ const showFailedChannels = async () => {
 const resetAllChannelFailures = async () => {
   try {
     await Api.Service.resetChannelFailures()
-    alert('✅ 重置成功')
+    showNotification('✅ 重置成功', 'success')
     await refreshData()
   } catch (error: any) {
     console.error('重置失败计数失败:', error)
-    alert(`❌ 重置失败计数失败: ${error.response?.data?.message || error.message || '未知错误'}`)
+    showNotification(`❌ 重置失败计数失败: ${error.response?.data?.message || error.message || '未知错误'}`, 'error')
   }
 }
 
@@ -509,11 +529,11 @@ const reassignChannel = async (channelName: string, action: 'promote' | 'demote'
 
   try {
     await Api.Channel.reassign({ channelName, action })
-    alert(`✅ ${actionText}成功`)
+    showNotification(`✅ ${actionText}成功`, 'success')
     await refreshData()
   } catch (error: any) {
     console.error(`${actionText}失败:`, error)
-    alert(`❌ ${actionText}失败: ${error.response?.data?.message || error.message || '未知错误'}`)
+    showNotification(`❌ ${actionText}失败: ${error.response?.data?.message || error.message || '未知错误'}`, 'error')
   }
 }
 
@@ -551,12 +571,12 @@ const submitUpdate = async () => {
       apiKeys: apiKeys.length > 0 ? apiKeys : [],
     })
 
-    alert('✅ 更新成功')
+    showNotification('✅ 更新成功', 'success')
     closeUpdateModal()
     await refreshData()
   } catch (error: any) {
     console.error('更新失败:', error)
-    alert(`❌ 更新失败: ${error.response?.data?.message || error.message || '未知错误'}`)
+    showNotification(`❌ 更新失败: ${error.response?.data?.message || error.message || '未知错误'}`, 'error')
   } finally {
     isUpdating.value = false
   }
@@ -570,11 +590,11 @@ const deleteChannel = async (channelName: string) => {
 
   try {
     await Api.Channel.delete(channelName)
-    alert(`✅ 渠道 "${channelName}" 已成功删除`)
+    showNotification(`✅ 渠道 "${channelName}" 已成功删除`, 'success')
     await refreshData()
   } catch (error: any) {
     console.error('删除失败:', error)
-    alert(`❌ 删除失败: ${error.response?.data?.message || error.message || '未知错误'}`)
+    showNotification(`❌ 删除失败: ${error.response?.data?.message || error.message || '未知错误'}`, 'error')
   }
 }
 
@@ -585,55 +605,9 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.page-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem 1rem;
-}
+/* 这个页面特有的样式 - 大部分样式已移至全局 page-layout.css */
 
-.content-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.page-header {
-  padding: 1rem;
-}
-
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 1rem;
-  padding: 0;
-}
-
-.header-info h2 {
-  font-size: 1.8rem;
-}
-
-.content-panel {
-  background: rgb(var(--v-theme-surface));
-  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-  border-radius: 16px !important;
-}
-
-.panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 1rem;
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-}
-
-.panel-content {
-  padding: 1.5rem;
-}
-
+/* 状态详情样式 */
 .status-info {
   display: flex;
   flex-direction: column;
@@ -657,6 +631,7 @@ onMounted(() => {
   gap: 0.25rem;
 }
 
+/* 搜索和筛选样式 */
 .search-filter {
   display: flex;
   gap: 1rem;
@@ -671,18 +646,21 @@ onMounted(() => {
   width: 180px;
 }
 
+/* 空状态样式 */
 .empty-state {
   text-align: center;
   padding: 3rem;
   color: rgba(var(--v-theme-on-surface), 0.5);
 }
 
+/* 渠道网格样式 */
 .channels-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
   gap: 1.5rem;
 }
 
+/* 渠道卡片样式 */
 .channel-card {
   border-radius: 12px !important;
   overflow: hidden;
@@ -701,12 +679,15 @@ onMounted(() => {
   height: 100%;
   background-color: grey;
 }
+
 .channel-card.openai::before {
   background-color: rgb(var(--v-theme-success));
 }
+
 .channel-card.anthropic::before {
   background-color: rgb(var(--v-theme-purple));
 }
+
 .channel-card.gemini::before {
   background-color: rgb(var(--v-theme-info));
 }
@@ -760,15 +741,13 @@ onMounted(() => {
   word-break: break-all;
 }
 
+/* 响应式设计 */
 @media (max-width: 768px) {
-  .page-container {
-    padding: 1rem;
-  }
-  .panel-header,
   .search-filter {
     flex-direction: column;
     align-items: stretch;
   }
+  
   .search-input,
   .filter-select {
     width: 100%;

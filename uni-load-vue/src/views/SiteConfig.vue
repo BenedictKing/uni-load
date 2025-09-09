@@ -2,7 +2,7 @@
   <div class="page-container">
     <div class="content-wrapper">
       <!-- 页面头部 -->
-      <v-card class="page-header" rounded="lg">
+      <v-card class="content-panel page-header" rounded="lg">
         <v-card-text class="header-content">
           <div class="header-info">
             <div class="d-flex align-center gap-6">
@@ -39,7 +39,10 @@
               </v-chip>
             </template>
           </v-text-field>
-          <div class="help-text mb-4">AI站点的API地址，系统会自动生成站点名称</div>
+          <div class="help-text mb-6">AI站点的API地址，系统会自动生成站点名称</div>
+
+          <!-- 分隔线 -->
+          <v-divider class="my-6"></v-divider>
 
           <!-- API格式类型选择 -->
           <div class="mb-4">
@@ -63,6 +66,9 @@
             </v-chip-group>
             <div class="help-text">选择该AI站点支持的API格式（可多选）</div>
           </div>
+
+          <!-- 分隔线 -->
+          <v-divider class="my-6"></v-divider>
 
           <!-- API密钥输入 -->
           <v-textarea
@@ -465,89 +471,12 @@ const handleSubmit = async () => {
 </script>
 
 <style scoped>
-.page-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem 1rem;
-}
+/* 这个页面特有的样式 - 大部分样式已移至全局 page-layout.css */
 
-.content-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.page-header {
-  padding: 1rem;
-}
-
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 1rem;
-  padding: 0;
-}
-
-.header-info h2 {
-  font-size: 1.8rem;
-}
-
-.content-panel {
-  background: rgb(var(--v-theme-surface));
-  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-  border-radius: 16px !important;
-}
-
-.panel-content {
-  padding: 1.5rem;
-}
-
-.help-text {
-  font-size: 0.875rem;
-  color: rgba(var(--v-theme-on-surface), 0.6);
-  margin-top: -0.5rem;
-}
-
+/* 渠道类型选择组样式 */
 .channel-types-group {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-}
-
-.submit-btn {
-  min-width: 200px;
-  border-radius: 8px;
-}
-
-.result-card .result-header {
-  display: flex;
-  align-items: center;
-  font-size: 1.25rem;
-  font-weight: 600;
-}
-
-.result-card .result-list {
-  background: transparent;
-}
-
-.result-card .models-section {
-  background: rgba(var(--v-border-color), 0.1);
-  border-radius: 8px;
-  padding: 1rem;
-  margin-top: 1rem;
-}
-
-.result-card .models-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-@media (max-width: 768px) {
-  .page-container {
-    padding: 1rem;
-  }
 }
 </style>
