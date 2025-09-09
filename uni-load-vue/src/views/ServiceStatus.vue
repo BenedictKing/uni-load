@@ -209,12 +209,7 @@
           <div class="service-status-content">
             <div v-if="tempGroupStats" class="temp-group-stats">
               <v-alert v-if="tempGroupStats.totalTempGroups === 0" type="success" variant="tonal" class="mb-0">
-                <template v-slot:text>
-                  <div class="d-flex align-center">
-                    <v-icon class="mr-2">mdi-check-circle</v-icon>
-                    无临时分组需要清理
-                  </div>
-                </template>
+                无临时分组需要清理
               </v-alert>
 
               <div v-else class="temp-group-details">
@@ -313,7 +308,6 @@ const initializeDefaultValues = () => {
       isRunning: false,
       hasInterval: false,
       intervalMinutes: 60,
-      nextSync: null
     }
   }
   if (!healthStatus.value) {
@@ -323,13 +317,12 @@ const initializeDefaultValues = () => {
       intervalMinutes: 30,
       failureThreshold: 3,
       failureCount: 0,
-      nextCheck: null
     }
   }
   if (!tempGroupStats.value) {
     tempGroupStats.value = {
       totalTempGroups: 0,
-      instanceStats: []
+      instanceStats: [],
     }
   }
 }

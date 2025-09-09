@@ -324,3 +324,162 @@
     text-align: center;
   }
 }
+
+/* 暗色主题专用样式 */
+@media (prefers-color-scheme: dark) {
+  /* 页面容器和内容区域 */
+  .page-container {
+    background: transparent;
+  }
+
+  .content-wrapper {
+    background: transparent;
+  }
+
+  /* 卡片和面板样式 */
+  .content-panel {
+    background: rgba(30, 41, 59, 0.8) !important;
+    border: 1px solid rgba(148, 163, 184, 0.2) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+  }
+
+  /* 页面头部样式 */
+  .page-header {
+    background: rgba(30, 41, 59, 0.8) !important;
+    border: 1px solid rgba(148, 163, 184, 0.2) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+  }
+
+  .page-header .header-content {
+    background: transparent;
+  }
+
+  .page-header .header-info h2 {
+    color: #f1f5f9 !important;
+  }
+
+  .page-header .header-info p {
+    color: rgba(241, 245, 249, 0.9) !important;
+  }
+
+  /* 面板头部样式 */
+  .panel-header {
+    background: rgba(51, 65, 85, 0.6) !important;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.2) !important;
+  }
+
+  .panel-title h3 {
+    color: #f1f5f9 !important;
+  }
+
+  /* 面板内容样式 */
+  .panel-content,
+  .service-status-content {
+    background: transparent;
+  }
+
+  /* 信息文本样式 */
+  .help-text {
+    color: rgba(241, 245, 249, 0.6) !important;
+  }
+
+  /* 状态信息样式 */
+  .info-label {
+    color: rgba(241, 245, 249, 0.7) !important;
+  }
+
+  .info-value {
+    color: #e2e8f0 !important;
+  }
+
+  /* 统计数字样式 */
+  .stats-number {
+    color: #fbbf24 !important;
+  }
+
+  .stats-label {
+    color: #f1f5f9 !important;
+  }
+
+  /* 分组项目样式 */
+  .temp-group-item {
+    color: rgba(241, 245, 249, 0.7) !important;
+  }
+
+  .group-name {
+    color: #f1f5f9 !important;
+  }
+
+  .group-id {
+    color: rgba(241, 245, 249, 0.5) !important;
+  }
+
+  /* 结果卡片样式 */
+  .result-card .models-section {
+    background: rgba(51, 65, 85, 0.4) !important;
+    border: 1px solid rgba(148, 163, 184, 0.2) !important;
+  }
+
+  /* 按钮和交互元素 */
+  .action-btn,
+  .submit-btn {
+    background: rgba(30, 41, 59, 0.8) !important;
+    border-color: rgba(148, 163, 184, 0.3) !important;
+    color: #f1f5f9 !important;
+  }
+
+  .action-btn:hover,
+  .submit-btn:hover {
+    background: rgba(51, 65, 85, 0.9) !important;
+    border-color: rgba(139, 92, 246, 0.5) !important;
+  }
+}
+
+/* Vuetify 暗色主题集成 */
+.v-theme--dark {
+  .content-panel {
+    background: rgba(30, 41, 59, 0.8) !important;
+    border: 1px solid rgba(148, 163, 184, 0.2) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+  }
+
+  .page-header {
+    background: rgba(30, 41, 59, 0.8) !important;
+    border: 1px solid rgba(148, 163, 184, 0.2) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+  }
+
+  .panel-header {
+    background: rgba(51, 65, 85, 0.6) !important;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.2) !important;
+  }
+
+  .page-header .header-info h2,
+  .page-header .header-info p,
+  .panel-title h3 {
+    color: #f1f5f9 !important;
+  }
+
+  .info-label {
+    color: rgba(241, 245, 249, 0.7) !important;
+  }
+
+  .info-value {
+    color: #e2e8f0 !important;
+  }
+
+  .help-text {
+    color: rgba(241, 245, 249, 0.6) !important;
+  }
+
+  .result-card .models-section {
+    background: rgba(51, 65, 85, 0.4) !important;
+    border: 1px solid rgba(148, 163, 184, 0.2) !important;
+  }
+}

@@ -19,7 +19,15 @@ import Layout from '@/components/Layout.vue'
 }
 
 .v-theme--dark .v-application {
+  background: transparent;
+}
+
+.v-theme--dark .v-main {
   background: #121212;
+}
+
+.v-theme--dark .v-container {
+  background: transparent;
 }
 
 /* 全局过渡效果 */

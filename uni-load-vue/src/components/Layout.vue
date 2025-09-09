@@ -366,6 +366,18 @@ onMounted(() => {
 }
 
 /* 暗色主题优化 */
+.v-theme--dark .v-app-bar {
+  background: linear-gradient(
+    135deg,
+    rgba(15, 23, 42, 0.9) 0%,
+    rgba(30, 41, 59, 0.9) 50%,
+    rgba(51, 65, 85, 0.9) 100%
+  ) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2) !important;
+}
+
 .v-theme--dark .footer {
   background: rgba(0, 0, 0, 0.2) !important;
   border-top-color: rgba(255, 255, 255, 0.1);
