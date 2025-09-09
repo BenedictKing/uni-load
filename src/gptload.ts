@@ -1055,37 +1055,35 @@ class GptloadService {
    * 重新分配渠道到上一个或下一个实例
    */
   async reassignChannelInstance(channelName: string, action: 'promote' | 'demote') {
+    // 1. 获取所有必要信息
     const allGroups = await this.getAllGroups()
-    const channelGroup = allGroups.find((g) => g.name === channelName)
+    const channelGroup = allGroups.find((g) => g.name === channelName && g.sort === layerConfigs.siteGroup.sort)
 
     if (!channelGroup) {
-      throw new Error(`未找到渠道分组: ${channelName}`)
+      throw new Error(`未找到站点分组: ${channelName}`)
     }
-
-    if (!channelGroup.upstreams || channelGroup.upstreams.length === 0) {
-      throw new Error(`渠道分组 ${channelName} 没有配置上游URL`)
-    }
-
-    const siteUrl = channelGroup.upstreams[0].url
 
     const currentInstanceId = channelGroup._instance.id
-    const allInstances = this.manager.getAllInstances() // Assumes sorted by priority
-
-    const currentIndex = allInstances.findIndex((inst) => inst.id === currentInstanceId)
-    if (currentIndex === -1) {
+    const currentInstance = this.manager.getInstance(currentInstanceId)
+    if (!currentInstance) {
       throw new Error(`找不到渠道 ${channelName} 当前所在的实例 ${currentInstanceId}`)
     }
 
+    const allInstances = this.manager.getAllInstances() // 已按优先级排序
+    const currentIndex = allInstances.findIndex((inst) => inst.id === currentInstanceId)
+
+    // 2. 确定目标实例 (修正提级/降级逻辑)
     let newIndex
     if (action === 'promote') {
-      newIndex = currentIndex + 1
-      if (newIndex >= allInstances.length) {
+      // 提级 -> 更高优先级 (index更小)
+      newIndex = currentIndex - 1
+      if (newIndex < 0) {
         throw new Error(`渠道 ${channelName} 已经是最高优先级实例，无法提级`)
       }
     } else {
-      // demote
-      newIndex = currentIndex - 1
-      if (newIndex < 0) {
+      // demote (降级) -> 更低优先级 (index更大)
+      newIndex = currentIndex + 1
+      if (newIndex >= allInstances.length) {
         throw new Error(`渠道 ${channelName} 已经是最低优先级实例，无法降级`)
       }
     }
@@ -1095,11 +1093,66 @@ class GptloadService {
       throw new Error(`目标实例 ${newInstance.name} 不健康，无法分配`)
     }
 
-    await this.manager.reassignSite(siteUrl, newInstance.id)
+    // 3. 在新实例上创建站点分组
+    console.log(`[1/4] 正在从实例 ${currentInstance.name} 获取API密钥...`)
+    const apiKeys = await this.getGroupApiKeys(channelGroup.id, currentInstance.id)
+
+    // 复制分组配置，移除实例特定字段
+    const newGroupData = { ...channelGroup }
+    delete newGroupData.id
+    delete newGroupData.created_at
+    delete newGroupData.updated_at
+    delete newGroupData._instance
+
+    console.log(`[2/4] 正在实例 ${newInstance.name} 上创建新的站点分组 ${channelName}...`)
+    const createResponse = await newInstance.apiClient.post('/groups', newGroupData)
+    const newGroup = createResponse.data?.data || createResponse.data
+    if (!newGroup || !newGroup.id) {
+      throw new Error(`在实例 ${newInstance.name} 上创建分组 ${channelName} 失败`)
+    }
+
+    if (apiKeys.length > 0) {
+      await this.addApiKeysToGroup(newGroup.id, apiKeys, newInstance)
+    }
+    console.log(`✅ 在新实例上创建分组并添加密钥成功 (新分组ID: ${newGroup.id})`)
+
+    // 4. 更新上游模型分组
+    console.log(`[3/4] 正在更新引用了 ${channelName} 的模型分组...`)
+    const upstreamUrlPart = `/proxy/${channelName}`
+    const modelGroupsToUpdate = allGroups.filter(
+      (g) =>
+        (g.sort === layerConfigs.modelChannelGroup.sort || g.sort === layerConfigs.aggregateGroup.sort) &&
+        g.upstreams?.some((u) => u.url.includes(upstreamUrlPart))
+    )
+
+    for (const modelGroup of modelGroupsToUpdate) {
+      const updatedUpstreams = modelGroup.upstreams.map((upstream) => {
+        if (upstream.url.includes(upstreamUrlPart)) {
+          // 将旧实例URL替换为新实例URL
+          return { ...upstream, url: upstream.url.replace(currentInstance.url, newInstance.url) }
+        }
+        return upstream
+      })
+
+      await this.updateGroup(modelGroup.id, modelGroup._instance.id, { upstreams: updatedUpstreams })
+      console.log(`  - 已更新模型分组 ${modelGroup.name} 的上游地址`)
+    }
+    console.log(`✅ ${modelGroupsToUpdate.length} 个模型分组的上游已更新`)
+
+    // 5. 删除旧的站点分组
+    console.log(`[4/4] 正在从实例 ${currentInstance.name} 删除旧的站点分组...`)
+    await this.deleteGroupById(channelGroup.id, currentInstance.id)
+    console.log(`✅ 旧站点分组 ${channelName} (ID: ${channelGroup.id}) 已删除`)
+
+    // 6. 更新内部站点分配映射（可选，但推荐）
+    if (channelGroup.upstreams && channelGroup.upstreams.length > 0) {
+      const siteUrl = channelGroup.upstreams[0].url
+      await this.manager.reassignSite(siteUrl, newInstance.id)
+    }
 
     return {
       channelName,
-      previousInstanceName: allInstances[currentIndex].name,
+      previousInstanceName: currentInstance.name,
       newInstanceName: newInstance.name,
     }
   }
