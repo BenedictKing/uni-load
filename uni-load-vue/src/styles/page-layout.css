@@ -22,21 +22,29 @@
 
 /* 页面头部样式 */
 .page-header {
-  padding: 1rem;
+  padding: 0;
 }
 
 .page-header .header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  flex-wrap: nowrap !important;
   gap: 1rem;
-  padding: 0.5rem 0;
+  padding: 1.5rem 2rem;
 }
 
 .page-header .header-info {
   flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
+
+.page-header .header-info .v-icon {
+  flex-shrink: 0;
+}
+
 
 .page-header .header-info h2 {
   font-size: 1.8rem;
@@ -233,6 +241,40 @@
   font-size: 0.8rem;
 }
 
+/* 确保大屏幕上的水平布局 */
+@media (min-width: 769px) {
+  .page-header .header-content {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+  }
+}
+
+/* Vuetify 工具类补充 - 如果原生工具类不工作 */
+.mb-1 { margin-bottom: 4px !important; }
+.mb-2 { margin-bottom: 8px !important; }
+.mb-3 { margin-bottom: 12px !important; }
+.mb-4 { margin-bottom: 16px !important; }
+.mb-5 { margin-bottom: 20px !important; }
+.mb-6 { margin-bottom: 24px !important; }
+.mb-7 { margin-bottom: 28px !important; }
+.mb-8 { margin-bottom: 32px !important; }
+
+.mt-1 { margin-top: 4px !important; }
+.mt-2 { margin-top: 8px !important; }
+.mt-3 { margin-top: 12px !important; }
+.mt-4 { margin-top: 16px !important; }
+.mt-5 { margin-top: 20px !important; }
+.mt-6 { margin-top: 24px !important; }
+.mt-7 { margin-top: 28px !important; }
+.mt-8 { margin-top: 32px !important; }
+
+.d-flex { display: flex !important; }
+.justify-center { justify-content: center !important; }
+.align-center { align-items: center !important; }
+
 /* 响应式设计 */
 @media (max-width: 768px) {
   .page-container {
@@ -244,8 +286,8 @@
   }
 
   .page-header .header-content {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    align-items: center;
   }
 
   .panel-content,
@@ -265,6 +307,12 @@
 }
 
 @media (max-width: 480px) {
+  .page-header .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
   .page-header .header-actions,
   .panel-controls {
     width: 100%;

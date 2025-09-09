@@ -5,12 +5,10 @@
       <v-card class="content-panel page-header" rounded="lg">
         <v-card-text class="header-content">
           <div class="header-info">
-            <div class="d-flex align-center gap-6">
-              <v-icon size="32" color="primary">mdi-chart-line</v-icon>
-              <div>
-                <h2 class="text-h4 font-weight-bold mb-1 text-on-surface">服务状态</h2>
-                <p class="text-body-2 opacity-90 text-on-surface">监控系统服务运行状态，执行维护操作</p>
-              </div>
+            <v-icon size="32" color="primary">mdi-chart-line</v-icon>
+            <div>
+              <h2 class="text-h4 font-weight-bold mb-1 text-on-surface">服务状态</h2>
+              <p class="text-body-2 opacity-90 text-on-surface">监控系统服务运行状态，执行维护操作</p>
             </div>
           </div>
           <div class="header-actions">
@@ -33,7 +31,9 @@
           <div class="panel-header">
             <div class="panel-title">
               <div class="d-flex align-center gap-2">
-                <v-icon size="20" :color="getSyncStatusColor()">{{ getSyncStatusIcon() }}</v-icon>
+                <v-icon size="20" :color="getSyncStatusColor()">
+                  {{ getSyncStatusIcon() || 'mdi-sync' }}
+                </v-icon>
                 <h3 class="text-h6 font-weight-medium mb-0">模型同步服务</h3>
               </div>
             </div>
@@ -101,7 +101,9 @@
           <div class="panel-header">
             <div class="panel-title">
               <div class="d-flex align-center gap-2">
-                <v-icon size="20" :color="getHealthStatusColor()">{{ getHealthStatusIcon() }}</v-icon>
+                <v-icon size="20" :color="getHealthStatusColor()">
+                  {{ getHealthStatusIcon() || 'mdi-heart-pulse' }}
+                </v-icon>
                 <h3 class="text-h6 font-weight-medium mb-0">渠道健康监控</h3>
               </div>
             </div>
@@ -177,7 +179,9 @@
           <div class="panel-header">
             <div class="panel-title">
               <div class="d-flex align-center gap-2">
-                <v-icon size="20" :color="getTempGroupStatusColor()">{{ getTempGroupStatusIcon() }}</v-icon>
+                <v-icon size="20" :color="getTempGroupStatusColor()">
+                  {{ getTempGroupStatusIcon() || 'mdi-broom' }}
+                </v-icon>
                 <h3 class="text-h6 font-weight-medium mb-0">临时分组清理</h3>
               </div>
             </div>
@@ -302,6 +306,34 @@ const showNotification = (text: string, color: string = 'success') => {
   snackbar.value = true
 }
 
+// 初始化默认值，确保图标有显示
+const initializeDefaultValues = () => {
+  if (!syncStatus.value) {
+    syncStatus.value = {
+      isRunning: false,
+      hasInterval: false,
+      intervalMinutes: 60,
+      nextSync: null
+    }
+  }
+  if (!healthStatus.value) {
+    healthStatus.value = {
+      isRunning: false,
+      hasInterval: false,
+      intervalMinutes: 30,
+      failureThreshold: 3,
+      failureCount: 0,
+      nextCheck: null
+    }
+  }
+  if (!tempGroupStats.value) {
+    tempGroupStats.value = {
+      totalTempGroups: 0,
+      instanceStats: []
+    }
+  }
+}
+
 // 定时刷新
 let refreshInterval: number | null = null
 
@@ -348,10 +380,10 @@ const getSyncStatusColor = () => {
 
 // 获取同步状态图标
 const getSyncStatusIcon = () => {
-  if (!syncStatus.value) return 'mdi-help-circle'
+  if (!syncStatus.value) return 'mdi-sync-alert'
   if (syncStatus.value.isRunning) return 'mdi-sync'
-  if (syncStatus.value.hasInterval) return 'mdi-check-circle'
-  return 'mdi-close-circle'
+  if (syncStatus.value.hasInterval) return 'mdi-check-circle-outline'
+  return 'mdi-close-circle-outline'
 }
 
 // 获取同步状态 Vuetify 类型
@@ -372,10 +404,10 @@ const getHealthStatusColor = () => {
 
 // 获取健康状态图标
 const getHealthStatusIcon = () => {
-  if (!healthStatus.value) return 'mdi-help-circle'
+  if (!healthStatus.value) return 'mdi-heart-pulse'
   if (healthStatus.value.isRunning) return 'mdi-heart-pulse'
-  if (healthStatus.value.hasInterval) return 'mdi-check-circle'
-  return 'mdi-close-circle'
+  if (healthStatus.value.hasInterval) return 'mdi-check-circle-outline'
+  return 'mdi-close-circle-outline'
 }
 
 // 获取健康状态 Vuetify 类型
@@ -394,8 +426,8 @@ const getTempGroupStatusColor = () => {
 
 // 获取临时分组状态图标
 const getTempGroupStatusIcon = () => {
-  if (!tempGroupStats.value) return 'mdi-help-circle'
-  return tempGroupStats.value.totalTempGroups > 0 ? 'mdi-alert' : 'mdi-check-circle'
+  if (!tempGroupStats.value) return 'mdi-broom'
+  return tempGroupStats.value.totalTempGroups > 0 ? 'mdi-alert-outline' : 'mdi-check-circle-outline'
 }
 
 // 刷新服务状态
@@ -579,6 +611,7 @@ const formatTime = (time: string | Date): string => {
 
 // 初始化和清理
 onMounted(() => {
+  initializeDefaultValues()
   refreshAllStatus()
 
   // 设置定时刷新

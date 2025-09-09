@@ -5,16 +5,14 @@
       <v-card class="content-panel page-header" rounded="lg">
         <v-card-text class="header-content">
           <div class="header-info">
-            <div class="d-flex align-center gap-6">
-              <v-icon size="32" color="primary">mdi-cog</v-icon>
-              <div>
-                <h2 class="text-h4 font-weight-bold mb-1 text-on-surface">AI站点配置</h2>
-                <p class="text-body-2 opacity-90 text-on-surface">配置新的AI站点，自动创建渠道和模型分组</p>
-              </div>
+            <v-icon size="32" color="primary">mdi-cog</v-icon>
+            <div>
+              <h2 class="text-h4 font-weight-bold mb-1 text-on-surface">AI站点配置</h2>
+              <p class="text-body-2 opacity-90 text-on-surface">配置新的AI站点，自动创建渠道和模型分组</p>
             </div>
           </div>
           <div class="header-actions">
-            <!-- 可以在这里添加头部操作按钮 -->
+            <!-- 操作按钮区域 -->
           </div>
         </v-card-text>
       </v-card>
@@ -31,7 +29,7 @@
             variant="outlined"
             density="comfortable"
             @input="debouncedUpdateSiteName"
-            class="mb-4">
+            :class="baseUrlHasError ? 'mb-2' : 'mb-4'">
             <template v-slot:append-inner>
               <v-chip :color="siteNameChipColor" size="small" :title="siteNameTooltip" class="site-name-chip">
                 <v-icon size="14" class="mr-1">{{ siteNameChipIcon }}</v-icon>
@@ -39,7 +37,7 @@
               </v-chip>
             </template>
           </v-text-field>
-          <div class="help-text mb-6">AI站点的API地址，系统会自动生成站点名称</div>
+          <div class="help-text" :class="baseUrlHasError ? 'mb-4' : 'mb-6'">AI站点的API地址，系统会自动生成站点名称</div>
 
           <!-- 分隔线 -->
           <v-divider class="my-6"></v-divider>
@@ -80,11 +78,14 @@
             rows="6"
             placeholder="sk-xxx...&#10;sk-yyy..., sk-zzz...&#10;sk-aaa... sk-bbb...; sk-ccc...&#10;&#10;支持分隔符：换行、空格、逗号、分号"
             counter="10000"
-            class="mb-4" />
-          <div class="help-text mb-4">每行一个密钥，支持多种分隔符（换行、空格、逗号、分号）</div>
+            :class="apiKeysHasError ? 'mb-2' : 'mb-4'" />
+          <div class="help-text" :class="apiKeysHasError ? 'mb-4' : 'mb-6'">每行一个密钥，支持多种分隔符（换行、空格、逗号、分号）</div>
+
+          <!-- 分隔线 -->
+          <v-divider class="my-6"></v-divider>
 
           <!-- 手动指定模型 - 可折叠 -->
-          <v-expansion-panels v-model="activePanels" class="mb-4">
+          <v-expansion-panels v-model="activePanels" class="mb-6">
             <v-expansion-panel value="models" title="手动指定模型 (可选)">
               <v-expansion-panel-text>
                 <v-textarea
@@ -100,7 +101,7 @@
           </v-expansion-panels>
 
           <!-- 验证端点配置 - 可折叠 -->
-          <v-expansion-panels v-if="form.channelTypes.length > 0" v-model="validationEndpointsPanels" class="mb-4">
+          <v-expansion-panels v-if="form.channelTypes.length > 0" v-model="validationEndpointsPanels" class="mb-6">
             <v-expansion-panel value="validation-endpoints" title="验证端点配置 (可选)">
               <v-expansion-panel-text>
                 <div v-for="type in form.channelTypes" :key="type" class="mb-3">
@@ -117,7 +118,7 @@
           </v-expansion-panels>
 
           <!-- 提交按钮 -->
-          <div class="d-flex justify-center mt-6">
+          <div class="d-flex justify-center mt-8">
             <v-btn
               color="primary"
               size="large"
@@ -258,8 +259,8 @@ const result = ref<any>(null)
 
 // 表单验证规则
 const baseUrlRules = [
-  (v: string) => !!v || '请输入API基础地址',
   (v: string) => {
+    if (!v) return true // 空值时不显示错误，让用户先输入
     try {
       new URL(v)
       return true
@@ -270,9 +271,28 @@ const baseUrlRules = [
 ]
 
 const apiKeysRules = [
-  (v: string) => !!v || '请输入API密钥',
-  (v: string) => v.length >= 10 || 'API密钥长度不能少于10个字符',
+  (v: string) => {
+    if (!v || !v.trim()) return true // 空值时不显示错误，让用户先输入
+    return v.length >= 10 || 'API密钥长度不能少于10个字符'
+  },
 ]
+
+// API密钥错误检查
+const apiKeysHasError = computed(() => {
+  if (!form.apiKeys || !form.apiKeys.trim()) return false // 空值时不显示错误
+  return form.apiKeys.length < 10
+})
+
+// 基础地址错误检查
+const baseUrlHasError = computed(() => {
+  if (!form.baseUrl) return false // 空值时不显示错误
+  try {
+    new URL(form.baseUrl)
+    return false
+  } catch {
+    return true
+  }
+})
 
 // 站点名称显示
 const siteNameDisplay = computed(() => {
@@ -424,6 +444,20 @@ const parseManualModels = (text: string) => {
 
 // 处理表单提交
 const handleSubmit = async () => {
+  // 验证基础地址
+  if (!form.baseUrl.trim()) {
+    alert('请输入API基础地址')
+    return
+  }
+
+  // 验证URL格式
+  try {
+    new URL(form.baseUrl)
+  } catch {
+    alert('请输入正确的URL格式')
+    return
+  }
+
   if (form.channelTypes.length === 0) {
     alert('请至少选择一种API格式类型')
     return
@@ -479,4 +513,5 @@ const handleSubmit = async () => {
   flex-wrap: wrap;
   gap: 0.5rem;
 }
+
 </style>

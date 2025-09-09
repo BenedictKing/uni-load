@@ -1,5 +1,5 @@
-/* Vuetify base styles */
-@import 'vuetify/styles';
+/* Vuetify base styles - 移到插件中导入 */
+/* @import 'vuetify/styles'; */
 
 /* 导入CSS变量系统 */
 @import './variables.css';
@@ -7,8 +7,8 @@
 /* 导入响应式工具类 */
 @import './responsive.css';
 
-/* 导入UNOCSS重置样式 */
-@import '@unocss/reset/tailwind.css';
+/* UnoCSS 重置样式暂时禁用，避免与 Vuetify 冲突 */
+/* @import '@unocss/reset/tailwind.css'; */
 
 /* 全局基础样式 */
 * {
@@ -25,11 +25,7 @@ html {
 body {
   font-family: var(--font-sans);
   color: rgb(var(--color-text-primary));
-  background: linear-gradient(
-    135deg,
-    rgb(var(--color-background-primary)) 0%,
-    rgb(var(--color-background-secondary)) 100%
-  );
+  background: var(--gradient-surface);
   min-height: 100vh;
   margin: 0;
   padding: 0;
@@ -168,11 +164,61 @@ body {
   box-shadow: var(--shadow-lg);
 }
 
+/* 特殊效果色彩 */
 .text-gradient {
-  background: linear-gradient(135deg, rgb(var(--color-primary)), rgb(var(--color-brand-600)));
+  background: var(--gradient-primary);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+.text-gradient-secondary {
+  background: var(--gradient-secondary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* 玻璃态效果 */
+.glass-effect {
+  background: rgba(255, 255, 255, 0.7) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  box-shadow: 0 8px 32px rgba(139, 92, 246, 0.1) !important;
+}
+
+/* 发光效果 */
+.glow-effect {
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.3) !important;
+}
+
+.glow-effect-primary {
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.4) !important;
+}
+
+.glow-effect-secondary {
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.4) !important;
+}
+
+/* 浮动动画 */
+.float-animation {
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+/* 脉冲效果 */
+.pulse-effect {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 5px rgba(139, 92, 246, 0.3); }
+  50% { box-shadow: 0 0 20px rgba(139, 92, 246, 0.6); }
 }
 
 /* Vuetify specific enhancements */
@@ -180,11 +226,15 @@ body {
   border-radius: var(--radius-lg) !important;
   box-shadow: var(--shadow-md) !important;
   transition: var(--transition-transform) !important;
+  background: rgb(var(--color-background-card)) !important;
+  backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(var(--color-border-primary), 0.5) !important;
 }
 
 .v-card:hover {
   transform: translateY(-2px) !important;
   box-shadow: var(--shadow-lg) !important;
+  border-color: rgba(var(--color-border-accent), 0.3) !important;
 }
 
 .v-btn {
@@ -193,10 +243,28 @@ body {
   text-transform: none !important;
   letter-spacing: 0.5px !important;
   transition: var(--transition-transform) !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.v-btn::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: -100% !important;
+  width: 100% !important;
+  height: 100% !important;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent) !important;
+  transition: left 0.5s !important;
+}
+
+.v-btn:hover::before {
+  left: 100% !important;
 }
 
 .v-btn:hover {
   transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3) !important;
 }
 
 .v-field__field {
@@ -340,54 +408,69 @@ body {
   body {
     background: linear-gradient(
       135deg,
-      rgb(var(--color-background-dark)) 0%,
-      rgb(var(--color-background-secondary-dark)) 100%
+      rgb(var(--color-gray-900)) 0%,
+      rgb(var(--color-gray-800)) 100%
     );
   }
 
   .glass-effect {
-    background: rgba(0, 0, 0, 0.2);
-    border-color: rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.4) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
   }
 
   .v-card {
-    background-color: rgb(var(--color-surface-dark)) !important;
-    border: 1px solid rgb(var(--color-border-secondary)) !important;
+    background-color: rgba(31, 41, 55, 0.8) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    backdrop-filter: blur(20px) !important;
   }
 
   .v-data-table__th {
-    background-color: rgb(var(--color-surface-dark)) !important;
+    background-color: rgba(31, 41, 55, 0.8) !important;
     color: rgb(var(--color-text-primary-dark)) !important;
   }
 
   .v-data-table__td {
-    border-bottom-color: rgb(var(--color-border-secondary)) !important;
+    border-bottom-color: rgba(255, 255, 255, 0.1) !important;
   }
 
   .v-expansion-panel {
-    background-color: rgb(var(--color-surface-dark)) !important;
-    border: 1px solid rgb(var(--color-border-secondary)) !important;
+    background-color: rgba(31, 41, 55, 0.8) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
   }
 
   .v-field {
-    background-color: rgb(var(--color-surface-dark)) !important;
+    background-color: rgba(31, 41, 55, 0.8) !important;
   }
 
   .v-alert {
-    background-color: rgb(var(--color-surface-dark)) !important;
-    border: 1px solid rgb(var(--color-border-secondary)) !important;
+    background-color: rgba(31, 41, 55, 0.8) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  }
+
+  .glow-effect {
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.4) !important;
+  }
+
+  .glow-effect-primary {
+    box-shadow: 0 0 20px rgba(167, 139, 250, 0.4) !important;
+  }
+
+  .glow-effect-secondary {
+    box-shadow: 0 0 20px rgba(34, 211, 238, 0.4) !important;
   }
 }
 
 /* Vuetify dark mode theme integration */
 .v-theme--dark {
   .v-card {
-    background-color: rgb(var(--color-surface-dark)) !important;
+    background-color: rgba(31, 41, 55, 0.8) !important;
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    backdrop-filter: blur(20px) !important;
   }
 
   .v-expansion-panel {
-    background-color: rgba(0, 0, 0, 0.2) !important;
+    background-color: rgba(31, 41, 55, 0.8) !important;
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
   }
 
@@ -396,7 +479,7 @@ body {
   }
 
   .v-alert {
-    background-color: rgba(0, 0, 0, 0.2) !important;
+    background-color: rgba(31, 41, 55, 0.8) !important;
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
   }
 
@@ -410,11 +493,30 @@ body {
 
   .v-app-bar {
     background: linear-gradient(135deg, var(--v-theme-primary) 0%, var(--v-theme-secondary) 100%) !important;
+    backdrop-filter: blur(20px) !important;
   }
 
   .v-footer {
     background-color: rgba(0, 0, 0, 0.3) !important;
     border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+  }
+
+  .glass-effect {
+    background: rgba(0, 0, 0, 0.4) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+  }
+
+  .glow-effect {
+    box-shadow: 0 0 20px rgba(167, 139, 250, 0.4) !important;
+  }
+
+  .glow-effect-primary {
+    box-shadow: 0 0 20px rgba(167, 139, 250, 0.4) !important;
+  }
+
+  .glow-effect-secondary {
+    box-shadow: 0 0 20px rgba(34, 211, 238, 0.4) !important;
   }
 }
 

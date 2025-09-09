@@ -5,12 +5,10 @@
       <v-card class="content-panel page-header" rounded="lg">
         <v-card-text class="header-content">
           <div class="header-info">
-            <div class="d-flex align-center gap-6">
-              <v-icon size="32" color="primary">mdi-connection</v-icon>
-              <div>
-                <h2 class="text-h4 font-weight-bold mb-1 text-on-surface">渠道管理</h2>
-                <p class="text-body-2 opacity-90 text-on-surface">管理AI渠道、查看健康状态、执行维护操作</p>
-              </div>
+            <v-icon size="32" color="primary">mdi-connection</v-icon>
+            <div>
+              <h2 class="text-h4 font-weight-bold mb-1 text-on-surface">渠道管理</h2>
+              <p class="text-body-2 opacity-90 text-on-surface">管理AI渠道、查看健康状态、执行维护操作</p>
             </div>
           </div>
           <div class="header-actions">

@@ -1,19 +1,51 @@
 /* CSS 变量系统 */
 :root {
-  /* ========== 颜色系统 ========== */
+  /* ========== 品牌色彩系统 ========== */
+  
+  /* 主品牌色 - 现代紫蓝色系 */
+  --color-brand-50: 245 243 255;
+  --color-brand-100: 237 233 254;
+  --color-brand-200: 221 214 254;
+  --color-brand-300: 196 181 253;
+  --color-brand-400: 167 139 250;
+  --color-brand-500: 139 92 246;
+  --color-brand-600: 124 58 237;
+  --color-brand-700: 109 40 217;
+  --color-brand-800: 91 33 182;
+  --color-brand-900: 76 29 149;
+  --color-brand-950: 49 20 96;
 
-  /* 品牌色彩 */
-  --color-brand-50: 239 246 255;
-  --color-brand-100: 219 234 254;
-  --color-brand-200: 191 219 254;
-  --color-brand-300: 147 197 253;
-  --color-brand-400: 96 165 250;
-  --color-brand-500: 59 130 246;
-  --color-brand-600: 37 99 235;
-  --color-brand-700: 29 78 216;
-  --color-brand-800: 30 64 175;
-  --color-brand-900: 30 58 138;
-  --color-brand-950: 23 37 84;
+  /* 辅助品牌色 - 青色系 */
+  --color-cyan-50: 236 254 255;
+  --color-cyan-100: 207 250 254;
+  --color-cyan-200: 165 243 252;
+  --color-cyan-300: 103 232 249;
+  --color-cyan-400: 34 211 238;
+  --color-cyan-500: 6 182 212;
+  --color-cyan-600: 8 145 178;
+  --color-cyan-700: 14 116 144;
+  --color-cyan-800: 21 94 117;
+  --color-cyan-900: 22 78 99;
+  --color-cyan-950: 8 51 68;
+
+  /* 点缀色 - 粉色系 */
+  --color-pink-50: 253 244 255;
+  --color-pink-100: 252 231 243;
+  --color-pink-200: 251 207 232;
+  --color-pink-300: 249 168 212;
+  --color-pink-400: 244 114 182;
+  --color-pink-500: 236 72 153;
+  --color-pink-600: 219 39 119;
+  --color-pink-700: 190 24 93;
+  --color-pink-800: 157 23 77;
+  --color-pink-900: 131 24 67;
+  --color-pink-950: 80 7 36;
+
+  /* 渐变色组合 */
+  --gradient-primary: linear-gradient(135deg, rgb(var(--color-brand-500)) 0%, rgb(var(--color-cyan-500)) 100%);
+  --gradient-secondary: linear-gradient(135deg, rgb(var(--color-brand-600)) 0%, rgb(var(--color-pink-500)) 100%);
+  --gradient-accent: linear-gradient(135deg, rgb(var(--color-cyan-400)) 0%, rgb(var(--color-pink-400)) 100%);
+  --gradient-surface: linear-gradient(135deg, rgb(var(--color-brand-50)) 0%, rgb(var(--color-cyan-50)) 100%);
 
   /* 中性色彩 */
   --color-gray-50: 249 250 251;
@@ -55,38 +87,57 @@
 
   /* ========== 应用色彩变量 ========== */
 
-  /* 主色调 */
+  /* 主色调 - 使用新的品牌色 */
   --color-primary: var(--color-brand-500);
   --color-primary-hover: var(--color-brand-600);
   --color-primary-active: var(--color-brand-700);
   --color-primary-light: var(--color-brand-100);
   --color-primary-dark: var(--color-brand-800);
 
-  /* 文本色彩 */
+  /* 辅助色调 */
+  --color-secondary: var(--color-cyan-500);
+  --color-secondary-hover: var(--color-cyan-600);
+  --color-accent: var(--color-pink-500);
+  --color-accent-hover: var(--color-pink-600);
+
+  /* 文本色彩 - 增强对比度 */
   --color-text-primary: var(--color-gray-900);
-  --color-text-secondary: var(--color-gray-600);
-  --color-text-tertiary: var(--color-gray-500);
+  --color-text-secondary: var(--color-gray-700);
+  --color-text-tertiary: var(--color-gray-600);
   --color-text-disabled: var(--color-gray-400);
   --color-text-inverse: var(--color-gray-50);
+  --color-text-accent: var(--color-brand-600);
 
-  /* 背景色彩 */
+  /* 背景色彩 - 更现代的层次感 */
   --color-background-primary: var(--color-gray-50);
   --color-background-secondary: var(--color-gray-100);
   --color-background-tertiary: var(--color-gray-200);
   --color-background-inverse: var(--color-gray-900);
   --color-background-overlay: rgba(0, 0, 0, 0.5);
+  --color-background-card: rgba(255, 255, 255, 0.8);
+  --color-background-glass: rgba(255, 255, 255, 0.6);
 
-  /* 边框色彩 */
+  /* 边框色彩 - 更精细的层次 */
   --color-border-primary: var(--color-gray-200);
   --color-border-secondary: var(--color-gray-300);
   --color-border-hover: var(--color-gray-400);
   --color-border-focus: var(--color-brand-500);
+  --color-border-accent: var(--color-cyan-400);
 
-  /* 状态色彩 */
+  /* 状态色彩 - 优化亮度 */
   --color-success: var(--color-success-500);
+  --color-success-light: var(--color-success-100);
   --color-warning: var(--color-warning-500);
+  --color-warning-light: var(--color-warning-100);
   --color-error: var(--color-error-500);
+  --color-error-light: var(--color-error-100);
   --color-info: var(--color-info-500);
+  --color-info-light: var(--color-info-100);
+
+  /* 特殊效果色彩 */
+  --color-glow: var(--color-brand-400);
+  --color-shadow: rgba(139, 92, 246, 0.1);
+  --color-highlight: rgba(6, 182, 212, 0.1);
 
   /* ========== 间距系统 ========== */
   --spacing-0: 0;
