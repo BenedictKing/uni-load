@@ -30,6 +30,7 @@ body {
   margin: 0;
   padding: 0;
   line-height: var(--line-height-normal);
+  background-attachment: fixed;
 }
 
 /* Vuetify integration */
@@ -408,44 +409,50 @@ body {
   body {
     background: linear-gradient(
       135deg,
-      rgb(var(--color-gray-900)) 0%,
-      rgb(var(--color-gray-800)) 100%
+      #0f172a 0%,
+      #1e293b 50%,
+      #334155 100%
     );
+    background-attachment: fixed;
+    min-height: 100vh;
   }
 
   .glass-effect {
-    background: rgba(0, 0, 0, 0.4) !important;
-    border-color: rgba(255, 255, 255, 0.1) !important;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+    background: rgba(15, 23, 42, 0.6) !important;
+    border-color: rgba(148, 163, 184, 0.2) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
   }
 
   .v-card {
-    background-color: rgba(31, 41, 55, 0.8) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    background-color: rgba(30, 41, 59, 0.8) !important;
+    border: 1px solid rgba(148, 163, 184, 0.2) !important;
     backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
   }
 
   .v-data-table__th {
-    background-color: rgba(31, 41, 55, 0.8) !important;
-    color: rgb(var(--color-text-primary-dark)) !important;
+    background-color: rgba(30, 41, 59, 0.9) !important;
+    color: #f1f5f9 !important;
   }
 
   .v-data-table__td {
-    border-bottom-color: rgba(255, 255, 255, 0.1) !important;
+    border-bottom-color: rgba(148, 163, 184, 0.2) !important;
   }
 
   .v-expansion-panel {
-    background-color: rgba(31, 41, 55, 0.8) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    background-color: rgba(30, 41, 59, 0.8) !important;
+    border: 1px solid rgba(148, 163, 184, 0.2) !important;
   }
 
   .v-field {
-    background-color: rgba(31, 41, 55, 0.8) !important;
+    background-color: rgba(30, 41, 59, 0.8) !important;
   }
 
   .v-alert {
-    background-color: rgba(31, 41, 55, 0.8) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    background-color: rgba(30, 41, 59, 0.8) !important;
+    border: 1px solid rgba(148, 163, 184, 0.2) !important;
   }
 
   .glow-effect {
@@ -459,19 +466,182 @@ body {
   .glow-effect-secondary {
     box-shadow: 0 0 20px rgba(34, 211, 238, 0.4) !important;
   }
+
+  /* 文本颜色优化 */
+  .text-on-surface {
+    color: #f1f5f9 !important;
+  }
+
+  .opacity-90 {
+    opacity: 0.9 !important;
+  }
+
+  /* 按钮和交互元素 */
+  .v-btn {
+    background-color: rgba(30, 41, 59, 0.8) !important;
+    border-color: rgba(148, 163, 184, 0.3) !important;
+  }
+
+  .v-btn:hover {
+    background-color: rgba(51, 65, 85, 0.9) !important;
+  }
+
+  /* 文本和标题优化 */
+  h1, h2, h3, h4, h5, h6 {
+    color: #f1f5f9 !important;
+  }
+
+  .text-h4, .text-h6, .text-body-2 {
+    color: #f1f5f9 !important;
+  }
+
+  /* 输入字段优化 */
+  .v-text-field,
+  .v-select,
+  .v-textarea {
+    background-color: rgba(30, 41, 59, 0.8) !important;
+  }
+
+  .v-text-field .v-field__input,
+  .v-select .v-field__input,
+  .v-textarea .v-field__input {
+    color: #f1f5f9 !important;
+  }
+
+  .v-text-field .v-label,
+  .v-select .v-label,
+  .v-textarea .v-label {
+    color: rgba(241, 245, 249, 0.7) !important;
+  }
+
+  /* 分隔线优化 */
+  .v-divider {
+    border-color: rgba(148, 163, 184, 0.2) !important;
+  }
+
+  /* 进度条优化 */
+  .v-progress-linear {
+    background-color: rgba(148, 163, 184, 0.2) !important;
+  }
+
+  .v-progress-linear__determinate {
+    background: linear-gradient(90deg, var(--v-theme-primary), var(--v-theme-secondary)) !important;
+  }
+
+  /* 工具提示优化 */
+  .v-tooltip .v-card {
+    background-color: rgba(15, 23, 42, 0.95) !important;
+    border: 1px solid rgba(148, 163, 184, 0.3) !important;
+    color: #f1f5f9 !important;
+  }
+
+  /* 徽章和指示器优化 */
+  .v-badge__badge {
+    background-color: var(--v-theme-primary) !important;
+    color: white !important;
+  }
+
+  /* 开关优化 */
+  .v-switch .v-selection-control {
+    color: var(--v-theme-primary) !important;
+  }
+
+  /* 复选框和单选按钮优化 */
+  .v-checkbox .v-selection-control,
+  .v-radio .v-selection-control {
+    color: var(--v-theme-primary) !important;
+  }
+
+  /* 滑块优化 */
+  .v-slider__track-fill {
+    background: var(--v-theme-primary) !important;
+  }
+
+  .v-slider__thumb {
+    background: var(--v-theme-primary) !important;
+    border: 2px solid #1e293b !important;
+  }
+
+  /* 面包屑优化 */
+  .v-breadcrumb {
+    color: rgba(241, 245, 249, 0.7) !important;
+  }
+
+  .v-breadcrumb-item--active {
+    color: #f1f5f9 !important;
+  }
+
+  /* 步骤器优化 */
+  .v-stepper {
+    background-color: transparent !important;
+  }
+
+  .v-stepper-header {
+    background-color: rgba(30, 41, 59, 0.8) !important;
+  }
+
+  /* 时间线优化 */
+  .v-timeline-divider__dot {
+    background-color: var(--v-theme-primary) !important;
+  }
+
+  /* 虚拟键盘优化 */
+  .v-bottom-navigation {
+    background: linear-gradient(
+      135deg,
+      rgba(15, 23, 42, 0.95) 0%,
+      rgba(30, 41, 59, 0.95) 100%
+    ) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border-top: 1px solid rgba(148, 163, 184, 0.2) !important;
+  }
+
+  /* 系统栏优化 */
+  .v-system-bar {
+    background: linear-gradient(
+      135deg,
+      rgba(15, 23, 42, 0.95) 0%,
+      rgba(30, 41, 59, 0.95) 100%
+    ) !important;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.2) !important;
+  }
+
+  /* 消息提示优化 */
+  .v-snackbar {
+    background: linear-gradient(
+      135deg,
+      rgba(15, 23, 42, 0.95) 0%,
+      rgba(30, 41, 59, 0.95) 100%
+    ) !important;
+    border: 1px solid rgba(148, 163, 184, 0.3) !important;
+    color: #f1f5f9 !important;
+  }
+
+  /* 通知优化 */
+  .v-notification {
+    background: linear-gradient(
+      135deg,
+      rgba(15, 23, 42, 0.95) 0%,
+      rgba(30, 41, 59, 0.95) 100%
+    ) !important;
+    border: 1px solid rgba(148, 163, 184, 0.3) !important;
+    color: #f1f5f9 !important;
+  }
 }
 
 /* Vuetify dark mode theme integration */
 .v-theme--dark {
   .v-card {
-    background-color: rgba(31, 41, 55, 0.8) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    background-color: rgba(30, 41, 59, 0.8) !important;
+    border: 1px solid rgba(148, 163, 184, 0.2) !important;
     backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
   }
 
   .v-expansion-panel {
-    background-color: rgba(31, 41, 55, 0.8) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    background-color: rgba(30, 41, 59, 0.8) !important;
+    border: 1px solid rgba(148, 163, 184, 0.2) !important;
   }
 
   .v-field__outline {
@@ -479,32 +649,72 @@ body {
   }
 
   .v-alert {
-    background-color: rgba(31, 41, 55, 0.8) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    background-color: rgba(30, 41, 59, 0.8) !important;
+    border: 1px solid rgba(148, 163, 184, 0.2) !important;
   }
 
   .v-tabs .v-tab {
-    color: rgba(255, 255, 255, 0.7) !important;
+    color: rgba(241, 245, 249, 0.7) !important;
   }
 
   .v-tabs .v-tab.v-tab--selected {
-    color: white !important;
+    color: #f1f5f9 !important;
   }
 
   .v-app-bar {
-    background: linear-gradient(135deg, var(--v-theme-primary) 0%, var(--v-theme-secondary) 100%) !important;
+    background: linear-gradient(
+      135deg,
+      rgba(15, 23, 42, 0.9) 0%,
+      rgba(30, 41, 59, 0.9) 50%,
+      rgba(51, 65, 85, 0.9) 100%
+    ) !important;
     backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.2) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+  }
+
+  .v-navigation-drawer {
+    background: linear-gradient(
+      180deg,
+      rgba(15, 23, 42, 0.95) 0%,
+      rgba(30, 41, 59, 0.95) 100%
+    ) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border-right: 1px solid rgba(148, 163, 184, 0.2) !important;
+  }
+
+  .v-list-item {
+    color: #f1f5f9 !important;
+  }
+
+  .v-list-item:hover {
+    background-color: rgba(51, 65, 85, 0.5) !important;
+  }
+
+  .v-list-item--active {
+    background-color: rgba(139, 92, 246, 0.2) !important;
+    color: #a78bfa !important;
   }
 
   .v-footer {
-    background-color: rgba(0, 0, 0, 0.3) !important;
-    border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+    background: linear-gradient(
+      135deg,
+      rgba(15, 23, 42, 0.9) 0%,
+      rgba(30, 41, 59, 0.9) 100%
+    ) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border-top: 1px solid rgba(148, 163, 184, 0.2) !important;
   }
 
   .glass-effect {
-    background: rgba(0, 0, 0, 0.4) !important;
-    border-color: rgba(255, 255, 255, 0.1) !important;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+    background: rgba(15, 23, 42, 0.6) !important;
+    border-color: rgba(148, 163, 184, 0.2) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
   }
 
   .glow-effect {
@@ -517,6 +727,98 @@ body {
 
   .glow-effect-secondary {
     box-shadow: 0 0 20px rgba(34, 211, 238, 0.4) !important;
+  }
+
+  /* 表单字段优化 */
+  .v-field__input {
+    color: #f1f5f9 !important;
+  }
+
+  .v-label {
+    color: rgba(241, 245, 249, 0.7) !important;
+  }
+
+  .v-text-field .v-input__details {
+    color: rgba(241, 245, 249, 0.6) !important;
+  }
+
+  /* 数据表格优化 */
+  .v-data-table {
+    background: transparent !important;
+  }
+
+  .v-data-table .v-table__wrapper > table > thead > tr > th {
+    background-color: rgba(30, 41, 59, 0.9) !important;
+    color: #f1f5f9 !important;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.2) !important;
+  }
+
+  .v-data-table .v-table__wrapper > table > tbody > tr > td {
+    color: #e2e8f0 !important;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.1) !important;
+  }
+
+  .v-data-table .v-table__wrapper > table > tbody > tr:hover {
+    background-color: rgba(51, 65, 85, 0.3) !important;
+  }
+
+  /* 按钮优化 */
+  .v-btn {
+    background-color: rgba(30, 41, 59, 0.8) !important;
+    border: 1px solid rgba(148, 163, 184, 0.3) !important;
+  }
+
+  .v-btn:hover {
+    background-color: rgba(51, 65, 85, 0.9) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3) !important;
+  }
+
+  .v-btn--variant-flat {
+    background-color: rgba(139, 92, 246, 0.2) !important;
+  }
+
+  .v-btn--variant-outlined {
+    background-color: transparent !important;
+    border: 1px solid rgba(139, 92, 246, 0.5) !important;
+  }
+
+  /* 芯片和标签优化 */
+  .v-chip {
+    background-color: rgba(51, 65, 85, 0.8) !important;
+    color: #e2e8f0 !important;
+    border: 1px solid rgba(148, 163, 184, 0.2) !important;
+  }
+
+  .v-chip.v-chip--variant-tonal {
+    background-color: rgba(139, 92, 246, 0.2) !important;
+    color: #a78bfa !important;
+  }
+
+  /* 对话框优化 */
+  .v-dialog .v-card {
+    background: linear-gradient(
+      135deg,
+      rgba(15, 23, 42, 0.95) 0%,
+      rgba(30, 41, 59, 0.95) 100%
+    ) !important;
+    border: 1px solid rgba(148, 163, 184, 0.3) !important;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5) !important;
+  }
+
+  /* 菜单优化 */
+  .v-menu .v-card {
+    background: linear-gradient(
+      135deg,
+      rgba(15, 23, 42, 0.95) 0%,
+      rgba(30, 41, 59, 0.95) 100%
+    ) !important;
+    border: 1px solid rgba(148, 163, 184, 0.3) !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4) !important;
+  }
+
+  .v-list-item:hover {
+    background-color: rgba(51, 65, 85, 0.6) !important;
   }
 }
 

@@ -18,6 +18,8 @@
   background: rgb(var(--v-theme-surface));
   border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
   border-radius: 16px !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 /* 页面头部样式 */
@@ -44,7 +46,6 @@
 .page-header .header-info .v-icon {
   flex-shrink: 0;
 }
-
 
 .page-header .header-info h2 {
   font-size: 1.8rem;
