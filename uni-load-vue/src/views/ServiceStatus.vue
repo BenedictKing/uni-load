@@ -1,6 +1,6 @@
 <template>
-  <div class="service-status">
-    <div class="status-container">
+  <div class="page-container">
+    <div class="content-wrapper">
       <!-- 页面头部 -->
       <v-card class="content-panel page-header" rounded="lg">
         <v-card-text class="header-content">
@@ -258,17 +258,10 @@
     </div>
 
     <!-- 通知 Snackbar -->
-    <v-snackbar
-      v-model="snackbar"
-      :color="snackbarColor"
-      :timeout="4000"
-      location="top"
-      elevation="24">
+    <v-snackbar v-model="snackbar" :color="snackbarColor" :timeout="4000" location="top" elevation="24">
       {{ snackbarText }}
       <template v-slot:actions>
-        <v-btn variant="text" @click="snackbar = false">
-          关闭
-        </v-btn>
+        <v-btn variant="text" @click="snackbar = false"> 关闭 </v-btn>
       </template>
     </v-snackbar>
   </div>
@@ -278,12 +271,12 @@
 import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useApi } from '@/composables/useApi'
 import { Api } from '@/api'
-import type { 
-  ServiceStatus, 
-  SystemInfoResponse, 
-  ModelSyncStatus, 
-  ChannelHealthStatus, 
-  TempGroupStats 
+import type {
+  ServiceStatus,
+  SystemInfoResponse,
+  ModelSyncStatus,
+  ChannelHealthStatus,
+  TempGroupStats,
 } from '@/types/api'
 
 // 响应式数据
@@ -314,7 +307,7 @@ let refreshInterval: number | null = null
 
 // 计算属性
 const overallStatus = computed(() => {
-  const hasError = healthStatus.value?.failureCount > 0
+  const hasError = healthStatus.value?.failureCount! > 0
   const isServiceDown = !syncStatus.value?.hasInterval && !healthStatus.value?.hasInterval
 
   if (hasError) {
@@ -415,7 +408,7 @@ const refreshServiceStatus = async () => {
     }
   } catch (error) {
     console.error('刷新服务状态失败:', error)
-    // TODO: 使用更好的错误提示方式
+    showNotification('刷新服务状态失败', 'error')
   }
 }
 
@@ -429,7 +422,7 @@ const refreshTempGroupStats = async () => {
     }
   } catch (error) {
     console.error('刷新临时分组统计失败:', error)
-    // TODO: 使用更好的错误提示方式
+    showNotification('刷新临时分组统计失败', 'error')
   } finally {
     isTempGroupLoading.value = false
   }
@@ -497,7 +490,7 @@ const showFailedChannels = async () => {
     const response = await Api.Service.getFailedChannels()
 
     if (response?.data?.length === 0) {
-      alert('✅ 当前没有失败的渠道')
+      showNotification('✅ 当前没有失败的渠道', 'success')
       return
     }
 
@@ -513,6 +506,7 @@ const showFailedChannels = async () => {
     alert(message)
   } catch (error) {
     console.error('获取失败渠道失败:', error)
+    showNotification('❌ 获取失败渠道失败', 'error')
   }
 }
 
@@ -524,10 +518,11 @@ const cleanupOldTempGroups = async () => {
 
   try {
     await Api.Maintenance.cleanupOldTempGroups({ hoursOld: 24 })
-    alert('✅ 清理过期临时分组成功')
+    showNotification('✅ 清理过期临时分组成功', 'success')
     await refreshTempGroupStats()
   } catch (error) {
     console.error('清理过期临时分组失败:', error)
+    showNotification('❌ 清理过期临时分组失败', 'error')
   }
 }
 
@@ -539,10 +534,11 @@ const cleanupAllTempGroups = async () => {
 
   try {
     await Api.Maintenance.cleanupTempGroups({})
-    alert('✅ 清理所有临时分组成功')
+    showNotification('✅ 清理所有临时分组成功', 'success')
     await refreshTempGroupStats()
   } catch (error) {
     console.error('清理所有临时分组失败:', error)
+    showNotification('❌ 清理所有临时分组失败', 'error')
   }
 }
 
@@ -551,11 +547,11 @@ const triggerManualSync = async () => {
   isSyncing.value = true
   try {
     await Api.Service.triggerManualSync()
-    alert('✅ 手动同步已启动')
+    showNotification('✅ 手动同步已启动', 'success')
     setTimeout(refreshServiceStatus, 2000)
   } catch (error: any) {
     console.error('手动同步失败:', error)
-    alert(`❌ 手动同步失败: ${error.response?.data?.message || error.message || '未知错误'}`)
+    showNotification(`❌ 手动同步失败: ${error.response?.data?.message || error.message || '未知错误'}`, 'error')
   } finally {
     isSyncing.value = false
   }
@@ -566,11 +562,11 @@ const toggleSyncService = async () => {
   try {
     const action = syncStatus.value?.hasInterval ? 'stop' : 'start'
     await Api.Service.controlModelSync({ action })
-    alert(`✅ 模型同步服务已${action === 'start' ? '启动' : '停止'}`)
+    showNotification(`✅ 模型同步服务已${action === 'start' ? '启动' : '停止'}`, 'success')
     await refreshServiceStatus()
   } catch (error: any) {
     console.error('切换同步服务失败:', error)
-    alert(`❌ 切换同步服务失败: ${error.response?.data?.message || error.message || '未知错误'}`)
+    showNotification(`❌ 切换同步服务失败: ${error.response?.data?.message || error.message || '未知错误'}`, 'error')
   }
 }
 
@@ -597,382 +593,13 @@ onBeforeUnmount(() => {
   }
 })
 </script>
+
 <style scoped>
-.service-status {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem 1rem;
-}
+/* 这个页面特有的样式 - 大部分样式已移至全局 page-layout.css */
 
-.status-container {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-/* 统一的卡片样式 */
-.content-panel {
-  background: rgb(var(--v-theme-surface));
-  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-  border-radius: 16px !important;
-}
-
-/* 页面头部样式 */
-.page-header .header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 1rem;
-  padding: 1.5rem;
-}
-
-.page-header h2,
-.page-header p {
-  color: var(--v-theme-on-surface) !important;
-}
-
-.header-info h2 {
-  margin: 0 0 0.5rem 0;
-  font-size: 1.8rem;
-  font-weight: 600;
-}
-
-.header-info p {
-  margin: 0;
-  opacity: 0.9;
-}
-
-.header-actions {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.action-btn {
-  text-transform: none;
-  letter-spacing: 0.5px;
+/* 实例计数样式 */
+.instance-count {
   font-weight: 500;
-}
-
-/* 健康总览样式 */
-.health-overview {
-  padding: 2rem;
-  background: rgba(255, 255, 255, 0.98);
-  border-radius: 20px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.health-overview h3 {
-  margin: 0 0 1.5rem 0;
-  font-size: 1.3rem;
-  color: #333;
-}
-
-.overview-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.5rem;
-}
-
-.status-card {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1.5rem;
-  border-radius: 12px;
-  border: 2px solid transparent;
-  transition: all 0.3s ease;
-}
-
-/* 服务面板样式 */
-.service-panel {
-  overflow: hidden;
-}
-
-.panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.5rem 2rem;
-  background: #f8f9fa;
-  border-bottom: 1px solid #e1e5e9;
-}
-
-.panel-title {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.panel-title h3 {
-  margin: 0;
-  font-size: 1.2rem;
-  color: #333;
-}
-
-.panel-controls {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.service-status-content {
-  padding: 2rem;
-}
-
-.status-details {
-  background: #f8f9fa;
-  padding: 1.5rem;
-  border-radius: 8px;
-  border: 1px solid #e1e5e9;
-}
-
-.status-info {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-}
-
-.info-item {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.info-label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #666;
-}
-
-.info-value {
-  font-size: 0.9rem;
-  color: #333;
-}
-
-/* 临时分组样式 */
-.temp-group-stats {
-  background: #f8f9fa;
-  padding: 1.5rem;
-  border-radius: 8px;
-  border: 1px solid #e1e5e9;
-}
-
-.temp-group-details {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.stats-summary {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.stats-number {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--v-theme-warning);
-}
-
-.stats-label {
-  font-weight: 600;
-  color: #333;
-}
-
-.instance-stats {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.temp-groups-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-}
-
-.temp-group-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.9rem;
-  color: #666;
-}
-
-.group-name {
-  font-weight: 500;
-  color: #333;
-}
-
-.group-id {
-  color: #999;
-  font-size: 0.8rem;
-}
-
-/* 指标面板样式 */
-.metrics-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.5rem;
-}
-
-.metric-card {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1.5rem;
-  background: white;
-  border-radius: 12px;
-  border: 1px solid #e1e5e9;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-.metric-content {
-  flex: 1;
-}
-
-.metric-content h4 {
-  margin: 0 0 0.5rem 0;
-  font-size: 1rem;
-  font-weight: 600;
-  color: #333;
-}
-
-.metric-value {
-  font-size: 0.9rem;
-  color: #666;
-  margin-bottom: 0.5rem;
-}
-
-.metric-bar {
-  width: 100%;
-  height: 6px;
-  background: #e1e5e9;
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-/* 系统信息模态框样式 */
-.system-info-content {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.info-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-}
-
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .service-status {
-    padding: 1rem 0.5rem;
-  }
-
-  .page-header {
-    padding: 1.5rem;
-  }
-
-  .header-content {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .health-overview,
-  .service-status-content {
-    padding: 1.5rem;
-  }
-
-  .panel-header {
-    padding: 1rem 1.5rem;
-    flex-wrap: wrap;
-    gap: 1rem;
-  }
-
-  .overview-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .metrics-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .status-info {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 480px) {
-  .header-actions,
-  .panel-controls {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .status-card {
-    flex-direction: column;
-    text-align: center;
-    gap: 0.5rem;
-  }
-
-  .metric-card {
-    flex-direction: column;
-    text-align: center;
-    gap: 0.5rem;
-  }
-
-  .info-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* 暗色主题优化 */
-.v-theme--dark .health-overview,
-.v-theme--dark .service-panel {
-  background: rgba(0, 0, 0, 0.2);
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-.v-theme--dark .panel-header {
-  background: rgba(0, 0, 0, 0.3);
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-.v-theme--dark .status-details,
-.v-theme--dark .temp-group-stats {
-  background: rgba(0, 0, 0, 0.2);
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-.v-theme--dark .metric-card {
-  background: rgba(0, 0, 0, 0.2);
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-.v-theme--dark .info-label {
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.v-theme--dark .info-value {
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.v-theme--dark .health-overview h3,
-.v-theme--dark .panel-title h3 {
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.v-theme--dark .metric-content h4 {
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.v-theme--dark .metric-value {
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(var(--v-theme-on-surface), 0.8);
 }
 </style>

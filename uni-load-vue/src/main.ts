@@ -1,4 +1,5 @@
 import './styles/global.css'
+import './styles/page-layout.css'
 import '@mdi/font/css/materialdesignicons.css'
 
 import { createApp } from 'vue'
