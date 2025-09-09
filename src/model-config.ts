@@ -24,7 +24,6 @@ class ModelConfig {
 
       // Google
       'gemini-2.5-', // 仅支持 2.5 及以上版本
-      // 'gemma-',
 
       // Anthropic
       'claude-opus',
@@ -37,25 +36,10 @@ class ModelConfig {
       'deepseek-',
 
       // Qwen (Alibaba)
-      // "qwen-",
       'qwen3-',
-
-      // Llama (Meta)
-      // "llama-",
-
-      // Mistral
-      // "mixtral-",
-      // "mistral-",
-
-      // 01.ai
-      // 'yi-',
 
       // Moonshot
       'kimi-k2',
-
-      // Doubao (ByteDance)
-      // 'doubao-1-6-',
-      // 'doubao-seed-',
 
       // Zhipu AI (智谱)
       'glm-4.5',
@@ -64,19 +48,8 @@ class ModelConfig {
       'grok-3',
       'grok-4',
 
-      // Flux
-      // "flux-",
-
-      // Misc / Provider Specific
-      // "o1",
-      // "o3",
-      // "o4",
-
       // vercel v0
       'v0-',
-
-      // MiniMax
-      // "minimax-",
     ]
 
     // 初始化黑名单关键词

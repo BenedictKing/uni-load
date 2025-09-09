@@ -267,7 +267,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useApi } from '@/composables/useApi'
 import { Api } from '@/api'
 import type {
@@ -327,9 +327,6 @@ const initializeDefaultValues = () => {
   }
 }
 
-// 定时刷新
-let refreshInterval: number | null = null
-
 // 计算属性
 const overallStatus = computed(() => {
   const hasError = healthStatus.value?.failureCount! > 0
@@ -359,9 +356,22 @@ const overallStatus = computed(() => {
 })
 
 // API 调用
-const { execute: loadServiceStatus } = useApi(() => Api.Service.getStatus(), { immediate: false })
+const { execute: loadServiceStatus, data: serviceStatusData } = useApi(() => Api.Service.getStatus(), { 
+  immediate: false,
+  refetchInterval: 30000 // 30秒自动刷新
+})
 
-const { execute: loadTempGroupStats } = useApi(() => Api.Maintenance.getTempGroupStats(), { immediate: false })
+const { execute: loadTempGroupStats } = useApi(() => Api.Maintenance.getTempGroupStats(), { 
+  immediate: false 
+})
+
+// 监听服务状态数据变化
+watch(serviceStatusData, (newData) => {
+  if (newData) {
+    syncStatus.value = newData.modelSync || null
+    healthStatus.value = newData.channelHealth || null
+  }
+}, { immediate: true })
 
 // 获取同步状态颜色
 const getSyncStatusColor = () => {
@@ -426,11 +436,7 @@ const getTempGroupStatusIcon = () => {
 // 刷新服务状态
 const refreshServiceStatus = async () => {
   try {
-    const response = await loadServiceStatus()
-    if (response?.data) {
-      syncStatus.value = response.data.modelSync || null
-      healthStatus.value = response.data.channelHealth || null
-    }
+    await loadServiceStatus()
   } catch (error) {
     console.error('刷新服务状态失败:', error)
     showNotification('刷新服务状态失败', 'error')
@@ -606,17 +612,10 @@ const formatTime = (time: string | Date): string => {
 onMounted(() => {
   initializeDefaultValues()
   refreshAllStatus()
-
-  // 设置定时刷新
-  refreshInterval = setInterval(() => {
-    refreshAllStatus()
-  }, 30000) // 每30秒刷新一次
 })
 
 onBeforeUnmount(() => {
-  if (refreshInterval) {
-    clearInterval(refreshInterval)
-  }
+  // 清理工作由 useApi hook 自动处理
 })
 </script>
 

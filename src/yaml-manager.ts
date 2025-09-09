@@ -9,12 +9,10 @@ import config from './config'
 class YamlManager implements IYamlManager {
   private uniApiPath: string
   private yamlPath: string
-  private gptloadUrl: string
 
   constructor() {
     this.uniApiPath = config.uniApi.path
     this.yamlPath = config.uniApi.yamlPath
-    this.gptloadUrl = config.gptload.url
   }
 
   /**
@@ -158,13 +156,20 @@ class YamlManager implements IYamlManager {
       // 为每个模型添加或更新 provider
       for (const modelGroup of modelGroups) {
         if (modelGroup && modelGroup.name && modelGroup.test_model) {
+          const instanceUrl = modelGroup._instance?.url
+          if (!instanceUrl) {
+            console.warn(`⚠️ 模型分组 ${modelGroup.name} 没有配置对应的 gpt-load 实例，跳过 uni-api 配置`)
+            continue
+          }
+          
           this.addOrUpdateModelProvider(
             config,
             modelGroup.test_model,
             modelGroup.name,
             modelGroup.validation_endpoint,
             modelGroup.channel_type,
-            gptloadToken
+            gptloadToken,
+            instanceUrl
           )
         } else {
           console.warn('⚠️ 跳过一个无效的模型分组数据:', modelGroup)
@@ -252,7 +257,8 @@ class YamlManager implements IYamlManager {
     groupName,
     validationEndpoint, // 这个参数实际上不应该用于生成 base_url
     channelType,
-    gptloadToken = 'sk-uni-load-auto-generated'
+    gptloadToken = 'sk-uni-load-auto-generated',
+    instanceUrl = null // 新增参数：实例 URL
   ) {
     // 标准化模型名称用于重定向
     const normalizedResult = this.normalizeModelName(originalModelName)
@@ -286,8 +292,8 @@ class YamlManager implements IYamlManager {
     // 构建 provider 配置
     const providerConfig: any = {
       provider: providerName,
-      // 修复：这里使用动态生成的 apiPath
-      base_url: `${this.gptloadUrl}/proxy/${modelNameForUrl}${apiPath}`,
+      // 使用传入的实例 URL 或跳过
+      base_url: instanceUrl ? `${instanceUrl}/proxy/${modelNameForUrl}${apiPath}` : undefined,
       api: gptloadToken,
       tools: true,
     }

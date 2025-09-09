@@ -274,9 +274,12 @@ class ThreeLayerArchitecture {
           })
         } else {
           // 检查是否需要更新上游
-          const expectedUpstream = `${
-            site._instance?.url || config.gptload.url
-          }/proxy/${site.name}`
+          const instanceUrl = site._instance?.url
+          if (!instanceUrl) {
+            console.warn(`站点 ${site.name} 没有配置对应的 gpt-load 实例，跳过上游检查`)
+            continue
+          }
+          const expectedUpstream = `${instanceUrl}/proxy/${site.name}`
           const hasCorrectUpstream = existingGroup.upstreams?.some((u) => u.url === expectedUpstream)
 
           if (!hasCorrectUpstream) {
@@ -304,12 +307,12 @@ class ThreeLayerArchitecture {
         })
       } else {
         // 检查聚合分组的上游是否完整
-        const expectedUpstreams = supportingSites.map(
-          (site) =>
-            `${site._instance?.url || config.gptload.url}/proxy/${(
-              modelConfig.constructor as any
-            ).generateModelChannelGroupName(model, site.name)}`
-        )
+        const expectedUpstreams = supportingSites
+          .filter((site) => site._instance?.url) // 过滤掉没有配置实例的站点
+          .map((site) => {
+            const instanceUrl = site._instance?.url
+            return `${instanceUrl}/proxy/${(modelConfig.constructor as any).generateModelChannelGroupName(model, site.name)}`
+          })
 
         const needsUpdate = expectedUpstreams.some(
           (expectedUpstream) => !existingAggregateGroup.upstreams?.some((u) => u.url === expectedUpstream)
@@ -1312,10 +1315,20 @@ class ThreeLayerArchitecture {
   }
 
   async updateAggregateUpstreams(existingGroup, channelGroups) {
-    const newUpstreams = channelGroups.map((cg) => ({
-      url: `${cg._instance?.url || config.gptload.url}/proxy/${cg.name}`,
-      weight: 1,
-    }))
+    const newUpstreams = channelGroups
+      .filter((cg) => cg && cg.name && cg._instance?.url) // 过滤掉无效的渠道分组和没有配置实例的分组
+      .map((cg) => {
+        const instanceUrl = cg._instance?.url
+        return {
+          url: `${instanceUrl}/proxy/${cg.name}`,
+          weight: 1,
+        }
+      })
+
+    if (newUpstreams.length === 0) {
+      console.warn(`聚合分组 ${existingGroup.name} 没有有效的上游渠道分组`)
+      return
+    }
 
     await gptloadService.updateGroup(existingGroup.id, existingGroup._instance.id, { upstreams: newUpstreams })
 
@@ -1337,11 +1350,14 @@ class ThreeLayerArchitecture {
 
       // 创建上游列表
       const upstreams = channelGroups
-        .filter((cg) => cg && cg.name) // 🔧 过滤无效的渠道分组
-        .map((cg) => ({
-          url: `${cg._instance?.url || config.gptload.url}/proxy/${cg.name}`,
-          weight: 1,
-        }))
+        .filter((cg) => cg && cg.name && cg._instance?.url) // 🔧 过滤无效的渠道分组和没有配置实例的分组
+        .map((cg) => {
+          const instanceUrl = cg._instance?.url
+          return {
+            url: `${instanceUrl}/proxy/${cg.name}`,
+            weight: 1,
+          }
+        })
 
       if (upstreams.length === 0) {
         console.log(`⚠️ 模型 ${model} 没有可用的渠道分组`)

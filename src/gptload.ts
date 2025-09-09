@@ -269,7 +269,9 @@ class GptloadService {
    * 删除所有模型分组 (sort=10,15)
    */
   async deleteAllModelGroups() {
-    console.log(`🚨 开始删除所有 sort=${layerConfigs.aggregateGroup.sort} 和 sort=${layerConfigs.modelChannelGroup.sort} 的模型分组...`)
+    console.log(
+      `🚨 开始删除所有 sort=${layerConfigs.aggregateGroup.sort} 和 sort=${layerConfigs.modelChannelGroup.sort} 的模型分组...`
+    )
 
     const allGroups = await this.getAllGroups()
     const modelGroupsToDelete = allGroups.filter(
@@ -525,7 +527,11 @@ class GptloadService {
             return null // 返回 null 而不是抛出错误，稍后过滤
           }
 
-          const instanceUrl = siteGroup._instance?.url || config.gptload.url
+          const instanceUrl = siteGroup._instance?.url
+          if (!instanceUrl) {
+            console.warn(`站点分组 ${siteGroup.name} 没有配置对应的 gpt-load 实例，跳过`)
+            return null
+          }
           const upstreamUrl = `${instanceUrl}/proxy/${siteGroup.name}`
 
           console.log(`📋 添加上游: ${upstreamUrl} (来源: ${siteGroup.name})`)
@@ -647,7 +653,11 @@ class GptloadService {
           continue // 跳过无效的站点分组
         }
 
-        const instanceUrl = siteGroup._instance?.url || config.gptload.url
+        const instanceUrl = siteGroup._instance?.url
+        if (!instanceUrl) {
+          console.warn(`站点分组 ${siteGroup.name} 没有配置对应的 gpt-load 实例，跳过`)
+          continue
+        }
         const newUpstreamUrl = `${instanceUrl}/proxy/${siteGroup.name}`
 
         // 检查是否已经包含此上游
@@ -926,7 +936,9 @@ class GptloadService {
       // 2. 找到所有引用了该渠道的模型分组 (sort=30 和 sort=40) 并处理它们
       const upstreamToRemove = `/proxy/${channelName}`
       const modelGroupsToUpdate = allGroups.filter(
-        (g) => (g.sort === layerConfigs.modelChannelGroup.sort || g.sort === layerConfigs.aggregateGroup.sort) && g.upstreams?.some((u) => u.url.includes(upstreamToRemove))
+        (g) =>
+          (g.sort === layerConfigs.modelChannelGroup.sort || g.sort === layerConfigs.aggregateGroup.sort) &&
+          g.upstreams?.some((u) => u.url.includes(upstreamToRemove))
       )
 
       console.log(`🔍 找到 ${modelGroupsToUpdate.length} 个引用该渠道的模型分组`)
