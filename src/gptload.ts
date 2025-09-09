@@ -4,6 +4,7 @@ import { layerConfigs } from './layer-configs'
 import { getService } from './services/service-factory'
 import { IMultiGptloadManager } from './interfaces'
 import config from './config'
+import threeLayerArchitecture from './three-layer-architecture'
 
 class GptloadService {
   private _manager: IMultiGptloadManager | null = null
@@ -1094,7 +1095,7 @@ class GptloadService {
     }
 
     // 3. 在新实例上创建站点分组
-    console.log(`[1/4] 正在从实例 ${currentInstance.name} 获取API密钥...`)
+    console.log(`[1/5] 正在从实例 ${currentInstance.name} 获取API密钥...`)
     const apiKeys = await this.getGroupApiKeys(channelGroup.id, currentInstance.id)
 
     // 复制分组配置，移除实例特定字段
@@ -1104,7 +1105,7 @@ class GptloadService {
     delete newGroupData.updated_at
     delete newGroupData._instance
 
-    console.log(`[2/4] 正在实例 ${newInstance.name} 上创建新的站点分组 ${channelName}...`)
+    console.log(`[2/5] 正在实例 ${newInstance.name} 上创建新的站点分组 ${channelName}...`)
     const createResponse = await newInstance.apiClient.post('/groups', newGroupData)
     const newGroup = createResponse.data?.data || createResponse.data
     if (!newGroup || !newGroup.id) {
@@ -1117,7 +1118,7 @@ class GptloadService {
     console.log(`✅ 在新实例上创建分组并添加密钥成功 (新分组ID: ${newGroup.id})`)
 
     // 4. 更新上游模型分组
-    console.log(`[3/4] 正在更新引用了 ${channelName} 的模型分组...`)
+    console.log(`[3/5] 正在更新引用了 ${channelName} 的模型分组...`)
     const upstreamUrlPart = `/proxy/${channelName}`
     const modelGroupsToUpdate = allGroups.filter(
       (g) =>
@@ -1140,7 +1141,7 @@ class GptloadService {
     console.log(`✅ ${modelGroupsToUpdate.length} 个模型分组的上游已更新`)
 
     // 5. 删除旧的站点分组
-    console.log(`[4/4] 正在从实例 ${currentInstance.name} 删除旧的站点分组...`)
+    console.log(`[4/5] 正在从实例 ${currentInstance.name} 删除旧的站点分组...`)
     await this.deleteGroupById(channelGroup.id, currentInstance.id)
     console.log(`✅ 旧站点分组 ${channelName} (ID: ${channelGroup.id}) 已删除`)
 
@@ -1149,6 +1150,11 @@ class GptloadService {
       const siteUrl = channelGroup.upstreams[0].url
       await this.manager.reassignSite(siteUrl, newInstance.id)
     }
+
+    // 7. 重新初始化三层架构以确保所有配置都已正确更新
+    console.log(`[5/5] 正在重新初始化三层架构以确保所有模型分组都已正确更新...`)
+    await threeLayerArchitecture.initialize()
+    console.log(`✅ 三层架构已更新`)
 
     return {
       channelName,
