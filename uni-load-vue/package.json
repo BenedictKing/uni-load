@@ -38,7 +38,7 @@
   "devDependencies": {
     "@iconify/vue": "^4.3.0",
     "@tsconfig/node22": "^22.0.2",
-    "@types/node": "^22.16.5",
+    "@types/node": "^24.3.1",
     "@typescript-eslint/eslint-plugin": "^8.42.0",
     "@typescript-eslint/parser": "^8.42.0",
     "@unocss/preset-uno": "^66.5.0",

@@ -2,7 +2,7 @@
   <div class="service-status">
     <div class="status-container">
       <!-- 页面头部 -->
-      <v-card class="page-header" rounded="lg">
+      <v-card class="content-panel page-header" rounded="lg">
         <v-card-text class="header-content">
           <div class="header-info">
             <div class="d-flex align-center gap-6">
@@ -28,7 +28,7 @@
       </v-card>
 
       <!-- 模型同步服务 -->
-      <v-card class="service-panel" rounded="lg">
+      <v-card class="content-panel service-panel" rounded="lg">
         <v-card-text class="pa-0">
           <div class="panel-header">
             <div class="panel-title">
@@ -96,7 +96,7 @@
       </v-card>
 
       <!-- 渠道健康监控 -->
-      <v-card class="service-panel" rounded="lg">
+      <v-card class="content-panel service-panel" rounded="lg">
         <v-card-text class="pa-0">
           <div class="panel-header">
             <div class="panel-title">
@@ -172,7 +172,7 @@
       </v-card>
 
       <!-- 临时分组清理 -->
-      <v-card class="service-panel" rounded="lg">
+      <v-card class="content-panel service-panel" rounded="lg">
         <v-card-text class="pa-0">
           <div class="panel-header">
             <div class="panel-title">
@@ -256,6 +256,21 @@
         </v-card-text>
       </v-card>
     </div>
+
+    <!-- 通知 Snackbar -->
+    <v-snackbar
+      v-model="snackbar"
+      :color="snackbarColor"
+      :timeout="4000"
+      location="top"
+      elevation="24">
+      {{ snackbarText }}
+      <template v-slot:actions>
+        <v-btn variant="text" @click="snackbar = false">
+          关闭
+        </v-btn>
+      </template>
+    </v-snackbar>
   </div>
 </template>
 
@@ -263,18 +278,36 @@
 import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useApi } from '@/composables/useApi'
 import { Api } from '@/api'
-import type { ServiceStatus, SystemInfoResponse } from '@/types/api'
+import type { 
+  ServiceStatus, 
+  SystemInfoResponse, 
+  ModelSyncStatus, 
+  ChannelHealthStatus, 
+  TempGroupStats 
+} from '@/types/api'
 
 // 响应式数据
-const syncStatus = ref<any>(null)
-const healthStatus = ref<any>(null)
-const tempGroupStats = ref<any>(null)
+const syncStatus = ref<ModelSyncStatus | null>(null)
+const healthStatus = ref<ChannelHealthStatus | null>(null)
+const tempGroupStats = ref<TempGroupStats | null>(null)
 
 // 加载状态
 const isRefreshing = ref(false)
 const isSyncing = ref(false)
 const isChecking = ref(false)
 const isTempGroupLoading = ref(false)
+
+// 通知状态
+const snackbar = ref(false)
+const snackbarText = ref('')
+const snackbarColor = ref('success')
+
+// 显示通知
+const showNotification = (text: string, color: string = 'success') => {
+  snackbarText.value = text
+  snackbarColor.value = color
+  snackbar.value = true
+}
 
 // 定时刷新
 let refreshInterval: number | null = null
@@ -376,12 +409,13 @@ const getTempGroupStatusIcon = () => {
 const refreshServiceStatus = async () => {
   try {
     const response = await loadServiceStatus()
-    if (response) {
-      syncStatus.value = response.modelSync
-      healthStatus.value = response.channelHealth
+    if (response?.data) {
+      syncStatus.value = response.data.modelSync || null
+      healthStatus.value = response.data.channelHealth || null
     }
   } catch (error) {
     console.error('刷新服务状态失败:', error)
+    // TODO: 使用更好的错误提示方式
   }
 }
 
@@ -390,11 +424,12 @@ const refreshTempGroupStats = async () => {
   isTempGroupLoading.value = true
   try {
     const response = await loadTempGroupStats()
-    if (response) {
-      tempGroupStats.value = response
+    if (response?.data) {
+      tempGroupStats.value = response.data
     }
   } catch (error) {
     console.error('刷新临时分组统计失败:', error)
+    // TODO: 使用更好的错误提示方式
   } finally {
     isTempGroupLoading.value = false
   }
@@ -408,10 +443,11 @@ const cleanupAndReset = async () => {
 
   try {
     await Api.Maintenance.cleanupModelGroups()
-    alert('✅ 清理重置成功')
+    showNotification('✅ 清理重置成功', 'success')
     await refreshServiceStatus()
   } catch (error) {
     console.error('清理重置失败:', error)
+    showNotification('❌ 清理重置失败', 'error')
   }
 }
 
@@ -432,11 +468,11 @@ const triggerChannelCheck = async () => {
   isChecking.value = true
   try {
     await Api.Service.triggerChannelCheck()
-    alert('✅ 手动健康检查已启动')
+    showNotification('✅ 手动健康检查已启动', 'success')
     setTimeout(refreshServiceStatus, 2000)
   } catch (error) {
     console.error('手动健康检查失败:', error)
-    alert('❌ 手动健康检查失败')
+    showNotification('❌ 手动健康检查失败', 'error')
   } finally {
     isChecking.value = false
   }
@@ -447,10 +483,11 @@ const toggleHealthMonitor = async () => {
   try {
     const action = healthStatus.value?.hasInterval ? 'stop' : 'start'
     await Api.Service.controlChannelHealth({ action })
-    alert(`✅ 健康监控已${action === 'start' ? '启动' : '停止'}`)
+    showNotification(`✅ 健康监控已${action === 'start' ? '启动' : '停止'}`, 'success')
     await refreshServiceStatus()
   } catch (error) {
     console.error('切换健康监控失败:', error)
+    showNotification('❌ 切换健康监控失败', 'error')
   }
 }
 
@@ -561,19 +598,38 @@ onBeforeUnmount(() => {
 })
 </script>
 <style scoped>
-/* 确保头部文字为深色 */
-.page-header h2,
-.page-header p {
-  color: var(--v-theme-on-surface) !important;
+.service-status {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
 }
 
-.header-content {
+.status-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* 统一的卡片样式 */
+.content-panel {
+  background: rgb(var(--v-theme-surface));
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border-radius: 16px !important;
+}
+
+/* 页面头部样式 */
+.page-header .header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
   gap: 1rem;
-  padding: 0;
+  padding: 1.5rem;
+}
+
+.page-header h2,
+.page-header p {
+  color: var(--v-theme-on-surface) !important;
 }
 
 .header-info h2 {
@@ -632,11 +688,6 @@ onBeforeUnmount(() => {
 
 /* 服务面板样式 */
 .service-panel {
-  background: rgba(255, 255, 255, 0.98);
-  border-radius: 20px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
   overflow: hidden;
 }
 

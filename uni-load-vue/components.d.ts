@@ -39,6 +39,7 @@ declare module 'vue' {
     VMain: typeof import('vuetify/components')['VMain']
     VProgressCircular: typeof import('vuetify/components')['VProgressCircular']
     VSelect: typeof import('vuetify/components')['VSelect']
+    VSnackbar: typeof import('vuetify/components')['VSnackbar']
     VSpacer: typeof import('vuetify/components')['VSpacer']
     VTab: typeof import('vuetify/components')['VTab']
     VTabs: typeof import('vuetify/components')['VTabs']

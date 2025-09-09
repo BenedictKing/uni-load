@@ -8,6 +8,13 @@ import type {
 } from 'axios'
 import type { ApiResponse } from '@/types/api'
 import { ApiError } from '@/types/api'
+// 简化配置直接读取环境变量
+const apiConfig = {
+  baseUrl: import.meta.env.VITE_API_BASE_URL || '/',
+  timeout: parseInt(import.meta.env.VITE_API_TIMEOUT || '30000', 10),
+}
+
+const isDevelopment = import.meta.env.DEV
 
 // 请求队列和取消令牌
 const pendingRequests = new Map<string, AbortController>()
@@ -22,8 +29,8 @@ class ApiClient {
 
   constructor() {
     this.instance = axios.create({
-      baseURL: '/', // 使用相对路径
-      timeout: 30000, // 设置一个合理的默认超时
+      baseURL: apiConfig.baseUrl,
+      timeout: apiConfig.timeout,
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -127,7 +134,7 @@ class ApiClient {
         const duration = endTime - startTime
 
         // 记录请求日志（开发环境）
-        if (import.meta.env.DEV) {
+        if (isDevelopment) {
           console.log(`API Request: ${response.config.method?.toUpperCase()} ${response.config.url} - ${duration}ms`)
         }
 
@@ -175,7 +182,7 @@ class ApiClient {
         const url = config?.url || ''
 
         // 记录错误日志
-        if (import.meta.env.DEV) {
+        if (isDevelopment) {
           console.error(`API Error: ${status} ${url}`, error)
         }
 

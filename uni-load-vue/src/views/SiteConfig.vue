@@ -93,18 +93,22 @@
             </v-expansion-panel>
           </v-expansion-panels>
 
-          <!-- 验证端点配置 -->
-          <div v-if="form.channelTypes.length > 0" class="validation-endpoints mb-4">
-            <div v-for="type in form.channelTypes" :key="type" class="mb-3">
-              <v-text-field
-                v-model="form.customValidationEndpoints[type]"
-                :label="`验证端点 (${getChannelTypeLabel(type)} 格式)`"
-                :placeholder="getValidationEndpointPlaceholder(type)"
-                variant="outlined"
-                density="comfortable" />
-              <div class="help-text">用于 {{ getChannelTypeLabel(type) }} 格式的健康检查端点，留空则使用默认值</div>
-            </div>
-          </div>
+          <!-- 验证端点配置 - 可折叠 -->
+          <v-expansion-panels v-if="form.channelTypes.length > 0" v-model="validationEndpointsPanels" class="mb-4">
+            <v-expansion-panel value="validation-endpoints" title="验证端点配置 (可选)">
+              <v-expansion-panel-text>
+                <div v-for="type in form.channelTypes" :key="type" class="mb-3">
+                  <v-text-field
+                    v-model="form.customValidationEndpoints[type]"
+                    :label="`验证端点 (${getChannelTypeLabel(type)} 格式)`"
+                    :placeholder="getValidationEndpointPlaceholder(type)"
+                    variant="outlined"
+                    density="comfortable" />
+                  <div class="help-text">用于 {{ getChannelTypeLabel(type) }} 格式的健康检查端点，留空则使用默认值</div>
+                </div>
+              </v-expansion-panel-text>
+            </v-expansion-panel>
+          </v-expansion-panels>
 
           <!-- 提交按钮 -->
           <div class="d-flex justify-center mt-6">
@@ -236,6 +240,7 @@ const siteNameStatus = ref<'loading' | 'success' | 'error'>('loading')
 // Vuetify 相关状态
 const activePanels = ref<string[]>([])
 const modelsPanels = ref<string[]>([])
+const validationEndpointsPanels = ref<string[]>([]) // 验证端点展开状态，默认收起
 const formRef = ref()
 const validForm = ref(false)
 
@@ -446,6 +451,7 @@ const handleSubmit = async () => {
       siteNameStatus.value = 'loading'
       activePanels.value = []
       modelsPanels.value = []
+      validationEndpointsPanels.value = []
     }
   } catch (error) {
     result.value = {
