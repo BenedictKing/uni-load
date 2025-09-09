@@ -10,7 +10,7 @@ class ModelSyncService {
 
   constructor() {
     this.syncInterval = null
-    this.syncIntervalMinutes = parseInt(process.env.MODEL_SYNC_INTERVAL, 10) || 60 // 默认60分钟
+    this.syncIntervalMinutes = parseInt(process.env.MODEL_SYNC_INTERVAL, 10) || 360 // 默认360分钟
     this.isRunning = false
   }
 
