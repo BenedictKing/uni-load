@@ -18,6 +18,7 @@ import modelsService from './models'
 import { getService } from './services/service-factory'
 import { IYamlManager } from './interfaces'
 import { layerConfigs } from './layer-configs'
+import config from './config'
 
 class ThreeLayerArchitecture {
   layerConfigs: any
@@ -274,7 +275,7 @@ class ThreeLayerArchitecture {
         } else {
           // 检查是否需要更新上游
           const expectedUpstream = `${
-            site._instance?.url || process.env.GPTLOAD_URL || 'http://localhost:3001'
+            site._instance?.url || config.gptload.url
           }/proxy/${site.name}`
           const hasCorrectUpstream = existingGroup.upstreams?.some((u) => u.url === expectedUpstream)
 
@@ -305,7 +306,7 @@ class ThreeLayerArchitecture {
         // 检查聚合分组的上游是否完整
         const expectedUpstreams = supportingSites.map(
           (site) =>
-            `${site._instance?.url || process.env.GPTLOAD_URL || 'http://localhost:3001'}/proxy/${(
+            `${site._instance?.url || config.gptload.url}/proxy/${(
               modelConfig.constructor as any
             ).generateModelChannelGroupName(model, site.name)}`
         )
@@ -1312,7 +1313,7 @@ class ThreeLayerArchitecture {
 
   async updateAggregateUpstreams(existingGroup, channelGroups) {
     const newUpstreams = channelGroups.map((cg) => ({
-      url: `${cg._instance?.url || process.env.GPTLOAD_URL || 'http://localhost:3001'}/proxy/${cg.name}`,
+      url: `${cg._instance?.url || config.gptload.url}/proxy/${cg.name}`,
       weight: 1,
     }))
 
@@ -1338,7 +1339,7 @@ class ThreeLayerArchitecture {
       const upstreams = channelGroups
         .filter((cg) => cg && cg.name) // 🔧 过滤无效的渠道分组
         .map((cg) => ({
-          url: `${cg._instance?.url || process.env.GPTLOAD_URL || 'http://localhost:3001'}/proxy/${cg.name}`,
+          url: `${cg._instance?.url || config.gptload.url}/proxy/${cg.name}`,
           weight: 1,
         }))
 

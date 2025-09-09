@@ -2,6 +2,7 @@ import gptloadService from './gptload'
 import modelsService from './models'
 import yamlManager from './yaml-manager'
 import { layerConfigs } from './layer-configs'
+import config from './config'
 
 class ModelSyncService {
   private syncInterval: NodeJS.Timeout | null
@@ -10,7 +11,7 @@ class ModelSyncService {
 
   constructor() {
     this.syncInterval = null
-    this.syncIntervalMinutes = parseInt(process.env.MODEL_SYNC_INTERVAL, 10) || 360 // 默认360分钟
+    this.syncIntervalMinutes = config.modelSync.intervalMinutes
     this.isRunning = false
   }
 

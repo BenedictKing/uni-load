@@ -7,6 +7,7 @@
 
 import fs from 'fs'
 import path from 'path'
+import config from '../config'
 
 export interface GptloadInstance {
   id: string
@@ -27,7 +28,7 @@ export class InstanceConfigManager {
       'gpt-load-instances.local.json', // 本地配置（优先级最高）
       'gpt-load-instances.json', // 生产配置
     ]
-    const customPath = process.env.GPTLOAD_INSTANCES_FILE
+    const customPath = config.gptload.instancesFile
     let configPath: string | null = null
 
     if (customPath) {

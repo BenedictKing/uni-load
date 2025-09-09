@@ -4,6 +4,7 @@ import YAML from 'yaml'
 import modelConfig from './model-config'
 import { IGptloadService, IMultiGptloadManager, IYamlManager } from './interfaces'
 import { getService } from './services/service-factory'
+import config from './config'
 
 class YamlManager implements IYamlManager {
   private uniApiPath: string
@@ -11,9 +12,9 @@ class YamlManager implements IYamlManager {
   private gptloadUrl: string
 
   constructor() {
-    this.uniApiPath = process.env.UNI_API_PATH || '../uni-api'
-    this.yamlPath = process.env.UNI_API_YAML_PATH || path.join(this.uniApiPath, 'api.yaml')
-    this.gptloadUrl = process.env.GPTLOAD_URL || 'http://localhost:3001'
+    this.uniApiPath = config.uniApi.path
+    this.yamlPath = config.uniApi.yamlPath
+    this.gptloadUrl = config.gptload.url
   }
 
   /**

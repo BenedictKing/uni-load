@@ -3,6 +3,7 @@ import modelConfig from './model-config'
 import { layerConfigs } from './layer-configs'
 import { getService } from './services/service-factory'
 import { IMultiGptloadManager } from './interfaces'
+import config from './config'
 
 class GptloadService {
   private _manager: IMultiGptloadManager | null = null
@@ -524,7 +525,7 @@ class GptloadService {
             return null // 返回 null 而不是抛出错误，稍后过滤
           }
 
-          const instanceUrl = siteGroup._instance?.url || process.env.GPTLOAD_URL || 'http://localhost:3001'
+          const instanceUrl = siteGroup._instance?.url || config.gptload.url
           const upstreamUrl = `${instanceUrl}/proxy/${siteGroup.name}`
 
           console.log(`📋 添加上游: ${upstreamUrl} (来源: ${siteGroup.name})`)
@@ -646,7 +647,7 @@ class GptloadService {
           continue // 跳过无效的站点分组
         }
 
-        const instanceUrl = siteGroup._instance?.url || process.env.GPTLOAD_URL || 'http://localhost:3001'
+        const instanceUrl = siteGroup._instance?.url || config.gptload.url
         const newUpstreamUrl = `${instanceUrl}/proxy/${siteGroup.name}`
 
         // 检查是否已经包含此上游

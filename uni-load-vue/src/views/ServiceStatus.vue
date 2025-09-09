@@ -307,7 +307,7 @@ const initializeDefaultValues = () => {
     syncStatus.value = {
       isRunning: false,
       hasInterval: false,
-      intervalMinutes: 60,
+      intervalMinutes: 360,
     }
   }
   if (!healthStatus.value) {

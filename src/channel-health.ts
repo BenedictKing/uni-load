@@ -18,6 +18,7 @@ import modelConfig from './model-config'
 import { layerConfigs } from './layer-configs'
 import { promises as fs } from 'fs'
 import path from 'path'
+import config from './config'
 import {
   ChannelFailureInfo,
   HealthCheckResult,
@@ -35,8 +36,8 @@ class ChannelHealthMonitor {
   private channelFailures: Map<string, number> = new Map()
 
   constructor() {
-    this.checkIntervalMinutes = parseInt(process.env.CHANNEL_CHECK_INTERVAL || '30')
-    this.failureThreshold = parseInt(process.env.CHANNEL_FAILURE_THRESHOLD || '3')
+    this.checkIntervalMinutes = config.channelHealth.intervalMinutes
+    this.failureThreshold = config.channelHealth.failureThreshold
   }
 
   /**
